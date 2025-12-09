@@ -241,7 +241,6 @@ class NhomModel extends DB
     public function sv_hide($manhom, $masv, $giatri)
     {
         try {
-            // Kiểm tra giá trị hợp lệ của giatri (0 hoặc 1)
             if (!in_array($giatri, ['0', '1'])) {
                 return [
                     'success' => false,
@@ -294,27 +293,133 @@ class NhomModel extends DB
         mysqli_stmt_close($stmt);
         return $row ? $row : [];
     }
+    public function getNamHoc($manguoidung)
+    {
+        $rows = [];
+        $sql = "
+        SELECT DISTINCT nh.manamhoc, nh.tennamhoc
+        FROM phancong pc
+        INNER JOIN namhoc nh ON pc.namhoc = nh.manamhoc
+        WHERE pc.manguoidung = ? and pc.trangthai = 1
+        ORDER BY nh.tennamhoc DESC
+    ";
+
+        $stmt = $this->con->prepare($sql);
+        if (!$stmt) {
+            error_log("getNamHoc prepare failed: " . $this->con->error . " | SQL: $sql");
+            return $rows;
+        }
+
+        $stmt->bind_param("s", $manguoidung);
+        $stmt->execute();
+
+        $result = $stmt->get_result();
+        if ($result) {
+            while ($r = $result->fetch_assoc()) {
+                $rows[] = $r;
+            }
+        } else {
+            $stmt->bind_result($manamhoc, $tennamhoc);
+            while ($stmt->fetch()) {
+                $rows[] = [
+                    'manamhoc' => $manamhoc,
+                    'tennamhoc' => $tennamhoc
+                ];
+            }
+        }
+
+        $stmt->close();
+        return $rows;
+    }
+
+    public function getHocKy($manguoidung, $manamhoc)
+    {
+        $rows = [];
+
+        $sql = "
+        SELECT DISTINCT hk.mahocky, hk.tenhocky
+        FROM phancong pc
+        INNER JOIN hocky hk ON pc.hocky = hk.mahocky
+        WHERE pc.manguoidung = ? AND pc.namhoc = ? AND pc.trangthai = 1
+        ORDER BY hk.tenhocky ASC
+    ";
+
+        $stmt = $this->con->prepare($sql);
+        if (!$stmt) {
+            error_log("getHocKy prepare failed: " . $this->con->error . " | SQL: $sql");
+            return $rows;
+        }
+
+        $stmt->bind_param("ss", $manguoidung, $manamhoc);
+        $stmt->execute();
+
+        $result = $stmt->get_result();
+        if ($result) {
+            while ($r = $result->fetch_assoc()) {
+                $rows[] = $r;
+            }
+        } else {
+            $stmt->bind_result($mahocky, $tenhocky);
+            while ($stmt->fetch()) {
+                $rows[] = [
+                    'mahocky' => $mahocky,
+                    'tenhocky' => $tenhocky
+                ];
+            }
+        }
+
+        $stmt->close();
+        return $rows;
+    }
+
 
     public function getBySubject($nguoitao, $hienthi)
     {
         $sht = $hienthi == 2 ? "" : "AND nhom.hienthi = $hienthi";
-        $sql = "SELECT monhoc.mamonhoc, monhoc.tenmonhoc, nhom.namhoc, nhom.hocky, nhom.manhom, nhom.tennhom, nhom.ghichu, nhom.siso, nhom.hienthi
-        FROM nhom, monhoc
-        WHERE nhom.mamonhoc = monhoc.mamonhoc AND nhom.giangvien = '$nguoitao' AND nhom.trangthai = 1 $sht";
+
+        $sql = "SELECT 
+                monhoc.mamonhoc, 
+                monhoc.tenmonhoc, 
+                namhoc.manamhoc AS manamhoc,
+                namhoc.tennamhoc,
+                hocky.mahocky,
+                hocky.tenhocky,
+                hocky.sohocky,
+
+                nhom.manhom, 
+                nhom.tennhom, 
+                nhom.ghichu, 
+                nhom.siso, 
+                nhom.hienthi
+            FROM nhom
+            JOIN monhoc ON nhom.mamonhoc = monhoc.mamonhoc
+            JOIN hocky ON nhom.hocky = hocky.mahocky
+            JOIN namhoc ON hocky.manamhoc = namhoc.manamhoc
+            WHERE nhom.giangvien = '$nguoitao' 
+              AND nhom.trangthai = 1 
+              ";
+
         $result = mysqli_query($this->con, $sql);
         $rows = [];
         while ($row = mysqli_fetch_assoc($result)) {
             $rows[] = $row;
         }
+
+        // Gom nhóm theo môn + năm học + học kỳ
         $newArray = [];
         foreach ($rows as $item) {
             $foundIndex = -1;
             foreach ($newArray as $key => $newItem) {
-                if ($newItem["mamonhoc"] == $item["mamonhoc"] && $newItem["namhoc"] == $item["namhoc"] && $newItem["hocky"] == $item["hocky"]) {
+                if (
+                    $newItem["mamonhoc"] == $item["mamonhoc"]
+                    && $newItem["manamhoc"] == $item["manamhoc"]
+                    && $newItem["mahocky"] == $item["mahocky"]
+                ) {
                     $foundIndex = $key;
                     break;
                 }
             }
+
             $detail_group = [
                 "manhom" => $item["manhom"],
                 "tennhom" => $item["tennhom"],
@@ -322,22 +427,27 @@ class NhomModel extends DB
                 "siso" => $item["siso"],
                 "hienthi" => $item["hienthi"]
             ];
+
             if ($foundIndex == -1) {
                 $newArray[] = [
-                    "mamonhoc" => $item["mamonhoc"],
-                    "tenmonhoc" => $item["tenmonhoc"],
-                    "namhoc" => $item["namhoc"],
-                    "hocky" => $item["hocky"],
-                    "nhom" => [$detail_group],
+                    "mamonhoc"   => $item["mamonhoc"],
+                    "tenmonhoc"  => $item["tenmonhoc"],
+                    "manamhoc"   => $item["manamhoc"],
+                    "tennamhoc"  => $item["tennamhoc"],
+                    "mahocky"    => $item["mahocky"],
+                    "tenhocky"   => $item["tenhocky"],
+                    "sohocky"    => $item["sohocky"],
+                    "nhom"       => [$detail_group],
                 ];
             } else {
                 $newArray[$foundIndex]['nhom'][] = $detail_group;
             }
         }
+
         return $newArray;
     }
 
-    // Cập nhật mã mời
+
     public function updateInvitedCode($manhom)
     {
         $valid = true;
@@ -353,7 +463,6 @@ class NhomModel extends DB
         return $valid;
     }
 
-    // Lấy mã mời
     public function getInvitedCode($manhom)
     {
         $sql = "SELECT mamoi FROM nhom WHERE manhom = '$manhom'";
@@ -361,7 +470,6 @@ class NhomModel extends DB
         return mysqli_fetch_assoc($result);
     }
 
-    // Lấy mã nhóm từ mã mời
     public function getIdFromInvitedCode($mamoi)
     {
         $sql = "SELECT `manhom` FROM `nhom` WHERE `mamoi` = '$mamoi'";
@@ -409,11 +517,29 @@ class NhomModel extends DB
     {
         $user_id = mysqli_real_escape_string($this->con, $user_id);
         $hienthi = mysqli_real_escape_string($this->con, $hienthi);
-        $sql = "SELECT monhoc.mamonhoc, monhoc.tenmonhoc, nhom.manhom, nhom.tennhom, nhom.namhoc, nhom.hocky, nguoidung.hoten, nguoidung.avatar, chitietnhom.hienthi
+        $sql = "SELECT 
+                monhoc.mamonhoc, 
+                monhoc.tenmonhoc, 
+                nhom.manhom, 
+                nhom.tennhom, 
+                nhom.namhoc, 
+                nhom.hocky,
+                namhoc.tennamhoc,
+                hocky.tenhocky,
+                nguoidung.hoten, 
+                nguoidung.avatar, 
+                chitietnhom.hienthi
             FROM chitietnhom
             JOIN nhom ON chitietnhom.manhom = nhom.manhom
             JOIN nguoidung ON nguoidung.id = nhom.giangvien
             JOIN monhoc ON monhoc.mamonhoc = nhom.mamonhoc
+            
+            -- JOIN thêm để lấy tên năm học
+            LEFT JOIN namhoc ON namhoc.manamhoc = nhom.namhoc
+            
+            -- JOIN thêm để lấy tên học kỳ
+            LEFT JOIN hocky ON hocky.mahocky = nhom.hocky
+
             WHERE chitietnhom.manguoidung = '$user_id'
             AND chitietnhom.hienthi = '$hienthi'
             AND nhom.trangthai != 0";
@@ -428,9 +554,26 @@ class NhomModel extends DB
     // Lấy chi tiết một nhóm mà sinh viên tham gia
     public function getDetailGroup($manhom)
     {
-        $sql = "SELECT monhoc.mamonhoc,monhoc.tenmonhoc,nhom.manhom, nhom.tennhom, namhoc, hocky, nhom.giangvien, nguoidung.hoten, nguoidung.avatar
-        FROM nhom, nguoidung, monhoc
-        WHERE nguoidung.id = nhom.giangvien AND monhoc.mamonhoc = nhom.mamonhoc AND nhom.manhom = $manhom";
+        $sql = "SELECT 
+            monhoc.mamonhoc,
+            monhoc.tenmonhoc,
+            nhom.manhom,
+            nhom.tennhom,
+
+            namhoc.tennamhoc,
+            hocky.tenhocky,
+
+            nhom.giangvien,
+            nguoidung.hoten,
+            nguoidung.avatar
+
+        FROM nhom
+        JOIN nguoidung ON nguoidung.id = nhom.giangvien
+        JOIN monhoc    ON monhoc.mamonhoc = nhom.mamonhoc
+        JOIN namhoc    ON namhoc.manamhoc = nhom.namhoc
+        JOIN hocky     ON hocky.mahocky   = nhom.hocky
+
+        WHERE nhom.manhom = $manhom";
         $result = mysqli_query($this->con, $sql);
         return mysqli_fetch_assoc($result);
     }
@@ -447,7 +590,6 @@ class NhomModel extends DB
         return $rows;
     }
 
-    // hàm update sỉ số sinh viên trong nhóm
     public function updateSiso($manhom)
     {
         $valid = true;
@@ -458,8 +600,6 @@ class NhomModel extends DB
         }
         return $valid;
     }
-
-    // Hàm cập nhật sỉ số khi sv tham gia bằng mã mời
     public function updateSiso1($mamoi)
     {
         $result = $this->getIdFromInvitedCode($mamoi);
@@ -468,7 +608,6 @@ class NhomModel extends DB
         return $valid;
     }
 
-    // Hàm lấy sinh viên ra từ nhóm
     public function getStudentByGroup($group)
     {
         $sql = "SELECT ng.id,ng.hoten,ng.email,ng.ngaythamgia,ng.ngaysinh,ng.gioitinh FROM chitietnhom ctn JOIN nguoidung ng ON ctn.manguoidung=ng.id WHERE ctn.manhom = $group";
@@ -482,7 +621,7 @@ class NhomModel extends DB
     public function addSV($mssv, $hoten, $password)
     {
         $password = password_hash($password, PASSWORD_DEFAULT);
-        $sql = "INSERT INTO `nguoidung`(`id`,`hoten`,`matkhau`,`trangthai`, `manhomquyen`) VALUES ('$mssv','$hoten','$password','1', '11')";
+        $sql = "INSERT INTO `nguoidung`(`id`,`hoten`,`matkhau`,`trangthai`, `manhomquyen`) VALUES ('$mssv','$hoten','$password','1', '2')";
         $check = true;
         $result = mysqli_query($this->con, $sql);
         if (!$result) {
@@ -582,7 +721,7 @@ class NhomModel extends DB
     {
         $query = "SELECT ND.id, avatar, hoten, email, gioitinh, ngaysinh, SUBSTRING_INDEX(hoten, ' ', -1) AS firstname FROM chitietnhom CTN, nguoidung ND WHERE CTN.manguoidung = ND.id AND CTN.manhom = " . $args['manhom'];
         if ($input) {
-            $query .= " AND (ND.hoten LIKE N'%${input}%' OR CTN.manguoidung LIKE N'%${input}%')";
+            $query .= " AND (ND.hoten LIKE N'%{$input}%' OR CTN.manguoidung LIKE N'%{$input}%')";
         }
         $query .= " ORDER BY firstname $order";
         return $query;
@@ -592,7 +731,7 @@ class NhomModel extends DB
     {
         $query = "SELECT ND.id, avatar, hoten, email, gioitinh, ngaysinh FROM chitietnhom CTN, nguoidung ND WHERE CTN.manguoidung = ND.id AND CTN.manhom = " . $args['manhom'];
         if ($input) {
-            $query .= " AND (ND.hoten LIKE N'%${input}%' OR CTN.manguoidung LIKE N'%${input}%')";
+            $query .= " AND (ND.hoten LIKE N'%{$input}%' OR CTN.manguoidung LIKE N'%{$input}%')";
         }
         if ($input) {
             $input = addslashes($input);

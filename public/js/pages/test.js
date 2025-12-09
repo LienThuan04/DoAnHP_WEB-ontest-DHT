@@ -88,8 +88,8 @@ function showListTest(tests) {
     // Học phần
     const hocPhan = {
       tenmonhoc: test.tenmonhoc || "Chưa xác định",
-      namhoc: test.namhoc || "2025",
-      hocky: test.hocky || "1",
+       namhoc: test.tennamhoc || "Chưa xác định",
+       hocky: test.tenhocky || "Chưa xác định",  
     };
 
     html += `

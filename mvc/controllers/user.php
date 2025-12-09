@@ -150,6 +150,17 @@ class User extends Controller
             ]);
         }
     }
+    public function setStatus()
+    {
+        if ($_SERVER["REQUEST_METHOD"] == "POST" && AuthCore::checkPermission("nguoidung", "update")) {
+            $id = $_POST['id'] ?? '';
+            $status = isset($_POST['status']) ? (int)$_POST['status'] : 0;
+            $result = $this->NguoiDungModel->setStatus($id, $status);
+            echo json_encode(['success' => $result]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'No permission or invalid request']);
+        }
+    }
 
     public function getDetail()
     {
@@ -158,76 +169,88 @@ class User extends Controller
             echo json_encode($result);
         }
     }
-    public function addExcel()
-    {
-        if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            require_once 'vendor/autoload.php';
-            $inputFileName = $_FILES["fileToUpload"]["tmp_name"];
-            try {
-                $inputFileType = PHPExcel_IOFactory::identify($inputFileName);
-                $objReader = PHPExcel_IOFactory::createReader($inputFileType);
-                $objPHPExcel = $objReader->load($inputFileName);
-            } catch (Exception $e) {
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'Lỗi không thể đọc file: ' . $e->getMessage()
-                ]);
-                return;
-            }
+   public function addExcel()
+{
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-            $sheet = $objPHPExcel->setActiveSheetIndex(0);
-            $Totalrow = $sheet->getHighestRow();
-            $LastColumn = $sheet->getHighestColumn();
-            $TotalCol = PHPExcel_Cell::columnIndexFromString($LastColumn);
-            $data = [];
-            for ($i = 3; $i <= $Totalrow; $i++) {
-                $fullname = "";
-                $email = "";
-                $mssv = "";
-                for ($j = 0; $j < $TotalCol; $j++) {
-                    if ($j == 1) {
-                        $mssv = trim($sheet->getCellByColumnAndRow($j, $i)->getValue());
-                    }
-                    if ($j == 2) {
-                        $fullname .= trim($sheet->getCellByColumnAndRow($j, $i)->getValue());
-                    }
-                    if ($j == 3) {
-                        $fullname .= " " . trim($sheet->getCellByColumnAndRow($j, $i)->getValue());
-                    }
-                    if ($j == 7) {
-                        $email = trim($sheet->getCellByColumnAndRow($j, $i)->getValue());
-                    }
-                }
-                // Kiểm tra dữ liệu hợp lệ
-                if (empty($mssv) || empty($email) || empty($fullname)) {
-                    continue; // Bỏ qua dòng không hợp lệ
-                }
-                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    continue; // Bỏ qua email không hợp lệ
-                }
-                $data[] = [
-                    'fullname' => trim($fullname),
-                    'email' => trim($email),
-                    'mssv' => trim($mssv),
-                    'nhomquyen' => 2,
-                    'trangthai' => 1
-                ];
-            }
+        require_once 'vendor/autoload.php';
 
-            if (empty($data)) {
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'Không có dữ liệu hợp lệ trong file'
-                ]);
-                return;
-            }
+        $file = $_FILES["fileToUpload"];
+        $inputFileName = $file["tmp_name"];
+        $ext = strtolower(pathinfo($file["name"], PATHINFO_EXTENSION));
 
+        // Chỉ cho phép Excel
+        if (!in_array($ext, ['xls', 'xlsx'])) {
             echo json_encode([
-                'status' => 'success',
-                'data' => $data
+                'status' => 'error',
+                'message' => 'Chỉ hỗ trợ file Excel (.xls, .xlsx)'
             ]);
+            return;
         }
+        try {
+            // PHPExcel tự nhận dạng file
+            $inputFileType = PHPExcel_IOFactory::identify($inputFileName);
+
+            // Chặn nhận nhầm HTML
+            if ($inputFileType === 'HTML') {
+                throw new Exception("File upload không phải Excel hợp lệ");
+            }
+
+            $objReader = PHPExcel_IOFactory::createReader($inputFileType);
+            $objPHPExcel = $objReader->load($inputFileName);
+
+        } catch (Exception $e) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Không thể đọc file: ' . $e->getMessage()
+            ]);
+            return;
+        }
+        // --- Phần xử lý dữ liệu giữ nguyên ---
+        $sheet = $objPHPExcel->setActiveSheetIndex(0);
+        $Totalrow = $sheet->getHighestRow();
+        $LastColumn = $sheet->getHighestColumn();
+        $TotalCol = PHPExcel_Cell::columnIndexFromString($LastColumn);
+
+        $data = [];
+        for ($i = 3; $i <= $Totalrow; $i++) {
+            $fullname = "";
+            $email = "";
+            $mssv = "";
+            for ($j = 0; $j < $TotalCol; $j++) {
+                if ($j == 1) $mssv = trim($sheet->getCellByColumnAndRow($j, $i)->getValue());
+                if ($j == 2) $fullname .= trim($sheet->getCellByColumnAndRow($j, $i)->getValue());
+                if ($j == 3) $fullname .= " " . trim($sheet->getCellByColumnAndRow($j, $i)->getValue());
+                if ($j == 7) $email = trim($sheet->getCellByColumnAndRow($j, $i)->getValue());
+            }
+
+            if (empty($mssv) || empty($email) || empty($fullname)) continue;
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+
+            $data[] = [
+                'fullname' => trim($fullname),
+                'email' => trim($email),
+                'mssv' => trim($mssv),
+                'nhomquyen' => 2,
+                'trangthai' => 1
+            ];
+        }
+
+        if (empty($data)) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Không có dữ liệu hợp lệ trong file'
+            ]);
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'data' => $data
+        ]);
     }
+}
+
     public function addFileExcel()
     {
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {

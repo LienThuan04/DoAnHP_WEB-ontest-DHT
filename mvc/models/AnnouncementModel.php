@@ -27,7 +27,8 @@ class AnnouncementModel extends DB
         $valid = true;
 
         foreach ($nhom as $manhom) {
-            $sql = "INSERT INTO `chitietthongbao`(`matb`, `manhom`) VALUES ('$matb','$manhom')";
+            $manhom_esc = mysqli_real_escape_string($this->con, $manhom);
+            $sql = "INSERT IGNORE INTO `chitietthongbao`(`matb`, `manhom`) VALUES ('$matb','$manhom_esc')";
             $result = mysqli_query($this->con, $sql);
             if (!$result) {
                 $valid = false;
@@ -39,8 +40,9 @@ class AnnouncementModel extends DB
 
             while ($row = mysqli_fetch_assoc($resMembers)) {
                 $user = $row['manguoidung'];
-                $insertStatus = "INSERT INTO trangthaithongbao (matb, manguoidung, trangthai)
-                             VALUES ('$matb', '$user', 'chưa xem')";
+                $user_esc = mysqli_real_escape_string($this->con, $user);
+                $insertStatus = "INSERT IGNORE INTO trangthaithongbao (matb, manguoidung, trangthai)
+                             VALUES ('$matb', '$user_esc', 'chưa xem')";
                 mysqli_query($this->con, $insertStatus);
             }
         }
@@ -81,10 +83,26 @@ class AnnouncementModel extends DB
 
     public function getAll($user_id)
     {
-        $sql = "SELECT `chitietthongbao`.`matb`,`tennhom`,`noidung`, `tenmonhoc` ,`namhoc`, `hocky`, `thoigiantao`
-        FROM `thongbao`, `chitietthongbao`,`nhom`,`monhoc` 
-        WHERE `thongbao`.`matb` = `chitietthongbao`.`matb` AND `chitietthongbao`.`manhom` = `nhom`.`manhom` AND `thongbao`.`is_auto` = 1 AND `nhom`.`mamonhoc` = `monhoc`.`mamonhoc`
-        AND `thongbao`.`nguoitao` = $user_id ORDER BY thoigiantao DESC";
+        $sql = "SELECT 
+    chitietthongbao.matb,
+    nhom.tennhom,
+    thongbao.noidung,
+    monhoc.tenmonhoc,
+    nhom.namhoc,
+    namhoc.tennamhoc,
+    nhom.hocky,
+    hocky.tenhocky,
+    thongbao.thoigiantao
+FROM thongbao
+JOIN chitietthongbao ON thongbao.matb = chitietthongbao.matb
+JOIN nhom ON chitietthongbao.manhom = nhom.manhom
+JOIN monhoc ON nhom.mamonhoc = monhoc.mamonhoc
+LEFT JOIN namhoc ON nhom.namhoc = namhoc.manamhoc
+LEFT JOIN hocky ON nhom.hocky = hocky.mahocky
+WHERE thongbao.is_auto = 0
+  AND thongbao.nguoitao = $user_id
+ORDER BY thongbao.thoigiantao DESC
+";
         $result = mysqli_query($this->con, $sql);
         $rows = array();
         while ($row = mysqli_fetch_assoc($result)) {
@@ -95,8 +113,8 @@ class AnnouncementModel extends DB
                     "matb" => $matb,
                     "noidung" => $row['noidung'],
                     "tenmonhoc" => $row['tenmonhoc'],
-                    "namhoc" => $row['namhoc'],
-                    "hocky" => $row['hocky'],
+                    "tennamhoc" => $row['tennamhoc'],
+                    "tenhocky" => $row['hocky'],
                     "thoigiantao" => $row['thoigiantao'],
                     "nhom" => [$row['tennhom']]
                 ];
@@ -222,22 +240,26 @@ class AnnouncementModel extends DB
 
     public function getQuery($filter, $input, $args)
     {
-        error_log("Filter: " . json_encode($filter));
-        error_log("Input: " . $input);
-        error_log("Args: " . json_encode($args));
 
         $query = "
-        SELECT 
-            TB.*, 
-            MH.tenmonhoc, 
-            N.namhoc, 
-            N.hocky, 
-            GROUP_CONCAT(DISTINCT N.tennhom SEPARATOR ', ') AS nhom
-        FROM thongbao TB
-        JOIN chitietthongbao CTTB ON TB.matb = CTTB.matb
-        JOIN nhom N ON CTTB.manhom = N.manhom
-        JOIN monhoc MH ON N.mamonhoc = MH.mamonhoc
-        WHERE TB.nguoitao = ? AND TB.is_auto = 0
+      SELECT  
+    TB.*, 
+    MH.tenmonhoc, 
+    NH.tennamhoc, 
+    HK.tenhocky, 
+    GROUP_CONCAT(DISTINCT N.tennhom SEPARATOR ', ') AS nhom
+FROM thongbao TB
+JOIN chitietthongbao CTTB ON TB.matb = CTTB.matb
+JOIN nhom N ON CTTB.manhom = N.manhom
+JOIN monhoc MH ON N.mamonhoc = MH.mamonhoc
+
+-- JOIN đúng theo cấu trúc bảng nhom
+JOIN namhoc NH ON N.namhoc = NH.manamhoc
+JOIN hocky HK ON N.hocky = HK.mahocky
+
+WHERE TB.nguoitao = ?
+  AND TB.is_auto = 0
+
     ";
 
         $params = ['s', $args['id']];
@@ -268,10 +290,6 @@ class AnnouncementModel extends DB
 
         // Gộp và sắp xếp
         $query .= " GROUP BY TB.matb ORDER BY TB.thoigiantao DESC";
-
-        error_log("Query: " . $query);
-        error_log("Params: " . json_encode($params));
-
         return ['query' => $query, 'params' => $params];
     }
 

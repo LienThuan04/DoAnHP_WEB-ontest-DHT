@@ -63,3 +63,26 @@
         }?>
     </div>
 </div>
+<style>
+.list-test .block-content {
+  overflow-x: auto; 
+}
+
+.table-responsive {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table thead th,
+.table tbody td {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.table .btn {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.7rem;
+}
+
+</style>

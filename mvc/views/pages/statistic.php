@@ -15,8 +15,8 @@
                             </button>
                             <ul class="dropdown-menu w-100 shadow-sm" aria-labelledby="dropdown-filter-semester">
                                 <?php foreach ($data['Semesters'] as $semester): ?>
-                                    <li><a class="dropdown-item filter-semester" href="javascript:void(0)" data-id="<?= htmlspecialchars($semester['hocky']) ?>">
-                                        Học kỳ <?= htmlspecialchars($semester['hocky']) ?>
+                                    <li><a class="dropdown-item filter-semester" href="javascript:void(0)" data-id="<?= htmlspecialchars($semester['mahocky']) ?>">
+                                  <?= htmlspecialchars($semester['tenhocky']) ?>
                                     </a></li>
                                 <?php endforeach; ?>
                             </ul>
@@ -32,7 +32,7 @@
                             <ul class="dropdown-menu w-100 shadow-sm" aria-labelledby="dropdown-filter-year">
                                 <?php foreach ($data['AcademicYears'] as $year): ?>
                                     <li><a class="dropdown-item filter-year" href="javascript:void(0)" data-id="<?= htmlspecialchars($year['namhoc']) ?>">
-                                        Năm học <?= htmlspecialchars($year['namhoc']) ?>
+                                        <?= htmlspecialchars($year['tennamhoc']) ?>
                                     </a></li>
                                 <?php endforeach; ?>
                             </ul>

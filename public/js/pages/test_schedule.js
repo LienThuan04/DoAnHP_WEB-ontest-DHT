@@ -3,100 +3,216 @@ function showData(data) {
   const $list = $(".list-test");
 
   if (data.length === 0) {
-    $list.html(`<tr><td colspan="8" class="text-center py-3 text-muted">
-                  <i class="fa fa-info-circle me-1"></i> Không có dữ liệu
+    $list.html(`<tr><td colspan="8" class="text-center py-5 text-muted">
+                  <i class="fa fa-info-circle fa-2x mb-3 d-block"></i>
+                  Không có dữ liệu
                 </td></tr>`);
     $(".pagination").hide();
     return;
   }
 
-  const format = new Intl.DateTimeFormat(navigator.language, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  let html = "";
-
   const uniqueTests = [
     ...new Map(data.map((test) => [test.made, test])).values(),
   ];
+  let html = "";
 
   uniqueTests.forEach((test) => {
     const open = new Date(test.thoigianbatdau);
     const close = new Date(test.thoigianketthuc);
-
-    // Trạng thái
-    let state = { color: "secondary", text: "Chưa mở" };
     const now = Date.now();
+
+    // Xác định trạng thái
+    let state = { color: "secondary", text: "Chưa mở", icon: "fa-clock" };
     const daThi = test.dathi == 1;
 
     if (daThi) {
-      state = { color: "success", text: "Đã hoàn thành" };
+      state = {
+        color: "success",
+        text: "Đã hoàn thành",
+        icon: "fa-check-circle",
+      };
     } else if (now >= +open && now <= +close) {
-      state = { color: "primary", text: "Chưa làm" };
+      state = { color: "primary", text: "Đang mở", icon: "fa-play-circle" };
     } else if (now > +close) {
-      state = { color: "danger", text: "Quá hạn" };
+      state = { color: "danger", text: "Quá hạn", icon: "fa-times-circle" };
+    }
+
+    // Điểm
+    let diemDisplay = "-";
+    if (daThi) {
+      if (test.xemdiemthi == 0) {
+        diemDisplay = `<span class="text-muted fst-italic">Không được xem</span>`;
+      } else if (
+        test.trangthai_tuluan === "Chưa chấm" ||
+        test.trangthai_tuluan == 0
+      ) {
+        diemDisplay = `<span class="text-warning fw-600">Chờ chấm tự luận</span>`;
+      } else {
+        const diem =
+          (parseFloat(test.diemthi) || 0) + (parseFloat(test.diem_tuluan) || 0);
+        diemDisplay = `<span class="fw-bold text-success fs-5">${diem.toFixed(
+          2
+        )}</span>`;
+      }
     }
 
     // Nhóm
     const tennhomArray =
       test.tennhom?.split(", ").filter((n) => n.trim()) || [];
     const tennhom =
-      tennhomArray.length > 0 ? tennhomArray.join(", ") : "Chưa gán nhóm";
+      tennhomArray.length > 0
+        ? tennhomArray
+            .map(
+              (g) => `<span class="badge bg-light text-dark me-1">${g}</span>`
+            )
+            .join("")
+        : `<span class="text-muted fst-italic">Chưa gán nhóm</span>`;
+
+    // Nút hành động thông minh
+    let actionBtn = "";
+    if (daThi) {
+      actionBtn = `<a href="./test/start/${test.made}" class="btn btn-sm btn-outline-success rounded-pill px-4">
+                    <i class="fa fa-eye me-1"></i> Xem lại
+                   </a>`;
+    } else if (now >= +open && now <= +close) {
+      actionBtn = `<a href="./test/start/${test.made}" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm">
+                    <i class="fa fa-play me-1"></i> Làm bài
+                   </a>`;
+    } else {
+      actionBtn = `<a href="./test/start/${test.made}" class="btn btn-sm btn-outline-secondary rounded-pill px-4" onclick="event.preventDefault()">
+                    <i class="fa fa-eye me-1"></i> Xem chi tiết
+                   </a>`;
+    }
 
     html += `
-      <tr>
-        <td class="fw-semibold">
-          <i class="fa fa-file-alt text-muted me-1"></i>
-          ${test.tende || "<i>Chưa có tên đề</i>"}
-        </td>
-        <td>${test.tenmonhoc || "<i>Chưa rõ môn</i>"}</td>
-        <td><i class="fa fa-calendar-alt me-1 text-muted"></i>${format.format(
-          open
-        )}</td>
-        <td><i class="fa fa-calendar-check me-1 text-muted"></i>${format.format(
-          close
-        )}</td>
-        <td>
-          <i class="fa fa-users text-muted me-1"></i>
-          ${tennhom}
-        </td>
-<td>${
-      test.xemdiemthi == 0
-        ? "Không được xem"
-        : test.diemthi != null
-        ? test.diemthi
-        : "-"
-    }</td>
-        <td>
-          <span class="badge bg-${state.color} rounded-pill px-3 py-2">
-            <i class="fa fa-circle small me-1"></i>${state.text}
-          </span>
-        </td>
-        <td>
-          <a href="./test/start/${
-            test.made
-          }" class="btn btn-sm btn-alt-info rounded-pill px-3">
-            <i class="fa fa-arrow-right me-1"></i> Xem chi tiết
-          </a>
-        </td>
-      </tr>
-    `;
+<tr class="transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-md hover:-translate-y-1 border-l-4 border-transparent hover:border-primary">
+
+  <!-- Tên đề thi + Môn -->
+  <td class="py-5 ps-5">
+  <div class="d-flex align-items-center gap-3">
+
+    <!-- Icon -->
+    <div class="flex-shrink-0">
+      <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 
+                  rounded-xl d-flex align-items-center justify-content-center shadow-lg">
+        <i class="fa fa-file-alt text-warning fs-5"></i> <!-- Icon màu trắng -->
+      </div>
+    </div>
+
+    <!-- Text -->
+    <div>
+      <div class="fw-bold text-dark fs-5">
+        ${test.tende || "Chưa đặt tên"}
+      </div>
+    </div>
+
+  </div>
+</td>
+
+
+  <!-- Môn học (ẩn trên mobile nếu cần) -->
+  <td class="py-5 text-muted fw-600 d-none d-lg-table-cell">
+    ${test.tenmonhoc?.substring(0, 20) || "-"}
+  </td>
+
+<!-- Bắt đầu -->
+<td class="py-5 text-center">
+  <div class="d-flex flex-column align-items-center">
+    <div class="text-dark fw-bold">${open.toLocaleDateString("vi-VN")}</div>
+    <div class="text-primary small fw-600">
+      ${open.toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}
+    </div>
+  </div>
+</td>
+
+<!-- Kết thúc -->
+<td class="py-5 text-center">
+  <div class="d-flex flex-column align-items-center">
+    <div class="text-dark fw-bold">${close.toLocaleDateString("vi-VN")}</div>
+    <div class="text-danger small fw-600">
+      ${close.toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}
+    </div>
+  </div>
+</td>
+
+
+  <!-- Nhóm -->
+  <td class="py-5">
+    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-600">
+      ${tennhomArray[0] || "Chưa gán"}
+    </span>
+  </td>
+
+  <!-- Điểm -->
+  <td class="py-5 text-center">
+    ${
+      daThi
+        ? test.xemdiemthi == 0
+          ? `<span class="text-muted fst-italic">Ẩn</span>`
+          : test.trangthai_tuluan === "Chưa chấm" || test.trangthai_tuluan == 0
+          ? `<span class="text-warning fw-bold">Chờ chấm</span>`
+          : `<span class="text-success fw-bold text-2xl">
+              ${(
+                (parseFloat(test.diemthi) || 0) +
+                (parseFloat(test.diem_tuluan) || 0)
+              ).toFixed(1)}
+            </span>`
+        : `<span class="text-secondary fw-bold text-xl">-</span>`
+    }
+  </td>
+
+  <!-- Trạng thái -->
+  <td class="py-5 text-center">
+    <span class="badge rounded-pill px-4 py-2 fw-bold text-white ${
+      daThi
+        ? "bg-success"
+        : now >= +open && now <= +close
+        ? "bg-primary"
+        : now > +close
+        ? "bg-danger"
+        : "bg-secondary"
+    } shadow-sm">
+      ${state.text}
+    </span>
+  </td>
+
+  <!-- Hành động -->
+<td class="py-5 text-end pe-5">
+  ${
+    daThi
+      ? `<a href="./test/start/${test.made}" class="btn btn-success rounded-pill px-4 shadow-sm hover:shadow-lg d-flex flex-column align-items-center">
+          <i class="fa fa-eye mb-1"></i>
+          Xem lại
+        </a>`
+      : now >= +open && now <= +close
+      ? `<a href="./test/start/${test.made}" class="btn btn-primary rounded-pill px-5 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all d-flex flex-column align-items-center">
+          <i class="fa fa-play mb-1"></i>
+          Làm bài
+        </a>`
+      : `<button class="btn btn-outline-secondary rounded-pill px-4 d-flex flex-column align-items-center" disabled>
+          <i class="fa fa-lock mb-1"></i>
+          Chưa mở
+        </button>`
+  }
+</td>
+
+
+</tr>
+`;
   });
 
   $list.html(
     html ||
-      `<tr><td colspan="8" class="text-center py-3 text-muted">
-       <i class="fa fa-exclamation-circle me-1"></i> Không có dữ liệu hợp lệ
-     </td></tr>`
+      `<tr><td colspan="8" class="text-center py-5 text-muted">Không có dữ liệu hợp lệ</td></tr>`
   );
-
-  $(".pagination").toggle(html !== "");
+  $(".pagination").toggle(!!html);
 }
-
 // Get current user ID
 const container = document.querySelector(".content");
 const currentUser = container.dataset.id;

@@ -1,56 +1,71 @@
-<div class="content" data-id="<?php echo $_SESSION['user_id']; ?>">
-    <!-- Form tìm kiếm -->
- <form id="search-form" onsubmit="return false;">
-  <div class="row g-3 align-items-end mb-4 bg-white p-3 rounded shadow-sm">
-    <!-- Học kỳ -->
-    <div class="col-lg-3 col-md-6">
-      <label for="filter-kihoc" class="form-label fw-bold">Học kỳ</label>
-      <select id="filter-kihoc" class="form-select">
-        <option value="">Tất cả học kỳ</option>
-        <option value="1">Học kỳ 1</option>
-        <option value="2">Học kỳ 2</option>
-        <option value="3">Học kỳ 3</option>
-      </select>
-    </div>
-
-    <!-- Nhóm học phần -->
-    <div class="col-lg-3 col-md-6">
-      <label for="filter-nhomhocphan" class="form-label fw-bold">Nhóm học phần</label>
-      <select id="filter-nhomhocphan" class="form-select">
-        <option value="">Tất cả nhóm học phần</option>
-      </select>
-    </div>
-
-    <!-- Tìm kiếm -->
-    <div class="col-lg-3 col-md-6">
-      <label for="search-input" class="form-label fw-bold">Tìm kiếm</label>
-      <input type="text" class="form-control" id="search-input" placeholder="Nhập từ khóa...">
-    </div>
-
-    <!-- Nút thêm thông báo -->
-    <div class="col-lg-3 col-md-6 text-end">
-      <label class="form-label d-block invisible">Thêm</label>
-      <a href="./teacher_announcement/add" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
-        <i class="fa fa-fw fa-plus me-1"></i> Thêm Thông Báo
+<div class="content py-5 bg-light" data-id="<?php echo $_SESSION['user_id']; ?>">
+  <div class="block block-rounded shadow-lg border-start border-5 border-teal">
+    <div class="block-header bg-gradient-teal text-white p-4 d-flex justify-content-between align-items-center">
+      <h3 class="block-title mb-0"><i class="fa fa-bullhorn me-2"></i> Quản lý Thông báo</h3>
+      <a href="./teacher_announcement/add" class="btn btn-hero-sm btn-light" title="Thêm thông báo">
+        <i class="fa fa-plus-circle me-1 text-teal"></i> Thêm thông báo
       </a>
     </div>
-  </div>
-</form>
 
+    <div class="block-content p-4">
+      <form id="search-form" onsubmit="return false;" class="mb-4">
+        <div class="row gy-3">
+          <div class="col-md-6">
+            <div class="input-group input-group-lg">
+              <span class="input-group-text bg-white border-2 border-teal">
+                <i class="fa fa-search text-muted"></i>
+              </span>
+              <input type="text" class="form-control border-2 border-teal" id="search-input" placeholder="Tìm kiếm thông báo..." aria-label="Tìm kiếm thông báo">
+              <button type="button" class="btn btn-outline-teal btn-search" data-bs-toggle="tooltip" title="Tìm kiếm">
+                <i class="fa fa-search"></i> Tìm
+              </button>
+            </div>
+          </div>
 
+          <div class="col-md-3">
+            <label for="filter-kihoc" class="form-label fw-semibold visually-hidden">Học kỳ</label>
+            <select id="filter-kihoc" class="form-select border-teal">
+              <option value="">Tất cả học kỳ</option>
+            </select>
+          </div>
 
-    <!-- Danh sách thông báo -->
-    <div class="list-announces" id="list-announces">
-        <!-- List sẽ được render bằng JS -->
-    </div>
+          <div class="col-md-3">
+            <label for="filter-nhomhocphan" class="form-label fw-semibold visually-hidden">Nhóm học phần</label>
+            <select id="filter-nhomhocphan" class="form-select border-teal">
+              <option value="">Tất cả nhóm học phần</option>
+            </select>
+          </div>
+        </div>
+      </form>
 
-    <!-- Phân trang -->
-    <div class="row my-3">
+      <div class="table-responsive">
+        <!-- JS sẽ render bảng/danh sách vào đây -->
+        <div class="list-announces" id="list-announces"></div>
+      </div>
+
+      <div class="pagination-container main-page-pagination mt-4 d-flex justify-content-end">
         <?php
-        if (isset($data["Plugin"]["pagination"])) {
-
+          if (isset($data["Plugin"]["pagination"])) {
             require "./mvc/views/inc/pagination.php";
-        }
-?>
+          }
+        ?>
+      </div>
     </div>
+  </div>
+
+  <!-- Reuse styles from namhoc for consistent look -->
+  <style>
+  .bg-gradient-teal { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); }
+  .bg-teal-light { background-color: #ccfbf1 !important; }
+  .btn-teal { background-color: #14b8a6; border-color: #14b8a6; color: #fff; }
+  .btn-teal:hover { background-color: #0d9488; border-color: #0d9488; }
+  .btn-outline-teal { border-color: #14b8a6; color: #14b8a6; }
+  .btn-outline-teal:hover { background-color: #14b8a6; color: #fff; }
+  .border-teal { border-color: #14b8a6 !important; }
+  .shadow-lg { box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }
+  .table-hover tbody tr:hover { background-color: #f1f5f9; }
+  .form-control:focus, .form-select:focus { border-color: #14b8a6; box-shadow: 0 0 0 0.2rem rgba(20,184,166,0.15); }
+  @media (max-width:576px){ .block-header h3{ font-size:1.1rem; } }
+  
+  </style>
 </div>

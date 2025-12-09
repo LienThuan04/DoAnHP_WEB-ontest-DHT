@@ -129,6 +129,36 @@
                                 </td>
                             </tr>
                             <tr>
+                                <td>Năm học</td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="namhoc" value="view">
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="namhoc" value="create">
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="namhoc" value="update">
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="namhoc" value="delete">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Xem Môn Học</td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="xem_monhoc" value="view">
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="xem_monhoc" value="create" disabled>
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="xem_monhoc" value="update" disabled>
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="xem_monhoc" value="delete" disabled>
+                                </td>
+                            </tr>
+                            <tr>
                                 <td>Chương</td>
                                 <td class="text-center">
                                     <input class="form-check-input" type="checkbox" name="chuong" value="view">
@@ -189,6 +219,21 @@
                                 </td>
                             </tr>
                             <tr>
+                                <td>Thống kê</td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="thongke" value="view">
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="thongke" value="create">
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="thongke" value="update">
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="thongke" value="delete">
+                                </td>
+                            </tr>
+                            <tr>
                                 <td>Thông báo</td>
                                 <td class="text-center">
                                     <input class="form-check-input" type="checkbox" name="thongbao" value="view">
@@ -235,6 +280,37 @@
                 <button type="button" class="btn btn-sm btn-alt-secondary" data-bs-dismiss="modal">Huỷ</button>
                 <button type="button" class="btn btn-sm btn-primary add-role-element" id="save-role">Lưu</button>
                 <button type="button" class="btn btn-sm btn-primary update-role-element" id="update-role-btn">Cập nhật</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Danh sách người dùng thuộc nhóm -->
+<div class="modal fade" id="modal-role-users" tabindex="-1" role="dialog" aria-labelledby="modal-role-users" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh sách người dùng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>MSSV / ID</th>
+                                <th>Họ và tên</th>
+                                <th>Email</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody id="list-role-users">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-alt-secondary" data-bs-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>

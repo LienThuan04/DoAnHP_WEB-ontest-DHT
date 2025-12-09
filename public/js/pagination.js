@@ -225,9 +225,14 @@ class Pagination {
     e.preventDefault();
     const input = this.searchForm.querySelector("#search-input");
     if (input.value == "") {
+      // remove both possible keys to ensure no leftover filters
       delete this.option.input;
+      delete this.option.content;
     } else {
+      // set both 'input' (current) and 'content' (legacy pages) so server-side
+      // pagination code can read either key
       this.option.input = input.value;
+      this.option.content = input.value;
       this.valuePage.curPage = 1;
     }
     this.getPagination(this.option, this.valuePage.curPage);

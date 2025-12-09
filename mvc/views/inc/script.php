@@ -42,6 +42,11 @@ if (isset($data["Plugin"]["pagination"])) {
     echo '<script src="./public/js/pagination.js"></script>';
 }
 if (isset($data["Script"])) {
-    echo '<script src="./public/js/pages/'.$data["Script"].'.js"></script>';
+    $scriptPath = __DIR__ . '/../../public/js/pages/' . $data["Script"] . '.js';
+    $query = '';
+    if (file_exists($scriptPath)) {
+        $query = '?v=' . filemtime($scriptPath);
+    }
+    echo '<script src="./public/js/pages/'.$data["Script"].'.js' . $query . '"></script>';
 }
 ?>

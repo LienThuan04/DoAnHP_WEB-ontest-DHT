@@ -33,12 +33,10 @@ class Account extends Controller
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             header('Content-Type: application/json; charset=utf8'); // Đảm bảo mã hóa UTF-8
 
-            // Lấy dữ liệu đầu vào
             $matkhaucu = isset($_POST['matkhaucu']) ? trim($_POST['matkhaucu']) : '';
             $matkhaumoi = isset($_POST['matkhaumoi']) ? trim($_POST['matkhaumoi']) : '';
             $id = isset($_SESSION['user_id']) ? trim($_SESSION['user_id']) : '';
 
-            // Kiểm tra đầu vào
             if (empty($matkhaucu) || empty($matkhaumoi) || empty($id)) {
                 echo json_encode([
                     "message" => "Vui lòng nhập đầy đủ thông tin.",
@@ -46,15 +44,9 @@ class Account extends Controller
                 ], JSON_UNESCAPED_UNICODE);
                 exit;
             }
-
-
-
-            // Kiểm tra mật khẩu hiện tại
             $valid = $this->nguoidung->checkPassword($id, $matkhaucu);
             if ($valid) {
-                // Băm mật khẩu mới
                 $new_password_hashed = password_hash($matkhaumoi, PASSWORD_BCRYPT);
-                // Cập nhật mật khẩu
                 $result = $this->nguoidung->changePassword($id, $new_password_hashed);
                 if ($result) {
                     echo json_encode([
@@ -122,11 +114,8 @@ class Account extends Controller
                 $id = $_SESSION['user_id'];
                 $imageName = $_FILES['file-img']['name'];
                 $tmpName = $_FILES['file-img']['tmp_name'];
-
-                // Image extension validation
                 $validImageExtension = ['jpg', 'jpeg', 'png'];
                 $imageExtension = explode('.', $imageName);
-
                 $name = $imageExtension[0];
                 $imageExtension = strtolower(end($imageExtension));
                 $result = $this->nguoidung->uploadFile($id, $tmpName, $imageExtension, $validImageExtension, $name);

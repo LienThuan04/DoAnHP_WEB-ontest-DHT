@@ -131,15 +131,15 @@ class teacher_announcement extends Controller
         }
     }
 
-    // public function getListAnnounce()
-    // {
-    //     AuthCore::checkAuthentication();
-    //     if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    //         $user_id = $_SESSION['user_id'];
-    //         $result = $this->AnnouncementModel->getAll($user_id);
-    //         echo json_encode($result);
-    //     }
-    // }
+    public function getListAnnounce()
+    {
+        AuthCore::checkAuthentication();
+        if ($_SERVER["REQUEST_METHOD"] == "POST") {
+            $user_id = $_SESSION['user_id'];
+            $result = $this->AnnouncementModel->getAll($user_id);
+            echo json_encode($result);
+        }
+    }
 
     public function deleteAnnounce()
     {

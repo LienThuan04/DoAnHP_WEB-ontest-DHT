@@ -1,4 +1,8 @@
 RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-d
+
+# Nếu file hoặc thư mục không tồn tại thì rewrite
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.+)$ index.php?url=$1
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Giữ nguyên query string khi rewrite
+RewriteRule ^(.+)$ index.php?url=$1 [L,QSA]

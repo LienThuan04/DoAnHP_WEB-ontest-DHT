@@ -3,7 +3,7 @@
 $GLOBALS['navbar'] = [
     [
         'name' => 'Dashboard',
-        'icon' => 'fas fa-tachometer-alt', // icon dashboard
+        'icon' => 'fas fa-tachometer-alt',
         'url'  => 'dashboard'
     ],
     [
@@ -12,13 +12,13 @@ $GLOBALS['navbar'] = [
         'navbarItem' => [
             [
                 'name' => 'Học phần',
-                'icon' => 'fas fa-chalkboard-teacher', // rõ nghĩa học phần
+                'icon' => 'fas fa-chalkboard-teacher',
                 'url'  => 'client/group',
                 'role' => 'tghocphan'
             ],
             [
                 'name' => 'Đề thi',
-                'icon' => 'fas fa-file-alt', // đề thi rõ hơn
+                'icon' => 'fas fa-file-alt',
                 'url'  => 'client/test',
                 'role' => 'tgthi'
             ],
@@ -30,25 +30,25 @@ $GLOBALS['navbar'] = [
         'navbarItem' => [
             [
                 'name' => 'Môn học',
-                'icon' => 'fas fa-book-open', // môn học
-                'url'  => 'subject',
-                'role' => 'monhoc'
+                'icon' => 'fas fa-book-open',
+                'url'  => 'view_subject',
+                'role' => 'xem_monhoc'
             ],
             [
                 'name' => 'Câu hỏi',
-                'icon' => 'fas fa-question-circle', // câu hỏi
+                'icon' => 'fas fa-question-circle',
                 'url'  => 'question',
                 'role' => 'cauhoi'
             ],
             [
                 'name' => 'Nhóm học phần',
-                'icon' => 'fas fa-layer-group', // nhóm học phần
+                'icon' => 'fas fa-layer-group',
                 'url'  => 'module',
                 'role' => 'hocphan'
             ],
             [
                 'name' => 'Đề kiểm tra',
-                'icon' => 'fas fa-file-lines', // bài kiểm tra
+                'icon' => 'fas fa-file-lines',
                 'url'  => 'test',
                 'role' => 'dethi'
             ],
@@ -58,41 +58,96 @@ $GLOBALS['navbar'] = [
                 'url'  => 'teacher_announcement',
                 'role' => 'thongbao'
             ],
-             [
+            [
                 'name' => 'Thống kê',
                 'icon' => 'fas fa-chart-bar',
                 'url'  => 'statistic',
                 'role' => 'thongke'
             ],
         ]
-    ]
+    ],
+    // ==========================
+    // ADMIN SECTION (kế thừa từ GV)
+    // ==========================
+    [
+        'name' => 'Admin',
+        'type' => 'heading',
+        'navbarItem' => [
+            [
+                'name' => 'Quản lý người dùng',
+                'icon' => 'fas fa-users-cog',
+                'url'  => 'user',
+                'role' => 'nguoidung'
+            ],
+            [
+            'name' => 'Năm học',
+            'icon' => 'fas fa-calendar-alt',
+            'url'  => 'namhoc',
+            'role' => 'phancong'
+            ],
+            [
+                'name' => 'Tạo môn học',
+                'icon' => 'fas fa-plus-circle',
+                'url'  => 'subject',
+                'role' => 'monhoc'
+            ],
+            [
+                'name' => 'Phân công môn học',
+                'icon' => 'fas fa-tasks',
+                'url'  => 'assignment',
+                'role' => 'phancong'
+            ],
+            [
+                'name' => 'Phân Quyền',
+                'icon' => 'fas fa-users',
+                'url'  => 'roles',
+                'role' => 'nhomquyen'
+            ],
+        ]
+    ],
 ];
 
-// Xử lý url để active navbar
+// =========================
+// 🔹 Hàm xác định trang hiện tại
+// =========================
 function getActiveNav()
 {
     $directoryURI = $_SERVER['REQUEST_URI'];
     $path = parse_url($directoryURI, PHP_URL_PATH);
     $components = explode('/', $path);
-    return $components[2];
+    return $components[2] ?? '';
 }
 
+// =========================
+// 🔹 Hàm build navbar (lọc theo quyền)
+// =========================
 function build_navbar()
 {
-    // Loại bỏ các navbar item không có trong session nhóm quyền
+    // Lọc các navbar item không thuộc quyền của user
     foreach ($GLOBALS['navbar'] as $key => $nav) {
         if (isset($nav['navbarItem'])) {
             foreach ($nav['navbarItem'] as $key1 => $navItem) {
-                if (!array_key_exists($navItem['role'], $_SESSION['user_role'])) {
-                    unset($GLOBALS['navbar'][$key]['navbarItem'][$key1]);
+                $role = $navItem['role'];
+                // Nếu role là admin, chỉ show với admin
+                if ($role == 'nguoidung' || $role == 'monhoc_admin' || $role == 'phancong' || $role == 'nhomquyen') {
+                    if (empty($_SESSION['is_admin'])) {
+                        unset($GLOBALS['navbar'][$key]['navbarItem'][$key1]);
+                    }
+                } else {
+                    // check role bình thường
+                    if (!array_key_exists($role, $_SESSION['user_role'])) {
+                        unset($GLOBALS['navbar'][$key]['navbarItem'][$key1]);
+                    }
                 }
             }
         }
     }
 
-    // Sau khi xoá các navbar item không có trong session nhóm quyền thì duyệt mảng tạo navbar
+
+    // Render HTML menu
     $html = '';
     $current_page = getActiveNav();
+
     foreach ($GLOBALS['navbar'] as $nav) {
         if (isset($nav['navbarItem']) && isset($nav['type']) && count($nav['navbarItem']) > 0) {
             $html .= "<li class=\"nav-main-heading\">".$nav['name']."</li>";
@@ -107,5 +162,6 @@ function build_navbar()
             }
         }
     }
+
     echo $html;
 }

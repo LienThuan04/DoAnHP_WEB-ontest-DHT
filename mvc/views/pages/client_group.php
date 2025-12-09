@@ -153,3 +153,20 @@
         </div>
     </div>
 </div>
+<style>
+  .table-responsive {
+  overflow: visible !important;
+}
+.table-responsive table {
+  overflow: visible !important;
+}
+.table-responsive .dropdown-menu {
+  position: absolute !important;
+  transform: translate3d(0, 0, 0) !important;
+}
+.table tbody tr:hover {
+  background-color: #cfe8ff !important;
+  cursor: pointer;
+}
+
+</style>

@@ -34,79 +34,117 @@ let groups = [];
 
 function showListAnnounce(announces) {
   let html = "";
-  if (announces.length !== 0) {
+
+  if (announces.length > 0) {
     html += `
-      <div class="block block-rounded shadow-sm">
-        <div class="block-header block-header-default bg-body-light">
-          <h3 class="block-title fw-bold text-primary">
-            <i class="fa fa-bullhorn me-2 text-warning"></i> Danh sách thông báo
-          </h3>
+      <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <!-- Header xanh lá đúng tone của anh -->
+        <div class="card-header bg-success bg-gradient text-white border-0 py-4 px-4">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <i class="fa fa-bullhorn fa-lg me-3"></i>
+              <h4 class="mb-0 fw-bold">Danh sách thông báo</h4>
+            </div>
+            <span class="badge bg-white text-success fs-6">${announces.length} thông báo</span>
+          </div>
         </div>
-        <div class="block-content">
-          <table class="table table-bordered table-striped table-hover table-vcenter">
-            <thead class="table-light">
-              <tr class="text-center fw-semibold text-uppercase">
-                <th style="width: 35%;">Nội dung</th>
-                <th style="width: 30%;">Học phần</th>
-                <th style="width: 20%;">Tạo lúc</th>
-                <th style="width: 15%;">Hành động</th>
+
+        <!-- Table responsive -->
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-success small text-uppercase fw-semibold">
+              <tr>
+                <th class="ps-4 text-center" style="width: 42%;">Nội dung</th>
+                <th class="text-center" style="width: 25%;">Học phần</th>
+                <th class="text-center" style="width: 15%;">Thời gian</th>
+                <th class="text-center" style="width: 18%;">Hành động</th>
               </tr>
             </thead>
-            <tbody>
-    `;
+            <tbody class="text-dark">`;
+
     announces.forEach((announce) => {
       html += `
-              <tr>
-                <td class="fw-semibold text-dark">
-                  <i class="fa fa-comment-dots text-muted me-1"></i> ${
-                    announce.noidung
-                  }
+              <tr class="border-start border-3 border-white hover-border-success transition-all">
+                <!-- Nội dung -->
+                <td class="ps-4 py-3 text-center">
+                  <div class="d-flex align-items-center">
+                    <i class="fa fa-comment-alt text-success me-3 flex-shrink-0"></i>
+                    <div class="text-truncate-line-2 fw-medium">
+                      ${escapeHtml(announce.noidung)}
+                    </div>
+                  </div>
                 </td>
-                <td class="text-center text-secondary">
-                  <i class="fa fa-layer-group me-1 text-info"></i>
-                  <strong data-bs-toggle="tooltip" data-bs-animation="true" data-bs-placement="top" style="cursor:pointer"
-                    title="${announce.nhom}">
-                    ${announce.tenmonhoc} - NH${announce.namhoc} - HK${
-        announce.hocky
-      }
-                  </strong>
+
+                <!-- Học phần -->
+                <td class="text-center small">
+                  <div class="fw-semibold text-success" 
+                       data-bs-toggle="tooltip" 
+                       data-bs-placement="top" 
+                       title="${escapeHtml(announce.nhom)}">
+                    ${escapeHtml(announce.tenmonhoc)}
+                  </div>
+                  <div class="text-muted small">${announce.tennamhoc} • ${
+        announce.tenhocky
+      }</div>
                 </td>
+
+                <!-- Thời gian -->
+                <td class="text-center small text-muted">
+                  <i class="fa fa-clock me-1"></i>
+                  ${formatDate(announce.thoigiantao)}
+                </td>
+
+                <!-- Nút hành động -->
                 <td class="text-center">
-                  <i class="fa fa-clock me-1 text-muted"></i> ${formatDate(
-                    announce.thoigiantao
-                  )}
+                  <div class="btn-group" role="group">
+                    <a href="./teacher_announcement/update/${announce.matb}"
+                       class="btn btn-sm btn-outline-success rounded-pill px-3"
+                       data-role="thongbao" data-action="update">
+                      <i class="fa fa-edit"></i>
+                    </a>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger rounded-pill px-3 btn-delete"
+                            data-role="thongbao" data-action="delete"
+                            data-id="${announce.matb}">
+                      <i class="fa fa-trash-alt"></i>
+                    </button>
+                  </div>
                 </td>
-                <td class="text-center">
-                  <a class="btn btn-sm btn-alt-primary rounded-pill px-3 me-1 my-1" 
-                     href="./teacher_announcement/update/${announce.matb}"
-                     data-role="thongbao" data-action="update">
-                    <i class="fa fa-edit me-1"></i> Sửa
-                  </a>
-                  <a class="btn btn-sm btn-alt-danger rounded-pill px-3 my-1 btn-delete"
-                     href="javascript:void(0)" 
-                     data-role="thongbao" data-action="delete" 
-                     data-id="${announce.matb}">
-                    <i class="fa fa-trash-alt me-1"></i> Xoá
-                  </a>
-                </td>
-              </tr>
-      `;
+              </tr>`;
     });
+
     html += `
             </tbody>
           </table>
         </div>
-      </div>
-    `;
+
+        <!-- Gợi ý kéo ngang trên mobile -->
+        <div class="card-footer bg-light border-0 py-3 text-muted small text-center d-md-none">
+          Kéo ngang để xem thêm ← →
+        </div>
+      </div>`;
   } else {
-    html += `<div class="alert alert-info text-center py-3 mb-0">
-               <i class="fa fa-info-circle me-1"></i> Không có thông báo nào được tìm thấy.
-             </div>`;
+    html += `
+      <div class="text-center py-5 my-5">
+        <i class="fa fa-bell-slash text-muted mb-4" style="font-size: 4.5rem; opacity: 0.4;"></i>
+        <h5 class="text-muted mb-2">Chưa có thông báo nào</h5>
+        <p class="text-muted">Khi có thông báo mới, chúng sẽ xuất hiện ở đây.</p>
+      </div>`;
     $(".pagination").hide();
   }
 
   $(".list-announces").html(html);
-  $('[data-bs-toggle="tooltip"]').tooltip();
+
+  // Khởi tạo tooltip
+  document
+    .querySelectorAll('[data-bs-toggle="tooltip"]')
+    .forEach((el) => new bootstrap.Tooltip(el));
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
 }
 function loadFilterSemesters() {
   $.ajax({
@@ -119,10 +157,15 @@ function loadFilterSemesters() {
       const seen = new Set();
 
       response.forEach((item) => {
-        const key = `${item.namhoc}-${item.hocky}`;
+        // module.loadData() returns objects with keys: manamhoc, tennamhoc, mahocky, tenhocky
+        const key = `${item.manamhoc}-${item.mahocky}`;
         if (!seen.has(key)) {
           seen.add(key);
-          html += `<option value="${key}">${item.namhoc} - HK${item.hocky}</option>`;
+          // Display readable names
+          const label = item.tennamhoc
+            ? `${item.tennamhoc} - ${item.tenhocky || ""}`
+            : `${item.manamhoc} - ${item.mahocky}`;
+          html += `<option value="${key}">${label}</option>`;
         }
       });
 
@@ -215,7 +258,9 @@ $(document).ready(function () {
         console.log("Dữ liệu nhóm học phần:", response); // Debug
         groups = response;
         response.forEach((item, index) => {
-          html += `<option value="${index}">${item.mamonhoc} - ${item.tenmonhoc} - NH${item.namhoc} - HK${item.hocky}</option>`;
+          const yearLabel = item.tennamhoc ? item.tennamhoc : item.manamhoc;
+          const hkLabel = item.tenhocky ? item.tenhocky : item.mahocky;
+          html += `<option value="${index}">${item.mamonhoc} - ${item.tenmonhoc} -${yearLabel} - ${hkLabel}</option>`;
         });
         $("#nhom-hp").html(html);
       },

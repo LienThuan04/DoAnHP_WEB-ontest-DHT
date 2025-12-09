@@ -39,10 +39,22 @@
                             <a class="dropdown-item" href="javascript:void(0)">Tất cả</a>
                         </div>
                     </div>
+                   
                     <div class="dropdown">
+    <button type="button" class="btn btn-sm btn-link fw-semibold dropdown-toggle"
+        id="inbox-msg-loai" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Loại câu hỏi
+    </button>
+    <div class="dropdown-menu dropdown-menu-end fs-sm" aria-labelledby="inbox-msg-loai">
+        <a class="dropdown-item data-loai" href="javascript:void(0)" data-id="">Tất cả</a>
+        <a class="dropdown-item data-loai" href="javascript:void(0)" data-id="mcq">Trắc nghiệm</a>
+        <a class="dropdown-item data-loai" href="javascript:void(0)" data-id="essay">Tự luận</a>
+        <a class="dropdown-item data-loai" href="javascript:void(0)" data-id="reading">Đọc hiểu</a>
+    </div>
+</div> <div class="dropdown">
                         <button type="button" class="btn btn-sm btn-link fw-semibold dropdown-toggle"
                             id="inbox-msg-filter" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            Độ khó
+                           Mức độ
                         </button>
                         <div class="dropdown-menu dropdown-menu-end fs-sm" aria-labelledby="inbox-msg-filter">
                             <a class="dropdown-item active data-dokho" href="javascript:void(0)" data-id="0">Tất cả</a>
@@ -51,77 +63,225 @@
                             <a class="dropdown-item data-dokho" href="javascript:void(0)" data-id="3">Khó</a>
                         </div>
                     </div>
+
                 </div>
-                <ul class="list-group fs-sm" id="list-question">
-                    <!-- Danh sách câu hỏi -->
-                </ul>
-                <?php if (isset($data["Plugin"]["pagination"])) {
-                    require "./mvc/views/inc/pagination.php";
-                }?>
+                <!-- DANH SÁCH CÂU HỎI -->
+<div class="block block-rounded">
+    <div class="block-content">
+        <ul class="list-group fs-sm" id="list-question">
+            <!-- Danh sách câu hỏi sẽ được render tại đây -->
+        </ul>
+    </div>
+</div>
+
+<!-- PHÂN TRANG -->
+<div class="mt-3">
+    <?php 
+        if (isset($data["Plugin"]["pagination"])) {
+            require "./mvc/views/inc/pagination.php";
+        }
+    ?>
+</div>
+
             </div>
         </div>
     </div>
+
    <div class="col-lg-8 col-xl-8 h100-scroll bg-body-dark">
     <div class="content px-4 py-4">
         <div class="block block-rounded shadow-sm border border-light-subtle bg-white">
             <!-- Header chọn số lượng -->
             <div class="block-content bg-light border-bottom rounded-top py-4 px-3">
                 <div class="d-flex flex-column align-items-center text-center gap-3">
+                    <!-- THỐNG KÊ SỐ LƯỢNG CÂU HỎI THEO ĐÚNG CSDL dethi -->
+<div class="card shadow-sm mb-4 border-0">
+  <div class="card-body">
+    
+    <h5 class="card-title text-primary fw-bold mb-4">
+      <i class="fa fa-chart-pie me-2"></i>
+      Số lượng câu hỏi cần chọn
+    </h5>
 
-                    <span class="fw-bold fs-5 text-dark">Số lượng:</span>
+    <div class="row g-4">
 
-                    <div class="d-flex flex-wrap align-items-center justify-content-center gap-3">
-                        <!-- Dễ -->
-                        <button type="button" class="btn btn-outline-success d-flex align-items-center gap-2 rounded-pill px-3 py-2">
-                            <span class="fw-semibold">Dễ</span>
-                            <span class="badge bg-success text-white rounded-pill px-2">
-                                <span id="slcaude">0</span>/<span id="ttcaude">0</span>
-                            </span>
-                        </button>
-
-                        <!-- Trung bình -->
-                        <button type="button" class="btn btn-outline-warning d-flex align-items-center gap-2 rounded-pill px-3 py-2">
-                            <span class="fw-semibold">Trung bình</span>
-                            <span class="badge bg-warning text-dark rounded-pill px-2">
-                                <span id="slcautb">0</span>/<span id="ttcautb">0</span>
-                            </span>
-                        </button>
-
-                        <!-- Khó -->
-                        <button type="button" class="btn btn-outline-danger d-flex align-items-center gap-2 rounded-pill px-3 py-2">
-                            <span class="fw-semibold">Khó</span>
-                            <span class="badge bg-danger text-white rounded-pill px-2">
-                                <span id="slcaukho">0</span>/<span id="ttcaukho">0</span>
-                            </span>
-                        </button>
-
-                        <!-- Nút tạo đề thi -->
-                        <button type="button" class="btn btn-primary btn-lg d-flex align-items-center gap-2 rounded-pill px-4" id="save-test">
-                            <i class="fa-solid fa-floppy-disk"></i>
-                            <span class="fw-semibold">Tạo đề thi</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="block-content px-4 py-4">
-                <h4 class="text-center text-primary mb-2 fw-bold" id="name-test">Tên đề thi</h4>
-                <p class="text-center text-muted mb-4">Thời gian làm bài: <span id="test-time">--</span> phút</p>
-                <div id="list-question-of-test">
-                </div>
-            </div>
+      <!-- TRẮC NGHIỆM -->
+      <div class="col-12 col-md-4">
+        <div class="text-center mb-3">
+          <span class="badge bg-success text-white fs-6 px-4 py-2 rounded-pill">
+            <i class="fa fa-check-circle me-1"></i> Trắc nghiệm
+          </span>
         </div>
+        <div class="d-flex flex-column gap-3">
+          <button type="button" class="btn btn-outline-success d-flex align-items-center justify-content-between rounded-pill px-4 py-3 shadow-sm">
+            <span class="fw-semibold">Dễ</span>
+            <span class="badge bg-success text-white rounded-pill fs-6 px-3">
+              <span id="sl_mcq_de">0</span>/<span id="tt_mcq_de">0</span>
+            </span>
+          </button>
+
+          <button type="button" class="btn btn-outline-warning d-flex align-items-center justify-content-between rounded-pill px-4 py-3 shadow-sm">
+            <span class="fw-semibold">TB</span>
+            <span class="badge bg-warning text-dark rounded-pill fs-6 px-3">
+              <span id="sl_mcq_tb">0</span>/<span id="tt_mcq_tb">0</span>
+            </span>
+          </button>
+
+          <button type="button" class="btn btn-outline-danger d-flex align-items-center justify-content-between rounded-pill px-4 py-3 shadow-sm">
+            <span class="fw-semibold">Khó</span>
+            <span class="badge bg-danger text-white rounded-pill fs-6 px-3">
+              <span id="sl_mcq_kho">0</span>/<span id="tt_mcq_kho">0</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TỰ LUẬN -->
+      <div class="col-12 col-md-4">
+        <div class="text-center mb-3">
+          <span class="badge bg-warning text-dark fs-6 px-4 py-2 rounded-pill">
+            <i class="fa fa-pen me-1"></i> Tự luận
+          </span>
+        </div>
+        <div class="d-flex flex-column gap-3">
+          <button type="button" class="btn btn-outline-success d-flex align-items-center justify-content-between rounded-pill px-4 py-3 shadow-sm" >
+            <span class="fw-semibold">Dễ</span>
+            <span class="badge bg-success text-white rounded-pill fs-6 px-3">
+              <span id="sl_essay_de">0</span>/<span id="tt_essay_de">0</span>
+            </span>
+          </button>
+
+          <button type="button" class="btn btn-outline-warning d-flex align-items-center justify-content-between rounded-pill px-4 py-3 shadow-sm" >
+            <span class="fw-semibold">TB</span>
+            <span class="badge bg-warning text-dark rounded-pill fs-6 px-3">
+              <span id="sl_essay_tb">0</span>/<span id="tt_essay_tb">0</span>
+            </span>
+          </button>
+
+          <button type="button" class="btn btn-outline-danger d-flex align-items-center justify-content-between rounded-pill px-4 py-3 shadow-sm" >
+            <span class="fw-semibold">Khó</span>
+            <span class="badge bg-danger text-white rounded-pill fs-6 px-3">
+              <span id="sl_essay_kho">0</span>/<span id="tt_essay_kho">0</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ĐỌC HIỂU -->
+      <div class="col-12 col-md-4">
+        <div class="text-center mb-3">
+          <span class="badge bg-primary text-white fs-6 px-4 py-2 rounded-pill">
+            <i class="fa fa-book-open me-1"></i> Đọc hiểu
+          </span>
+        </div>
+        <div class="d-flex flex-column gap-3">
+          <button type="button" class="btn btn-outline-success d-flex align-items-center justify-content-between rounded-pill px-4 py-3 shadow-sm" >
+            <span class="fw-semibold">Dễ</span>
+            <span class="badge bg-success text-white rounded-pill fs-6 px-3">
+              <span id="sl_reading_de">0</span>/<span id="tt_reading_de">0</span>
+            </span>
+          </button>
+
+          <button type="button" class="btn btn-outline-warning d-flex align-items-center justify-content-between rounded-pill px-4 py-3 shadow-sm" >
+            <span class="fw-semibold">TB</span>
+            <span class="badge bg-warning text-dark rounded-pill fs-6 px-3">
+              <span id="sl_reading_tb">0</span>/<span id="tt_reading_tb">0</span>
+            </span>
+          </button>
+
+          <button type="button" class="btn btn-outline-danger d-flex align-items-center justify-content-between rounded-pill px-4 py-3 shadow-sm" >
+            <span class="fw-semibold">Khó</span>
+            <span class="badge bg-danger text-white rounded-pill fs-6 px-3">
+              <span id="sl_reading_kho">0</span>/<span id="tt_reading_kho">0</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      
+      
+
+    </div>
+  </div>
+
+  
+
+</div>
+       <div class="block-content px-4 py-4">
+    <h4 class="text-center text-primary mb-2 fw-bold" id="name-test">Tên đề thi</h4>
+   <p class="text-center mb-4 border-bottom border-3 border-primary pb-1 d-inline-block">
+    Thời gian làm bài: <span id="test-time" class="fw-bold text-dark">--</span>
+</p>
+
+    <div id="list-question-of-test" class="mb-4">
+        <!-- Danh sách câu hỏi sẽ hiển thị ở đây -->
+    </div>
+
+    <!-- Nút Tạo đề thi nằm bên phải -->
+    <div class="d-flex justify-content-end">
+        <button type="button" class="btn btn-primary btn-lg d-flex align-items-center gap-2 rounded-pill px-4" id="save-test">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span class="fw-semibold">Tạo đề thi</span>
+        </button>
     </div>
 </div>
 
-</div>
 <style>
-header,
-footer {
-    display: none !important
+  /* Thu nhỏ card thống kê */
+  .card-body {
+    padding: 1rem 1.2rem !important;
+  }
+
+  /* Thu nhỏ badge tiêu đề (Trắc nghiệm / Tự luận / Đọc hiểu) */
+  .card .badge {
+    font-size: 0.8rem !important;
+    padding: 6px 14px !important;
+  }
+
+  /* Thu nhỏ BUTTON mức độ */
+  .btn.btn-outline-success,
+  .btn.btn-outline-warning,
+  .btn.btn-outline-danger {
+    padding: 6px 12px !important;
+    font-size: 0.9rem;
+    height: 42px; /* nhỏ hơn nhiều */
+  }
+
+  /* Thu nhỏ badge trong button */
+  .btn .badge {
+    font-size: 0.75rem !important;
+    padding: 4px 10px !important;
+    min-width: 48px;
+  }
+
+  /* Thu nhỏ chữ mức độ */
+  .btn span.fw-semibold {
+    font-size: 0.85rem;
+  }
+
+  /* Giảm khoảng cách giữa các nút */
+  .d-flex.flex-column.gap-3 {
+    gap: 0.6rem !important;
+  }
+
+  /* Giảm margin chung */
+  .card.shadow-sm.mb-4 {
+    margin-bottom: 1.2rem !important;
+  }
+
+  /* Responsive: mobile tự thu nhỏ lại  */
+  @media (max-width: 576px) {
+    .btn {
+      height: 38px !important;
+      padding: 4px 10px !important;
+    }
+    .btn .badge {
+      font-size: 0.7rem !important;
+      padding: 3px 8px !important;
+    }
+  }
+  #name-test {
+    font-size: 2rem;     
+    color: #ff0000 !important;
+    font-weight: bold;    
 }
 
-#page-container.page-header-fixed #main-container {
-    padding-top: 0 !important
-}
 </style>

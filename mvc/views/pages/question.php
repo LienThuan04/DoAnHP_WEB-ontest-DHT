@@ -4,203 +4,471 @@
             <h3 class="block-title">Tất cả câu hỏi</h3>
             <div class="block-options">
                 <button type="button" class="btn btn-hero btn-primary" data-bs-toggle="modal"
-                    data-bs-target="#modal-add-question" id="addquestionnew" data-role="cauhoi" data-action="create"><i class="fa-regular fa-plus"></i> Thêm câu
-                    hỏi mới</button>
+                    data-bs-target="#modal-add-question" id="addquestionnew" data-role="cauhoi" data-action="create">
+                    <i class="fa fa-plus me-1"></i> Thêm câu hỏi mới
+                </button>
             </div>
         </div>
+
         <div class="block-content">
-            <form action="#" method="POST" id="search-form" onsubmit="return false;">
-                <div class="row mb-3">
-                    <div class="col-xl-4 d-flex gap-2 align-items-center">
+            <form id="search-form" onsubmit="return false;">
+                <!-- 4 ô lọc -->
+                <div class="row g-3 align-items-center mb-4">
+                    <div class="col-xl-3 col-lg-3 col-md-6 col-12">
                         <select class="js-select2 form-select" id="main-page-monhoc" name="main-page-monhoc"
-                            data-placeholder="Chọn môn học" data-tab="1">
-                            <option></option>
+                            data-placeholder="Chọn môn học">
+                            <option value=""></option>
                         </select>
                     </div>
-                    <div class="col-xl-4 d-flex gap-2 align-items-center">
-                        <select class="js-select2 form-select" id="main-page-chuong" data-tab="1"
-                            name="main-page-chuong" data-placeholder="Chọn chương">
-                            <option></option>
+                    <div class="col-xl-3 col-lg-3 col-md-6 col-12">
+                        <select class="js-select2 form-select" id="main-page-chuong" name="main-page-chuong"
+                            data-placeholder="Chọn chương">
+                            <option value=""></option>
                         </select>
                     </div>
-                    <div class="col-xl-4 d-flex gap-2 align-items-center">
-                        <label for="">Độ khó:</label>
+                    <div class="col-xl-3 col-lg-3 col-md-6 col-12">
                         <select class="js-select2 form-select" id="main-page-dokho" name="main-page-dokho"
-                            style="width: 150px;" data-placeholder="Choose one..">
-                            <option value="0">Tất cả</option>
+                            data-placeholder="Tất cả độ khó">
+                            <option value="0">Tất cả độ khó</option>
                             <option value="1">Cơ bản</option>
                             <option value="2">Trung bình</option>
                             <option value="3">Nâng cao</option>
                         </select>
                     </div>
+                    <div class="col-xl-3 col-lg-3 col-md-6 col-12">
+                        <select class="js-select2 form-select" id="main-page-loai" name="main-page-loai"
+                            data-placeholder="Tất cả loại câu hỏi">
+                            <option value="0">Tất cả loại câu hỏi</option>
+                            <option value="mcq">Trắc nghiệm</option>
+                            <option value="essay">Tự luận</option>
+                            <option value="reading">Đọc hiểu</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="row mb-3">
-                    <div class="input-group">
-                        <input type="text" class="form-control form-control-alt" id="search-input" name="search-input"
-                            placeholder="Nội dung câu hỏi...">
-                        <button class="input-group-text bg-body border-0 btn-search">
-                            <i class="fa fa-search"></i>
-                        </button>
+
+                <!-- Thanh tìm kiếm -->
+                <div class="row mb-5">
+                    <div class="col-12">
+                        <div class="input-group input-group-lg shadow-sm">
+                            <input type="text" class="form-control form-control-alt rounded-start" 
+                                   id="search-input" name="search-input"
+                                   placeholder="Tìm kiếm nội dung câu hỏi...">
+                            <button type="button" class="btn btn-primary rounded-end border-0 btn-search">
+                                <i class="fa fa-search"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>
+
             <div class="table-responsive">
-                <table class="table table-vcenter">
-                    <thead>
+                <table class="table table-vcenter table-hover table-bordered align-middle">
+                    <thead class="table-light">
                         <tr>
                             <th class="text-center" style="width: 100px;">ID</th>
                             <th style="width: 700px;">Nội dung câu hỏi</th>
                             <th class="d-none d-sm-table-cell">Môn học</th>
                             <th class="d-none d-xl-table-cell">Độ khó</th>
-                            <th class="text-center col-header-action">Hành động</th>
+                            <th class="text-center">Hành động</th>
                         </tr>
                     </thead>
-                    <tbody id="listQuestion">
-                    </tbody>
+                    <tbody id="listQuestion"></tbody>
                 </table>
             </div>
+
             <?php if (isset($data["Plugin"]["pagination"])) {
                 require "./mvc/views/inc/pagination.php";
-            }?>
+            } ?>
         </div>
     </div>
 </div>
-<div class="modal fade" id="modal-add-question" tabindex="-1" role="dialog" aria-labelledby="modal-add-question"
-    aria-hidden="true">
+
+
+<!-- Modal thêm/sửa câu hỏi -->
+<div class="modal fade" id="modal-add-question" tabindex="-1" role="dialog" aria-labelledby="modal-add-question" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
         <div class="modal-content">
             <ul class="nav nav-tabs nav-tabs-alt mb-1" role="tablist">
                 <li class="nav-item">
                     <button class="nav-link active" id="btabs-alt-static-home-tab" data-bs-toggle="tab"
-                        data-bs-target="#btabs-alt-static-home" role="tab" aria-controls="btabs-alt-static-home"
-                        aria-selected="true">
+                        data-bs-target="#btabs-alt-static-home" role="tab" aria-controls="btabs-alt-static-home" aria-selected="true">
                         Thêm thủ công
                     </button>
                 </li>
                 <li class="nav-item">
                     <button class="nav-link" id="btabs-alt-static-profile-tab" data-bs-toggle="tab"
-                        data-bs-target="#btabs-alt-static-profile" role="tab" aria-controls="btabs-alt-static-profile"
-                        aria-selected="false">
-                        Thêm từ file
+                        data-bs-target="#btabs-alt-static-profile" role="tab" aria-controls="btabs-alt-static-profile" aria-selected="false">
+                        <i class="fa fa-file-word text-primary me-2"></i>Thêm từ file
                     </button>
                 </li>
                 <li class="nav-item ms-auto">
                     <button type="button" class="btn btn-close p-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 </li>
             </ul>
+
             <div class="modal-body block block-transparent bg-white mb-0 block-rounded">
                 <div class="block-content tab-content">
-                    <div class="tab-pane active" id="btabs-alt-static-home" role="tabpanel"
-                        aria-labelledby="btabs-static-home-tab" tabindex="0">
-                        <form id="form_add_question" onsubmit="return false;">
+                    <!-- Tab: Thêm thủ công -->
+                    <div class="tab-pane active" id="btabs-alt-static-home" role="tabpanel" aria-labelledby="btabs-static-home-tab" tabindex="0">
+                       <form id="form_add_question" onsubmit="return false;">
                             <div class="mb-4">
                                 <div class="row">
-                                    <div class="col-4">
-                                        <label for="" class="form-label">Môn học</label>
-                                        <select class="js-select2 form-select data-monhoc" data-tab="1" id="mon-hoc"
-                                            name="mon-hoc" style="width: 100%;" data-placeholder="Choose one.."
-                                            >
+                                    <div class="col-md-3 col-sm-6 mb-3">
+                                        <label class="form-label" for="mon-hoc">Môn học <span class="text-danger">*</span></label>
+                                        <select class="js-select2 form-select data-monhoc" id="mon-hoc" name="mon-hoc"
+                                            data-tab="1" data-placeholder="Chọn môn học" required>
+                                            <option value=""></option>
                                         </select>
                                     </div>
-                                    <div class="col-4">
-                                        <label class="form-label">Chương</label>
-                                        <select class="js-select2 form-select data-chuong" id="chuong" name="chuong" data-tab="1"
-                                            style="width: 100%;" data-placeholder="Choose one..">
+                                    <div class="col-md-3 col-sm-6 mb-3">
+                                        <label class="form-label" for="chuong">Chương <span class="text-danger">*</span></label>
+                                        <select class="js-select2 form-select data-chuong" id="chuong" name="chuong"
+                                            data-tab="1" data-placeholder="Chọn chương" required>
+                                            <option value=""></option>
                                         </select>
                                     </div>
-                                    <div class="col-4">
-                                        <label class="form-label">Độ khó</label>
-                                        <select class="js-select2 form-select" id="dokho" name="dokho" style="width: 100%;"
-                                            data-placeholder="Choose one..">
-                                            <option></option>
+                                    <div class="col-md-3 col-sm-6 mb-3">
+                                        <label class="form-label" for="dokho">Độ khó <span class="text-danger">*</span></label>
+                                        <select class="js-select2 form-select" id="dokho" name="dokho"
+                                            data-placeholder="Chọn mức độ" required>
+                                            <option value=""></option>
                                             <option value="1">Cơ bản</option>
                                             <option value="2">Trung bình</option>
                                             <option value="3">Nâng cao</option>
                                         </select>
                                     </div>
-                                </div>
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label" for="js-ckeditor">Nội dung câu hỏi</label>
-                                <textarea id="js-ckeditor" name="js-ckeditor"></textarea>
-                            </div>
-                            <div class="mb-4 row">
-                                <h6>Danh sách đáp án</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-vcenter">
-                                        <tbody id="list-options">
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <p>
-                                    <button class="btn btn-hero btn-primary" type="button" data-bs-toggle="collapse"
-                                        data-bs-target="#add_option" aria-expanded="false" aria-controls="add_option">
-                                        Thêm câu trả lời <i class="fa fa-fw fa-angle-down opacity-50"></i>
-                                    </button>
-                                </p>
-                                <div class="collapse" id="add_option">
-                                    <div class="card card-body">
-                                        <label class="form-label" for="option-content">Nội dung trả lời</label>
-                                        <textarea id="option-content" name="option-content"></textarea>
-                                        <div class="form-check mt-4">
-                                            <input class="form-check-input" type="checkbox" value="" id="true-option">
-                                            <label class="form-check-label" for="true-option">
-                                                Đáp án đúng
-                                            </label>
-                                        </div>
-                                        <p>
-                                            <button type="button" class="btn btn-primary mt-3" id="save-option">Lưu câu
-                                                trả lời</button>
-                                            <button type="button" class="btn btn-primary mt-3" id="update-option">Cập
-                                                nhật câu trả lời</button>
-                                        </p>
+                                    <div class="col-md-3 col-sm-6 mb-3">
+                                        <label class="form-label" for="loai-cau-hoi">Loại câu hỏi <span class="text-danger">*</span></label>
+                                        <select class="js-select2 form-select" id="loai-cau-hoi" name="loai-cau-hoi"
+                                            data-placeholder="Chọn loại câu hỏi" required>
+                                            <option value="mcq">Trắc nghiệm</option>
+                                            <option value="essay">Tự luận</option>
+                                            <option value="reading">Đọc hiểu</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
+                            <!-- Passage Input for Reading Type -->
+                            <div class="mb-4" id="passage-area" style="display: none;">
+                                <div class="mb-2">
+                                    <label class="form-label" for="passage-title">Tiêu đề đoạn văn <span class="text-danger">*</span></label>
+                                    <input type="text" id="passage-title" name="passage-title" class="form-control"
+                                        placeholder="Nhập tiêu đề cho đoạn văn">
+                                    <small class="text-muted">Nhập tiêu đề hoặc tên cho đoạn văn đọc hiểu.</small>
+                                </div>
+                                <label class="form-label" for="passage-content">Đoạn ngữ liệu <span class="text-danger">*</span></label>
+                                <textarea id="passage-content" name="passage-content" class="form-control"
+                                    placeholder="Nhập đoạn ngữ liệu cho câu hỏi đọc hiểu"></textarea>
+                                <small class="text-muted">Nhập đoạn văn hoặc nội dung liên quan cho các câu hỏi đọc hiểu.</small>
+                            </div>
+
+                            <!-- Question Content for MCQ and Essay -->
+                            <div class="mb-4" id="question-content-area">
+                                <label class="form-label" for="js-ckeditor">Nội dung câu hỏi <span class="text-danger">*</span></label>
+                                <textarea id="js-ckeditor" name="js-ckeditor" class="form-control"></textarea>
+
+                                <div class="mb-3">
+    <label class="form-label">Hình ảnh câu hỏi (tùy chọn)</label>
+    <input type="file" class="form-control" id="question-image" accept="image/*">
+
+    <!-- VÙNG PREVIEW ẢNH + NÚT XÓA -->
+    <div class="mt-3" id="question-image-preview-container">
+        <div id="question-image-preview">
+            <small class="text-muted">Không có ảnh</small>
+        </div>
+    </div>
+</div>
+
+                                
+                            </div>
+
+                            <!-- MCQ Options -->
+                            <div class="mb-4" id="mcq-options-area">
+                                <h6 class="mb-3">Danh sách đáp án</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-vcenter table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-center" style="width: 50px;">STT</th>
+                                                <th>Nội dung đáp án</th>
+                                                <th class="text-center" style="width: 150px;">Hình ảnh</th>
+                                                <th class="text-center" style="width: 150px;">Đáp án đúng</th>
+                                                <th class="text-center" style="width: 150px;">Hành động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="list-options"></tbody>
+                                    </table>
+                                </div>
+
+                                <div class="mb-3">
+                                    <button class="btn btn-hero btn-primary mt-3" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#add_option" aria-expanded="false" aria-controls="add_option">
+                                        <i class="fa fa-plus me-1"></i> Thêm đáp án
+                                    </button>
+                                </div>
+
+                                <div class="collapse mt-3" id="add_option">
+                                    <div class="card card-body border">
+                                        <label class="form-label" for="option-content">Nội dung đáp án</label>
+                                        <textarea id="option-content" name="option-content" class="form-control"></textarea>
+                                        <div class="form-check mt-3">
+                                            <input class="form-check-input" type="checkbox" value="" id="true-option">
+                                            <label class="form-check-label" for="true-option">Đáp án đúng</label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="option-image">Hình ảnh đáp án (tùy chọn)</label>
+                                            <input type="file" class="form-control" id="option-image" name="option-image[]" accept="image/*">
+                                            <small class="text-muted">Hình minh họa cho đáp án.</small>
+                                        </div>
+                                        <div class="mt-3" id="option-image-preview-container">
+                <div id="option-image-preview">
+                    <small class="text-muted">Không có ảnh</small>
+                </div>
+            </div>
+                                        <div class="mt-3">
+                                            <button type="button" class="btn btn-primary me-2" id="save-option">Lưu đáp án</button>
+                                            <button type="button" class="btn btn-primary" id="update-option" style="display: none;">Cập nhật đáp án</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reading Questions -->
+                            <div class="mb-4" id="reading-questions-area" style="display: none;">
+                                <h6 class="mb-3">Danh sách câu hỏi đọc hiểu</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-vcenter table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 60px;">STT</th>
+                                                <th style="width: 400px;">Câu hỏi</th>
+                                                <th>Phương án</th>
+                                                <th class="text-center" style="width: 100px;">Đáp án</th>
+                                                <th class="text-center" style="width: 150px;">Hành động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="reading-questions-list"></tbody>
+                                    </table>
+                                </div>
+
+                                <button class="btn btn-hero btn-primary mt-3" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#add_reading_question" aria-expanded="false" aria-controls="add_reading_question">
+                                    <i class="fa fa-plus me-1"></i> Thêm câu hỏi đọc hiểu
+                                </button>
+
+                                <div class="collapse mt-3" id="add_reading_question">
+                                    <div class="card card-body border">
+                                        <label class="form-label" for="reading-question-content">Nội dung câu hỏi</label>
+                                        <textarea id="reading-question-content" name="reading-question-content" class="form-control" rows="4"></textarea>
+                                        <h6 class="mt-3">Danh sách đáp án</h6>
+                                        <div id="reading-question-options" class="mb-3"></div>
+                                        <div class="mb-3">
+                                            <button type="button" class="btn btn-primary mb-3" id="add-reading-option">Thêm đáp án</button>
+                                        </div>
+                                        <div class="mt-3">
+                                            <button type="button" class="btn btn-alt-primary" id="save-reading-question">
+                                                <i class="fa fa-check me-1"></i> Lưu câu hỏi
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="mb-4">
-                                <button type="submit" class="btn btn-alt-primary" id="add_question"><i
-                                        class="fa fa-fw fa-plus me-1"></i> Lưu câu hỏi</button>
-                                <button class="btn btn-alt-primary" id="edit_question"><i
-                                        class="fa fa-fw fa-plus me-1"></i> Sửa câu hỏi</button>
+                                <button type="submit" class="btn btn-alt-success" id="add_question">
+                                    <i class="fa fa-save me-1"></i> Lưu
+                                </button>
+                                <button type="button" class="btn btn-alt-primary" id="edit_question" style="display: none;">
+                                    <i class="fa fa-pencil-alt me-1"></i> Sửa câu hỏi
+                                </button>
                                 <input type="hidden" value="" id="question_id">
                             </div>
                         </form>
                     </div>
-                    <div class="tab-pane" id="btabs-alt-static-profile" role="tabpanel"
-                        aria-labelledby="btabs-static-profile-tab" tabindex="0">
-                        <form id="form-upload" method="POST" enctype="multipart/form-data">
-                            <div class="mb-4">
-                                <div class="row">
-                                    <div class="col-6">
-                                        <label for="" class="form-label">Môn học</label>
-                                        <select id="monhocfile" class="js-select2 form-select data-monhoc" data-tab="2"
-                                            style="width: 100%;" data-placeholder="Choose one.." required>
-                                        </select>
+
+                    <!-- Tab: Thêm từ file -->
+                    <div class="tab-pane" id="btabs-alt-static-profile" role="tabpanel" aria-labelledby="btabs-static-profile-tab" tabindex="0">
+                        <form id="form-upload" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                            <div class="block block-rounded shadow">
+                                <div class="block-header block-header-default bg-primary-dark">
+                                    <h3 class="block-title text-white">
+                                        Nhập câu hỏi từ file Word (.docx)
+                                    </h3>
+                                </div>
+
+                                <div class="block-content block-content-full">
+                                    <div class="row g-3 mb-4">
+                                        <div class="col-6">
+                                            <label class="form-label">Môn học <span class="text-danger">*</span></label>
+                                            <select id="monhocfile" class="js-select2 form-select data-monhoc" data-tab="2"
+                                                style="width: 100%;" data-placeholder="Chọn môn học" required></select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">Chương <span class="text-danger">*</span></label>
+                                            <select id="chuongfile" class="js-select2 form-select data-chuong" data-tab="2"
+                                                style="width: 100%;" data-placeholder="Chọn chương" required></select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">Loại câu hỏi <span class="text-danger">*</span></label>
+                                            <select id="loaicauhoifile" class="js-select2 form-select" data-tab="2" style="width: 100%;" required>
+                                                <option value="">Chọn loại câu hỏi</option>
+                                                <option value="mcq">Trắc nghiệm</option>
+                                                <option value="essay">Tự luận</option>
+                                                <option value="reading">Đọc hiểu</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div class="col-6">
-                                        <label class="form-label">Chương</label>
-                                        <select id="chuongfile" class="js-select2 form-select data-chuong" data-tab="2"
-                                            style="width: 100%;" data-placeholder="Choose one.." required>
-                                        </select>
+
+                                    <div class="mb-4">
+                                        <label class="form-label" for="file-cau-hoi">
+                                            File câu hỏi (.docx) <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="file" class="form-control form-control-lg" id="file-cau-hoi" accept=".docx" required>
+                                        <div class="form-text mt-2">Chỉ hỗ trợ file Word 2007 trở lên (.docx)</div>
+                                        <div class="invalid-feedback">Vui lòng chọn file .docx</div>
+                                    </div>
+
+                                    <div class="alert alert-info d-flex align-items-start mb-4" role="alert">
+                                        <i class="fa fa-info-circle fa-2x me-3"></i>
+                                        <div>
+                                            <strong>Hướng dẫn nhanh:</strong><br>
+                                            • Dùng <code>[Essay][3]</code> cho tự luận - mức độ khó<br>
+                                            • Dùng <code>[Reading][2]</code> cho đoạn văn - mức độ TB<br>
+                                            • Dùng <code>[mcq][1]</code> cho trắc nghiệm - mức độ dễ<br><br>
+
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Tải file mẫu theo định dạng:</label>
+                                                <div class="d-flex gap-2 flex-wrap">
+                                                    <a href="./public/filemau/THEMFILE_TRACNGHIEM.pdf" class="btn btn-alt-success btn-sm" download>
+                                                        <i class="fa fa-download me-1"></i> Trắc nghiệm (.pdf)
+                                                    </a>
+                                                    <a href="./public/filemau/THEMFILE_TULUAN.pdf" class="btn btn-alt-danger btn-sm" download>
+                                                        <i class="fa fa-download me-1"></i> Tự luận (.pdf)
+                                                    </a>
+                                                    <a href="./public/filemau/THEMFILE_DOANVAN.pdf" class="btn btn-alt-warning btn-sm" download>
+                                                        <i class="fa fa-download me-1"></i> Đoạn văn (.pdf)
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div id="preview-cau-hoi" class="mb-4" style="display: none; max-height: 500px; overflow-y: auto;"></div>
+
+                                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                        <button type="button" class="btn btn-alt-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-hero-primary" id="btnAddExcel" disabled>Thêm file Excel (sắp có)</button>
+                                            <button type="submit" class="btn btn-hero-success btn-lg" id="nhap-file" disabled>
+                                                <span id="text-nhap-file">Thêm vào hệ thống</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="mb-4">
-                                <label class="form-label" for="file-cau-hoi">Nội dung</label>
-                                <input class="form-control" type="file" id="file-cau-hoi" accept=".docx" required>
-                            </div>
-                            <div class="mb-4">
-                                <em>Vui lòng soạn câu hỏi theo đúng định dạng. <a href="./public/filemau/mau_import_cau_hoi.docx">Tải về file mẫu Docx</a></em>
-                            </div>
-                            <div class="mb-4 d-flex justify-content-between">
-                                <button type="submit" class="btn btn-hero btn-primary" id="nhap-file"><i
-                                        class="fa fa-cloud-arrow-up"></i> Thêm vào hệ thống</button>
-                            </div>
                         </form>
-                        <div id="content-file"></div>
+                        <div id="content-file" class="mt-4"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.reading-content {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+.btn-search i {
+    color: white;
+}
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+}
+.shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+.js-select2 {
+    width: 100% !important;
+}
+
+.select2-container {
+    width: 100% !important;
+}
+.correct-radio {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #6c757d;
+  border-radius: 50%;
+  outline: none;
+  cursor: default;
+  position: relative;
+  margin: 0;
+}
+
+.correct-radio.correct-answer {
+  border-color: blue;
+}
+
+.correct-radio.correct-answer::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background-color: blue;
+  border-radius: 50%;
+}
+
+.correct-radio:checked:not(.correct-answer) {
+  border-color: #6c757d;
+}
+
+.correct-radio:checked:not(.correct-answer)::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background-color: #6c757d;
+  border-radius: 50%;
+}
+#nhap-file.btn-success {
+  background: linear-gradient(90deg, #28a745, #5cd65c);
+  border-color: #28a745;
+  color: #fff;
+}
+
+
+</style>
+
+<script>
+    // const questionImageInput = document.getElementById('question-image');
+    // const questionImagePreview = document.getElementById('question-image-preview');
+
+    // questionImageInput.addEventListener('change', function() {
+    //     const file = this.files[0];
+    //     if (file) {
+    //         const reader = new FileReader();
+    //         reader.onload = function(e) {
+    //             questionImagePreview.src = e.target.result;
+    //             questionImagePreview.style.display = 'block';
+    //         }
+    //         reader.readAsDataURL(file);
+    //     } else {
+    //         questionImagePreview.src = '';
+    //         questionImagePreview.style.display = 'none';
+    //     }
+    // });
+</script>

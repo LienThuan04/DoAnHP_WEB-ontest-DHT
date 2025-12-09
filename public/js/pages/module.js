@@ -84,8 +84,8 @@ $(document).ready(function () {
             <h4 class="mb-0 fw-bold text-primary" id="${d++}">
               <span class="mamonhoc">${item.mamonhoc}</span> - 
               <span class="tenmonhoc">${item.tenmonhoc}</span> - 
-              NH <span class="namhoc">${item.namhoc}</span> - 
-              HK <span class="hocky">${item.hocky}</span>
+              <span class="namhoc">(${item.tennamhoc})</span> - 
+              <span class="hocky">${item.tenhocky}</span>
             </h4>
             ${htmlbtnhide}
           </div>
@@ -306,6 +306,7 @@ $(document).ready(function () {
 
   // Reset feedback khi mở modal
   $("#modal-add-group").on("show.bs.modal", function () {
+    loadNamHoc();
     $("#ten-nhom").removeClass("is-invalid");
     $(".duplicate-feedback").remove();
   });
@@ -324,28 +325,71 @@ $(document).ready(function () {
     "json"
   );
 
-  function renderListYear() {
-    let html = "<option></option>";
-    let today = new Date();
-    let currentYear = today.getFullYear();
-    let currentMonth = today.getMonth() + 1;
-
-    let startYear = currentMonth < 8 ? currentYear - 1 : currentYear;
-    let year1 = `${startYear}-${startYear + 1}`;
-    let year2 = `${startYear + 1}-${startYear + 2}`;
-
-    html += `<option value="${year1}">${year1}</option>`;
-    html += `<option value="${year2}">${year2}</option>`;
-
-    $("#nam-hoc").html(html);
-    $("#nam-hoc").select2({ placeholder: "Chọn năm học" });
-    $("#nam-hoc").val(year1).trigger("change");
-  }
-
-  renderListYear();
-
   // Initialize hoc-ky select
   $("#hoc-ky").select2({ placeholder: "Chọn học kỳ" });
+  $("#nam-hoc").select2({ placeholder: "Chọn năm học" });
+  function loadNamHoc() {
+    $.ajax({
+      type: "post",
+      url: "./module/getNamHoc",
+      dataType: "json",
+      success: function (res) {
+        if (res.success && res.data.length > 0) {
+          let options = "<option></option>";
+          res.data.forEach((item) => {
+            options += `<option value="${item.manamhoc}">${item.tennamhoc}</option>`;
+          });
+          $("#nam-hoc").html(options).trigger("change.select2");
+        } else {
+          $("#nam-hoc").html("<option></option>");
+          console.warn("Không có dữ liệu năm học hoặc lỗi:", res.message);
+        }
+      },
+      error: function (xhr, status, error) {
+        console.error("Lỗi load năm học:", status, error, xhr.responseText);
+        Dashmix.helpers("jq-notify", {
+          type: "danger",
+          icon: "fa fa-times me-1",
+          message: "Không thể tải danh sách năm học!",
+        });
+      },
+    });
+  }
+
+  // Khi chọn năm học thì load học kỳ tương ứng
+  $("#nam-hoc").on("change", function () {
+    const namhoc = $(this).val();
+    if (!namhoc) {
+      $("#hoc-ky").html("<option></option>").trigger("change.select2");
+      return;
+    }
+    $.ajax({
+      type: "post",
+      url: "./module/getHocKy",
+      data: { namhoc: namhoc },
+      dataType: "json",
+      success: function (res) {
+        if (res.success && res.data.length > 0) {
+          let options = "<option></option>";
+          res.data.forEach((item) => {
+            options += `<option value="${item.mahocky}">${item.tenhocky}</option>`;
+          });
+          $("#hoc-ky").html(options).trigger("change.select2");
+        } else {
+          $("#hoc-ky").html("<option></option>").trigger("change.select2");
+          console.warn("Không có dữ liệu học kỳ hoặc lỗi:", res.message);
+        }
+      },
+      error: function (xhr, status, error) {
+        console.error("Lỗi load học kỳ:", status, error, xhr.responseText);
+        Dashmix.helpers("jq-notify", {
+          type: "danger",
+          icon: "fa fa-times me-1",
+          message: "Không thể tải danh sách học kỳ!",
+        });
+      },
+    });
+  });
 
   $("#add-group").click(function (e) {
     e.preventDefault();
@@ -425,7 +469,7 @@ $(document).ready(function () {
         if (result.isConfirmed) {
           $.ajax({
             type: "post",
-            url: "./module/delete", 
+            url: "./module/delete",
             data: { manhom: manhom },
             dataType: "json",
             success: function (response) {
@@ -435,7 +479,7 @@ $(document).ready(function () {
                   response.message || "Nhóm đã được xoá thành công",
                   "success"
                 );
-                loadDataGroup(mode); 
+                loadDataGroup(mode);
               } else {
                 swalWithBootstrapButtons.fire(
                   "Lỗi!",

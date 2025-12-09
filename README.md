@@ -1,7 +1,7 @@
-# DoAnHP3_WEB-ontest-DHT
+# DoAnHP4_WEB-ontest-DHT 
 
 **Mô tả**  
-Website quản lý bài thi trực tuyến do **LianHarman** phát triển trong khuôn khổ đồ án học phần 3 ngành Công nghệ Thông tin, Đại học Kỹ thuật Công nghệ Cần Thơ.  
+Website quản lý bài thi trực tuyến do **LianHarman** phát triển trong khuôn khổ đồ án học phần 4 ngành Công nghệ Thông tin từ đồ án 3 lên, Đại học Kỹ thuật Công nghệ Cần Thơ.  
 Hỗ trợ tạo đề thi, làm bài, chấm điểm và thống kê kết quả.
 
 ---
@@ -24,6 +24,8 @@ Hỗ trợ tạo đề thi, làm bài, chấm điểm và thống kê kết qu�
   - Hiển thị danh sách kết quả theo từng thí sinh  
   - Xuất dữ liệu để phục vụ báo cáo (nếu có tích hợp)
 
+- **Hỗ trợ thêm định nghĩa role theo sở thích của admin và trao quyền hạn sử dụng nhất định tùy mục đích của admin**.
+
 ---
 
 ## Cấu trúc thư mục
@@ -43,4 +45,7 @@ Hỗ trợ tạo đề thi, làm bài, chấm điểm và thống kê kết qu�
 1. **Clone repository**:
    ```bash
    git clone https://github.com/LienThuan9697/DoAnHP3_WEB-ontest-DHT.git
-   cd DoAnHP3_WEB-ontest-DHT
+
+2. **Setup database**:
+- Tìm file `tracnghiemonline.sql` trong thư mục `database` rồi dán vào mysql của xampp rồi chạy.
+- Sau khi đã có database ta tiến hành đem thư mục này vào thư mục htdoc của xampp rồi khởi động xampp là đã có dự án.

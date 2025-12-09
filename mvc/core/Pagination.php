@@ -27,7 +27,8 @@ class Pagination extends Controller
     public function getTotal($args)
     {
         $limit = 10;
-        $input = $args['input'] ?? null;
+        // support both 'input' and legacy 'content' keys coming from different pages
+        $input = $args['input'] ?? ($args['content'] ?? null);
         $filter = $args['filter'] ?? null;
         $func = $args['custom']['function'] ?? null;
 
@@ -46,7 +47,9 @@ class Pagination extends Controller
             $count_query = "SELECT COUNT(*) AS total FROM ( $cleanedQuery ) AS sub";
         } else {
             // Loại bỏ ORDER BY và LIMIT nếu có
-            $cleanedQuery = preg_replace('/ORDER BY\s+[\w`.\s,]+(\s+(ASC|DESC))?/i', '', $originalQuery);
+            // Use a more robust pattern to remove the entire ORDER BY clause even when it
+            // contains functions, parentheses or complex expressions (e.g. CAST(...)).
+            $cleanedQuery = preg_replace('/ORDER\s+BY[\s\S]*?(?=(LIMIT|$))/i', '', $originalQuery);
             $cleanedQuery = preg_replace('/LIMIT\s+\d+(\s*,\s*\d+)?/i', '', $cleanedQuery);
 
             // Đếm tổng kết quả qua subquery nếu chứa GROUP BY, UNION hoặc DISTINCT

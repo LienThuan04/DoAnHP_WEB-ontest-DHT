@@ -18,17 +18,32 @@ Dashmix.onLoad(() =>
               min: 1,
               max: 5,
             },
+
+            // --- SỬA Ở ĐÂY ---
             sotiet_lt: {
-              required: true,
+              required: {
+                depends: function () {
+                  let type = $("#loaimon").val();
+                  return type === "lt" || type === "lt+th";
+                },
+              },
               number: true,
               min: 0,
             },
+
             sotiet_th: {
-              required: true,
+              required: {
+                depends: function () {
+                  let type = $("#loaimon").val();
+                  return type === "th" || type === "lt+th";
+                },
+              },
               number: true,
               min: 0,
             },
+            // -----------------
           },
+
           messages: {
             mamonhoc: {
               required: "Vui lòng nhập mã môn học",
@@ -42,11 +57,13 @@ Dashmix.onLoad(() =>
               min: "Số tín chỉ phải lớn hơn 0",
               max: "Số tín chỉ không được vượt quá 5",
             },
+
             sotiet_lt: {
               required: "Vui lòng nhập số tiết lý thuyết",
               number: "Phải là số",
               min: "Không được nhỏ hơn 0",
             },
+
             sotiet_th: {
               required: "Vui lòng nhập số tiết thực hành",
               number: "Phải là số",
@@ -61,11 +78,37 @@ Dashmix.onLoad(() =>
     }
   }.init()
 );
+// Auto handle disable fields based on loaimon
+function handleLoaiMon() {
+  let type = $("#loaimon").val();
+
+  if (type === "lt") {
+    $("#sotiet_lt").prop("disabled", false);
+    $("#sotiet_th").prop("disabled", true).val("");
+  }
+
+  if (type === "th") {
+    $("#sotiet_lt").prop("disabled", true).val("");
+    $("#sotiet_th").prop("disabled", false);
+  }
+
+  if (type === "lt+th") {
+    $("#sotiet_lt").prop("disabled", false);
+    $("#sotiet_th").prop("disabled", false);
+  }
+}
+
+$("#loaimon").on("change", handleLoaiMon);
 
 function showData(subjects) {
   let html = "";
 
   subjects.forEach((subject) => {
+    const statusHtml =
+      subject.trangthai == 1
+        ? `<span class="text-success"><i class="fa fa-check-circle me-1"></i> Còn hoạt động</span>`
+        : `<span class="text-danger"><i class="fa fa-ban me-1"></i> Không còn dạy</span>`;
+
     html += `
       <tr tid="${subject.mamonhoc}">
         <td class="text-center fs-sm">
@@ -81,25 +124,17 @@ function showData(subjects) {
         <td class="d-none d-sm-table-cell text-center fs-sm">
           ${subject.sotietthuchanh}
         </td>
+
+        <!-- CỘT TRẠNG THÁI -->
+        <td class="text-center fs-sm">
+          ${statusHtml}
+        </td>
+
+        <!-- CỘT HÀNH ĐỘNG -->
         <td class="text-center col-action">
           <a
             href="javascript:void(0)"
-            class="btn btn-sm btn-alt-secondary subject-info"
-            data-role="chuong"
-            data-action="view"
-            data-id="${subject.mamonhoc}"
-            data-bs-toggle="modal"
-            data-bs-target="#modal-chapter"
-            data-bs-toggle="tooltip"
-            data-bs-original-title="Chi tiết chương"
-            aria-label="Chi tiết chương"
-          >
-            <i class="fa fa-book-open me-1 text-primary"></i> Chương
-          </a>
-
-          <a
-            href="javascript:void(0)"
-            class="btn btn-sm btn-alt-secondary btn-edit-subject"
+            class="btn btn-sm btn-alt-warning btn-edit"
             data-role="monhoc"
             data-action="update"
             data-id="${subject.mamonhoc}"
@@ -107,12 +142,12 @@ function showData(subjects) {
             data-bs-original-title="Sửa môn học"
             aria-label="Sửa môn học"
           >
-            <i class="fa fa-fw fa-pencil"></i>
+            <i class="fa fa-edit"></i>
           </a>
 
           <a
             href="javascript:void(0)"
-            class="btn btn-sm btn-alt-secondary btn-delete-subject"
+            class="btn btn-sm btn-alt-danger btn-delete"
             data-role="monhoc"
             data-action="delete"
             data-id="${subject.mamonhoc}"
@@ -120,7 +155,7 @@ function showData(subjects) {
             data-bs-original-title="Xoá môn học"
             aria-label="Xoá môn học"
           >
-            <i class="fa fa-fw fa-times"></i>
+            <i class="fa fa-trash"></i>
           </a>
         </td>
       </tr>
@@ -130,59 +165,6 @@ function showData(subjects) {
   $("#list-subject").html(html);
   $('[data-bs-toggle="tooltip"]').tooltip();
 }
-
-$("#sotinchi").on("input", function () {
-  let tinchi = parseFloat($(this).val());
-  let loaimon = $("#loaimon").val();
-  if (isNaN(tinchi) || tinchi <= 0 || !loaimon) {
-    $("#sotiet_lt").val("");
-    $("#sotiet_th").val("");
-    return;
-  }
-  let totalTiet = tinchi * 15; // Tổng số tiết cơ bản (1 TC = 15 tiết)
-
-  switch (loaimon) {
-    case "lt": // Toàn lý thuyết
-      $("#sotiet_lt").val(totalTiet);
-      $("#sotiet_th").val(0);
-      break;
-
-    case "th": // Toàn thực hành
-      if (tinchi === 1) {
-        $("#sotiet_lt").val(0);
-        $("#sotiet_th").val(30);
-      } else if (tinchi === 2) {
-        $("#sotiet_lt").val(0);
-        $("#sotiet_th").val(60);
-      } else if (tinchi === 3) {
-        $("#sotiet_lt").val(0);
-        $("#sotiet_th").val(0);
-      } else if (tinchi === 4) {
-        $("#sotiet_lt").val(0);
-        $("#sotiet_th").val(60);
-      }
-      break;
-
-    case "lt+th": // Lý thuyết + Thực hành
-      if (tinchi === 1) {
-        $("#sotiet_lt").val(15);
-        $("#sotiet_th").val(0);
-      } else if (tinchi === 2) {
-        $("#sotiet_lt").val(15);
-        $("#sotiet_th").val(30);
-      } else if (tinchi === 3) {
-        $("#sotiet_lt").val(30);
-        $("#sotiet_th").val(30);
-      } else if (tinchi === 4) {
-        $("#sotiet_lt").val(45);
-        $("#sotiet_th").val(30);
-      }
-      break;
-  }
-  $("#loaimon").on("change", function () {
-    $("#sotinchi").trigger("input");
-  });
-});
 
 $(document).ready(function () {
   $("[data-bs-target='#modal-add-subject']").click(function (e) {
@@ -197,6 +179,27 @@ $(document).ready(function () {
     $("#sotiet_th").val("");
     $("#loaimon").val("lt+th"); // Giá trị mặc định
   });
+
+  // Khi thay đổi loại môn, tự động reset và disable trường không dùng
+  $("#loaimon").on("change", function () {
+    let type = $(this).val();
+
+    if (type === "lt") {
+      $("#sotiet_lt").prop("disabled", false);
+      $("#sotiet_th").prop("disabled", true).val("");
+    }
+
+    if (type === "th") {
+      $("#sotiet_lt").prop("disabled", true).val("");
+      $("#sotiet_th").prop("disabled", false);
+    }
+
+    if (type === "lt+th") {
+      $("#sotiet_lt").prop("disabled", false);
+      $("#sotiet_th").prop("disabled", false);
+    }
+  });
+
   function checkTonTai(mamon) {
     let check = true;
     $.ajax({
@@ -265,7 +268,7 @@ $(document).ready(function () {
     }
   });
 
-  $(document).on("click", ".btn-edit-subject", function () {
+  $(document).on("click", ".btn-edit", function () {
     $(".update-subject-element").show();
     $(".add-subject-element").hide();
     let mamon = $(this).data("id");
@@ -278,13 +281,28 @@ $(document).ready(function () {
       dataType: "json",
       success: function (response) {
         if (response) {
-          $("#mamonhoc").val(response.mamonhoc).prop("disabled", true),
-            $("#tenmonhoc").val(response.tenmonhoc),
-            $("#sotinchi").val(response.sotinchi),
-            $("#sotiet_lt").val(response.sotietlythuyet),
-            $("#sotiet_th").val(response.sotietthuchanh),
-            $("#modal-add-subject").modal("show"),
-            $("#update_subject").data("id", response.mamonhoc);
+          $("#mamonhoc").val(response.mamonhoc).prop("disabled", true);
+          $("#tenmonhoc").val(response.tenmonhoc);
+          $("#sotinchi").val(response.sotinchi);
+          $("#sotiet_lt").val(response.sotietlythuyet);
+          $("#sotiet_th").val(response.sotietthuchanh);
+
+          // Determine loaimon based on sotietlythuyet and sotietthuchanh
+          let sotiet_lt = parseInt(response.sotietlythuyet) || 0;
+          let sotiet_th = parseInt(response.sotietthuchanh) || 0;
+          let loaimon = "lt+th";
+          if (sotiet_lt > 0 && sotiet_th === 0) {
+            loaimon = "lt";
+          } else if (sotiet_lt === 0 && sotiet_th > 0) {
+            loaimon = "th";
+          } else if (sotiet_lt > 0 && sotiet_th > 0) {
+            loaimon = "lt+th";
+          }
+          $("#loaimon").val(loaimon);
+          handleLoaiMon();
+
+          $("#modal-add-subject").modal("show");
+          $("#update_subject").data("id", response.mamonhoc);
         }
       },
     });
@@ -298,6 +316,8 @@ $(document).ready(function () {
     $("#sotiet_lt").val("");
     $("#sotiet_th").val("");
     $("#loaimon").val("lt+th");
+    handleLoaiMon();
+
     $("#update_subject").data("id", "");
   });
 
@@ -340,7 +360,7 @@ $(document).ready(function () {
     }
   });
 
-  $(document).on("click", ".btn-delete-subject", function () {
+  $(document).on("click", ".btn-delete", function () {
     let trid = $(this).data("id");
     let e = Swal.mixin({
       buttonsStyling: false,
@@ -477,7 +497,7 @@ $(document).ready(function () {
     } else {
       $.ajax({
         type: "post",
-        url: "./subject/addChapter",
+        url: "./view_subject/addChapter",
         data: {
           mamonhoc: mamonhoc,
           tenchuong: $("#name_chapter").val(),

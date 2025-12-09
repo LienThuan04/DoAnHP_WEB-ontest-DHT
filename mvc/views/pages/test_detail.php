@@ -8,8 +8,15 @@
                         <i class="fa fa-table me-2"></i>Bảng điểm
                     </button>
                 </li>
+                <!-- Thêm vào ngay sau <li> của tab "Thống kê" -->
+<li class="nav-item">
+    <button class="nav-link text-success fw-bold" id="cham-tuluan-tab" data-bs-toggle="tab" data-bs-target="#cham-tuluan" role="tab">
+        <i class="fa fa-edit me-2"></i>Chấm tự luận
+        <span class="badge bg-danger ms-2" id="count-chua-cham">0</span>
+    </button>
+</li>
                 <li class="nav-item">
-                    <button class="nav-link text-secondary fw-bold" id="thong-ke-tab" data-bs-toggle="tab" data-bs-target="#thong-ke" role="tab" aria-controls="thong-ke" aria-selected="false">
+                    <button class="nav-link text-warning fw-bold" id="thong-ke-tab" data-bs-toggle="tab" data-bs-target="#thong-ke" role="tab" aria-controls="thong-ke" aria-selected="false">
                         <i class="fa fa-chart-bar me-2"></i>Thống kê
                     </button>
                 </li>
@@ -83,13 +90,71 @@
                                     <th class="text-center">Hành động</th>
                                 </tr>
                             </thead>
-                            <tbody id="took_the_exam"></tbody>
+                            <tbody id="took_the_exam" class="js-table-sections-body"></tbody>
                         </table>
                     </div>
                     <?php if (isset($data["Plugin"]["pagination"])): ?>
                         <?php require "./mvc/views/inc/pagination.php"; ?>
                     <?php endif; ?>
                 </div>
+                <!-- Chấm tự luận -->
+                 <!-- Thêm vào trong <div class="block-content tab-content p-3"> -->
+<div class="tab-pane fade" id="cham-tuluan" role="tabpanel">
+    <div class="row">
+        <!-- Danh sách sinh viên cần chấm -->
+        <div class="col-lg-4">
+            <div class="block block-rounded h-100">
+                <div class="block-header block-header-default">
+                    <h3 class="block-title">Danh sách cần chấm (<span id="total-chua-cham">0</span>)</h3>
+                </div>
+                <div class="block-content block-content-full">
+                    <ul class="list-group list-group-flush" id="danh-sach-sinhvien-tuluan">
+                        <!-- Load bằng JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Khu vực chấm bài -->
+        <div class="col-lg-8">
+            <div class="block block-rounded" id="khu-vuc-cham-bai" style="display:none;">
+                <div class="block-header block-header-default d-flex justify-content-between align-items-center">
+                      <span class="fw-bold fs-5 text-primary">Chi tiết câu trả lời</span>
+            <span class="mx-2 fw-bold">-</span>
+            <span id="ten-sinhvien-cham" class="fw-bold fs-5">Nguyễn Văn A</span>
+            <span class="mx-2 fw-bold">-</span>
+            <span id="mssv-cham" class="fw-bold fs-5">CNTT123456</span>
+                </div>
+                <div class="block-content">
+                    <div id="noi-dung-tuluan"></div>
+                    
+                    <hr class="my-4">
+
+                    <form id="form-cham-diem-tuluan">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Điểm tự luận (tổng: <span id="tong-diem-tuluan">0</span> điểm)</label>
+                            <input type="number" step="0.25" min="0" class="form-control form-control-lg text-center fw-bold text-primary" 
+                                   id="diem-tuluan-input" value="0" style="font-size: 2rem;" readonly>
+                        </div>
+                        <div class="text-center">
+    <button type="submit" class="btn btn-success btn-lg px-5">
+        <i class="fa fa-save me-2"></i>Lưu điểm
+    </button>
+</div>
+
+                    </form>
+                </div>
+            </div>
+
+            <!-- Khi chưa chọn sinh viên -->
+            <div class="text-center py-5 text-muted" id="khong-co-du-lieu">
+                <i class="fa fa-edit fa-5x mb-4 opacity-25"></i>
+                <h4>Chọn một sinh viên để bắt đầu chấm tự luận</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
 
                 <!-- Thống kê -->
                 <div class="tab-pane fade" id="thong-ke" role="tabpanel" aria-labelledby="thong-ke-tab">
@@ -286,3 +351,86 @@
         </div>
     </div>
 </div>
+<style>
+#danh-sach-sinhvien-tuluan .list-group-item {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+#danh-sach-sinhvien-tuluan .list-group-item:hover {
+    background-color: #f8f9fa;
+}
+#danh-sach-sinhvien-tuluan .list-group-item.active {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #1976d2;
+}
+.tuluan-cauhoi {
+    background: #f8f9fa;
+    border-left: 4px solid #1976d2;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.tuluan-cauhoi h5 {
+    color: #1976d2;
+    margin-bottom: 10px;
+}
+.tuluan-image {
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin: 10px 0;
+    cursor: zoom-in;
+}
+.student-item { 
+    transition: all 0.3s ease; 
+    cursor: pointer; 
+  }
+  .student-item:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12)!important; 
+  }
+ /* Active student nhẹ nhàng hơn */
+.student-item.active {
+    background-color: #cfe2ff !important; /* Xanh nhạt Bootstrap */
+    color: #0d6efd !important;           /* chữ xanh đậm */
+    border-left: 4px solid #0d6efd;      /* viền trái nổi bật */
+}
+
+  .student-item.active * { color: white!important; }
+  .student-item.active .text-muted { opacity: 0.9; }
+  .avatar-bg { background: #0d6efd; }
+  .hover-shadow { transition: box-shadow 0.3s; }
+  @media (max-width: 768px) {
+    .student-item .d-flex.gap-3 { gap: 1rem!important; font-size: 0.9rem; }
+    .student-item strong.fs-5 { font-size: 1.1rem!important; }
+    .student-item strong.fs-4 { font-size: 1.3rem!important; }
+  }
+  #khu-vuc-cham-bai {
+    background: #fff;
+    border: 1px solid #e3e3e3;
+    border-radius: 12px;
+}
+#noi-dung-tuluan .card {
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+#noi-dung-tuluan .card-header {
+    font-weight: 600;
+    font-size: 1rem;
+}
+#noi-dung-tuluan .diem-cau {
+    max-width: 120px;
+}
+@media (max-width: 768px) {
+    #khu-vuc-cham-bai {
+        padding: 15px;
+    }
+    #ten-sinhvien-cham, #mssv-cham {
+        font-size: 1rem;
+    }
+    #diem-tuluan-input {
+        font-size: 1.5rem;
+    }
+}
+</style>

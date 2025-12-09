@@ -72,10 +72,7 @@
             <div class="col-6">
               <label for="hoc-ky" class="form-label">Học kỳ</label>
               <select class="js-select2 form-select" id="hoc-ky" name="hoc-ky" style="width: 100%;" data-placeholder="Chọn học kỳ">
-                <option></option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
+                
               </select>
             </div>
           </div>

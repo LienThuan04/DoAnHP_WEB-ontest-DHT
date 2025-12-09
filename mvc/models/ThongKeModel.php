@@ -9,12 +9,18 @@ class ThongKeModel extends DB
             return [];
         }
 
-        $sql = "SELECT DISTINCT n.hocky, CONCAT('Học kỳ ', n.hocky) AS tenhocky
-                FROM nhom n
-                JOIN giaodethi g ON n.manhom = g.manhom
-                JOIN dethi d ON g.made = d.made
-                WHERE d.nguoitao = ? AND n.trangthai = 1 AND d.trangthai = 1
-                ORDER BY n.hocky";
+        $sql = "SELECT DISTINCT 
+    n.hocky AS mahocky,
+    hk.tenhocky
+FROM nhom n
+JOIN hocky hk ON n.hocky = hk.mahocky
+JOIN giaodethi g ON n.manhom = g.manhom
+JOIN dethi d ON g.made = d.made
+WHERE d.nguoitao = ?
+  AND n.trangthai = 1
+  AND d.trangthai = 1
+ORDER BY hk.tenhocky
+";
         $stmt = $this->con->prepare($sql);
         if ($stmt === false) {
             error_log("Prepare failed in getSemesters: " . $this->con->error);
@@ -44,12 +50,18 @@ class ThongKeModel extends DB
             return [];
         }
 
-        $sql = "SELECT DISTINCT n.namhoc, n.namhoc AS tennamhoc
-                FROM nhom n
-                JOIN giaodethi g ON n.manhom = g.manhom
-                JOIN dethi d ON g.made = d.made
-                WHERE d.nguoitao = ? AND n.trangthai = 1 AND d.trangthai = 1
-                ORDER BY n.namhoc DESC";
+        $sql = "SELECT DISTINCT 
+    n.namhoc,
+    nh.tennamhoc
+FROM nhom n
+JOIN namhoc nh ON n.namhoc = nh.manamhoc
+JOIN giaodethi g ON n.manhom = g.manhom
+JOIN dethi d ON g.made = d.made
+WHERE d.nguoitao = ?
+  AND n.trangthai = 1
+  AND d.trangthai = 1
+ORDER BY nh.tennamhoc DESC
+";
         $stmt = $this->con->prepare($sql);
         if ($stmt === false) {
             error_log("Prepare failed in getAcademicYears: " . $this->con->error);

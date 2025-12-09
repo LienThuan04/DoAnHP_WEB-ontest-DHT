@@ -59,74 +59,69 @@ $(document).ready(function () {
     let html = ``;
 
     if (groups.length === 0) {
-      html += `<p class="text-center">Chưa tham gia lớp nào</p>`;
+      html = `<p class="text-center my-3 text-muted">Chưa tham gia lớp nào</p>`;
     } else {
-      html += `
-        <table class="table table-striped table-bordered align-middle shadow-sm">
-          <thead class="table-primary text-center">
-            <tr>
-              <th style="width: 5%">STT</th>
-              <th style="width: 20%">Tên nhóm</th>
-              <th style="width: 25%">Môn học</th>
-              <th style="width: 15%">Giảng viên</th>
-              <th style="width: 10%">Năm</th>
-              <th style="width: 10%">Học kỳ</th>
-              <th style="width: 15%">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
+      html = `
+      <div class="table-responsive">
+      <table class="table table-hover table-borderless align-middle shadow-sm rounded">
+        <thead class="table-primary text-center">
+          <tr>
+            <th>STT</th>
+            <th>Tên nhóm</th>
+            <th>Môn học</th>
+            <th>Giảng viên</th>
+            <th style="white-space:nowrap;">Năm học</th>
+            <th>Học kỳ</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
     `;
 
       groups.forEach((group, index) => {
         const actionBtn =
           group.hienthi == 1
-            ? `<a class="dropdown-item btn-hide-group" data-id="${group.manhom}" href="javascript:void(0)">
-                <i class="si si-eye me-2 text-dark"></i> Ẩn nhóm
-             </a>`
-            : `<a class="dropdown-item btn-unhide-group" data-id="${group.manhom}" href="javascript:void(0)">
-                <i class="si si-action-undo me-2 text-dark"></i> Huỷ ẩn
-             </a>`;
+            ? `<a class="dropdown-item btn-hide-group" data-id="${group.manhom}" href="#"><i class="si si-eye me-2"></i> Ẩn nhóm</a>`
+            : `<a class="dropdown-item btn-unhide-group" data-id="${group.manhom}" href="#"><i class="si si-action-undo me-2"></i> Huỷ ẩn</a>`;
 
         html += `
         <tr>
           <td class="text-center">${index + 1}</td>
-          <td>
-            <strong>${group.tennhom}</strong>
-          </td>
+          <td><strong>${group.tennhom}</strong></td>
           <td>${group.tenmonhoc}</td>
+          <td class="text-center">${group.hoten}</td>
+          <td class="text-center" style="white-space:nowrap;">${
+            group.tennamhoc
+          }</td>
+          <td class="text-center">${group.tenhocky}</td>
           <td class="text-center">
-            ${group.hoten}
-          </td>
-          <td class="text-center">${group.namhoc}</td>
-          <td class="text-center">${group.hocky}</td>
-          <td class="text-center">
-            <div class="dropdown">
-              <button type="button" class="btn btn-sm btn-alt-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="dropdown d-inline">
+              <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">
                 <i class="fa fa-cog"></i>
               </button>
               <div class="dropdown-menu dropdown-menu-end">
                 ${actionBtn}
                 <a class="dropdown-item btn-delete-group" data-id="${
                   group.manhom
-                }" href="javascript:void(0)">
+                }" href="#">
                   <i class="si si-logout me-2"></i> Thoát nhóm
                 </a>
               </div>
-              <button class="btn btn-sm btn-outline-primary btn-view-group mt-2" data-bs-toggle="offcanvas"
-                data-bs-target="#offcanvasExample" data-id="${
-                  group.manhom
-                }" data-index="${index}">
-                Xem
-              </button>
             </div>
+            
+            <button class="btn btn-sm btn-outline-primary btn-view-group ms-1"
+              data-bs-toggle="offcanvas" data-bs-target="#offcanvasExample"
+              data-id="${group.manhom}" data-index="${index}">
+              Xem
+            </button>
           </td>
         </tr>
       `;
       });
 
       html += `
-          </tbody>
-        </table>
+        </tbody>
+      </table>
       </div>
     `;
     }

@@ -103,6 +103,68 @@ class Module extends Controller
             ]);
         }
     }
+    public function getNamHoc()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        AuthCore::checkAuthentication();
+
+        if ($_SERVER["REQUEST_METHOD"] === "POST" && AuthCore::checkPermission("hocphan", "view")) {
+            $manguoidung = $_SESSION['user_id'] ?? '';
+
+            if (empty($manguoidung)) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Không xác định được người dùng.'
+                ]);
+                return;
+            }
+
+            $namhoc_list = $this->nhomModel->getNamHoc($manguoidung);
+
+            echo json_encode([
+                'success' => true,
+                'data' => $namhoc_list
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Yêu cầu không hợp lệ hoặc không có quyền truy cập.'
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+
+    public function getHocKy()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        AuthCore::checkAuthentication();
+
+        if ($_SERVER["REQUEST_METHOD"] === "POST" && AuthCore::checkPermission("hocphan", "view")) {
+            $manguoidung = $_SESSION['user_id'] ?? '';
+            $manamhoc = $_POST['namhoc'] ?? '';
+
+            if (empty($manguoidung) || empty($manamhoc)) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Thiếu thông tin người dùng hoặc năm học.'
+                ], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+
+            $hocky_list = $this->nhomModel->getHocKy($manguoidung, $manamhoc);
+
+            echo json_encode([
+                'success' => true,
+                'data' => $hocky_list
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Yêu cầu không hợp lệ hoặc không có quyền truy cập.'
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
     public function delete()
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -242,6 +304,7 @@ class Module extends Controller
             echo json_encode($result);
         }
     }
+
 
 
     public function addSV()

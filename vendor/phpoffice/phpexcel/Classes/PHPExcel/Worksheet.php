@@ -1090,8 +1090,8 @@ class PHPExcel_Worksheet implements PHPExcel_IComparable
      * @param bool $returnCell   Return the worksheet (false, default) or the cell (true)
      * @return PHPExcel_Worksheet|PHPExcel_Cell    Depending on the last parameter being specified
      */
-    public function setCellValue($pCoordinate = 'A1', $pValue = null, $returnCell = false)
-    {
+public function setCellValue($pCoordinate, $pValue = null, $returnCell = false)    
+{
         $cell = $this->getCell(strtoupper($pCoordinate))->setValue($pValue);
         return ($returnCell) ? $cell : $this;
     }
@@ -1105,7 +1105,7 @@ class PHPExcel_Worksheet implements PHPExcel_IComparable
      * @param bool $returnCell Return the worksheet (false, default) or the cell (true)
      * @return PHPExcel_Worksheet|PHPExcel_Cell    Depending on the last parameter being specified
      */
-    public function setCellValueByColumnAndRow($pColumn = 0, $pRow = 1, $pValue = null, $returnCell = false)
+   public function setCellValueByColumnAndRow($pColumn, $pRow = 1, $pValue = null)
     {
         $cell = $this->getCellByColumnAndRow($pColumn, $pRow)->setValue($pValue);
         return ($returnCell) ? $cell : $this;
@@ -1120,8 +1120,7 @@ class PHPExcel_Worksheet implements PHPExcel_IComparable
      * @param bool $returnCell Return the worksheet (false, default) or the cell (true)
      * @return PHPExcel_Worksheet|PHPExcel_Cell    Depending on the last parameter being specified
      */
-    public function setCellValueExplicit($pCoordinate = 'A1', $pValue = null, $pDataType = PHPExcel_Cell_DataType::TYPE_STRING, $returnCell = false)
-    {
+    public function setCellValueExplicit($pCoordinate, $pValue = null, $pDataType = null){
         // Set value
         $cell = $this->getCell(strtoupper($pCoordinate))->setValueExplicit($pValue, $pDataType);
         return ($returnCell) ? $cell : $this;

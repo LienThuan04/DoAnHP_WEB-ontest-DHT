@@ -636,22 +636,32 @@ class PHPExcel
      * @return New sheet index
      * @throws PHPExcel_Exception
      */
-    public function setIndexByName($sheetName, $newIndex)
-    {
-        $oldIndex = $this->getIndex($this->getSheetByName($sheetName));
-        $pSheet = array_splice(
-            $this->_workSheetCollection,
-            $oldIndex,
-            1
-        );
-        array_splice(
-            $this->_workSheetCollection,
-            $newIndex,
-            0,
-            $pSheet
-        );
-        return $newIndex;
+public function setIndexByName($sheetName, $newIndex)
+{
+    $sheet = $this->getSheetByName($sheetName);
+
+    if ($sheet === null) {
+        throw new Exception("Sheet '$sheetName' not found.");
     }
+
+    $oldIndex = (int)$this->getIndex($sheet);
+
+    $pSheet = array_splice(
+        $this->_workSheetCollection,
+        $oldIndex,
+        1
+    );
+
+    array_splice(
+        $this->_workSheetCollection,
+        $newIndex,
+        0,
+        $pSheet
+    );
+
+    return $newIndex;
+}
+
 
     /**
      * Get sheet count
