@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import { setupCors } from '@/config/cors.config';
 import { validationConfig } from '@/config/validation.config';
 import { setupAppConfig } from '@/config/app-setup.config';
+import { join } from 'path';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -31,6 +32,13 @@ async function bootstrap() {
   // Add cookie-parser middleware to handle cookies in requests and responses, which is essential for managing refresh tokens stored in cookies.
   app.use(cookieParser());
 
+  // ─── SSR (hệ thi OnTest) ──────────────────────────────────────────────
+  // Render HTML phía server bằng EJS (thay view PHP), phục vụ tài nguyên tĩnh
+  // trong public/ (theme/css/js bê từ DHT_OneTest). Xem docs/07.
+  app.useStaticAssets(join(process.cwd(), 'public'));
+  app.setBaseViewsDir(join(process.cwd(), 'views'));
+  app.setViewEngine('ejs');
+
   // Call the CORS setup function to configure CORS for the application
   setupCors(app);
 
@@ -40,6 +48,7 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Application is running on: http://${host}:${port}/${globalPrefix}/v${version}`);
   logger.log(`Swagger is running on: http://${host}:${port}/swagger`);
+  logger.warn(`Server is running, page Home is url: http://${host}:${port}/`);
 }
 
 bootstrap().catch((err) => {
