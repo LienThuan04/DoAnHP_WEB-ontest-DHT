@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <%- include('../partials/head') %>
+  </head>
+  <body class="bg-light">
+    <nav class="navbar navbar-dark bg-primary">
+      <div class="container">
+        <span class="navbar-brand">OnTest</span>
+        <form action="/auth/logout" method="post" class="d-inline">
+          <button class="btn btn-outline-light btn-sm" type="submit">
+            Đăng xuất
+          </button>
+        </form>
+      </div>
+    </nav>
+    <div class="container py-4">
+      <h3>Bảng điều khiển</h3>
+      <div class="card mt-3">
+        <div class="card-body">
+          <p class="mb-1">
+            Xin chào, <strong><%= user.hoten %></strong>
+          </p>
+          <p class="mb-1 text-muted">Email: <%= user.email %></p>
+          <p class="mb-0 text-muted">
+            Nhóm quyền: <%= user.roleName %> (#<%= user.manhomquyen %>)
+          </p>
+        </div>
+      </div>
+      <p class="text-muted mt-3">
+        Trang này yêu cầu đăng nhập (JwtAuthGuard). Gắn
+        <code>@Permissions('resource','action')</code> để kiểm quyền chi tiết.
+      </p>
+    </div>
+    <%- include('../partials/script') %>
+  </body>
+</html>
