@@ -1,0 +1,5 @@
+/* OnTest — style tối thiểu cho scaffold Phase 0-1.
+   Theme Dashmix/CKEditor/Select2 từ DHT_OneTest sẽ bê vào public/ ở phase sau. */
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
