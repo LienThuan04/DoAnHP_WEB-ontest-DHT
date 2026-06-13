@@ -16,8 +16,12 @@ export class PagesController {
   @Public()
   @Get()
   @Render('pages/landing')
-  landing() {
-    return { Title: 'OnTest — Thi trắc nghiệm trực tuyến' };
+  landing(@Req() req: Request) {
+    // Landing công khai: chỉ cần biết đã đăng nhập chưa để đổi nút
+    // (Đăng nhập <-> Dashboard) — kiểm sự hiện diện cookie, không cần verify.
+    const cookieName = process.env.ACCESS_TOKEN_COOKIE || 'access_token';
+    const isLoggedIn = !!req.cookies?.[cookieName];
+    return { Title: 'DHT ONTEST', isLoggedIn };
   }
 
   @Get('dashboard')
