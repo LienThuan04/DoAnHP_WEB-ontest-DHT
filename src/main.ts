@@ -35,7 +35,9 @@ async function bootstrap() {
   // ─── SSR (hệ thi OnTest) ──────────────────────────────────────────────
   // Render HTML phía server bằng EJS (thay view PHP), phục vụ tài nguyên tĩnh
   // trong public/ (theme/css/js bê từ DHT_OneTest). Xem docs/07.
-  app.useStaticAssets(join(process.cwd(), 'public'));
+  // Phục vụ theme Dashmix (css/fonts/media/js) dưới prefix /public/ — khớp đường
+  // dẫn tài nguyên trong markup gốc của DHT_OneTest (./public/...).
+  app.useStaticAssets(join(process.cwd(), 'public'), { prefix: '/public/' });
   app.setBaseViewsDir(join(process.cwd(), 'views'));
   app.setViewEngine('ejs');
 
