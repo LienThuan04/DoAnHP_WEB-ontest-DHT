@@ -16,9 +16,12 @@ import { LoggingInterceptor } from '@/common/interceptors/logging.interceptor';
 import { TransformInterceptor } from '@/common/interceptors/transform.interceptor';
 import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter';
 import { JwtAuthGuard } from '@/lib/passport/jwt-auth.guard';
+import { PermissionsGuard } from '@/lib/passport/permissions.guard';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { EnvConfigModule } from '@/core/env-config.module';
 import { ThrottlerConfigModule } from '@/core/throttler-config.module';
+import { ExamAuthModule } from '@/exam-auth/exam-auth.module';
+import { PagesModule } from '@/pages/pages.module';
 
 @Module({
   imports: [
@@ -27,7 +30,8 @@ import { ThrottlerConfigModule } from '@/core/throttler-config.module';
     SeedDbModule,
     ScheduleModule.forRoot(),
     AuthModule, FilesModule, JobsModule, EmailModule,
-    ThrottlerConfigModule
+    ThrottlerConfigModule,
+    ExamAuthModule, PagesModule,
   ],
   controllers: [AppController],
   providers: [
@@ -37,6 +41,7 @@ import { ThrottlerConfigModule } from '@/core/throttler-config.module';
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
