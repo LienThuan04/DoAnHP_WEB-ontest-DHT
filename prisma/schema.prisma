@@ -90,3 +90,67 @@ model PendingUserUpdate {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HỆ THI OnTest (chuyển từ DHT_OneTest — MySQL → đây là PostgreSQL)
+// Phase 0-1: chỉ 4 model cốt lõi cho auth + RBAC.
+// Các model nghiệp vụ (monhoc, cauhoi, dethi, ketqua, nhom...) bổ sung ở Phase 2+.
+// Giữ @@map tên bảng tiếng Việt để dễ map ngược về PHP (xem docs/04).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Người dùng hệ thi — bảng `nguoidung`
+model NguoiDung {
+  id          String    @id
+  email       String    @unique
+  googleid    String?
+  hoten       String
+  gioitinh    Boolean?
+  ngaysinh    DateTime? @db.Date
+  avatar      String?   @default("ANHSV.png")
+  ngaythamgia DateTime  @default(now()) @db.Date
+  matkhau     String?
+  trangthai   Int       @default(1)
+  sodienthoai Int?
+  token       String?
+  otp         String?
+  manhomquyen Int?
+
+  nhomQuyen NhomQuyen? @relation(fields: [manhomquyen], references: [manhomquyen])
+
+  @@map("nguoidung")
+}
+
+/// Nhóm quyền (role hệ thi) — bảng `nhomquyen`
+model NhomQuyen {
+  manhomquyen  Int     @id @default(autoincrement())
+  tennhomquyen String
+  trangthai    Boolean @default(true)
+
+  nguoiDung    NguoiDung[]
+  chiTietQuyen ChiTietQuyen[]
+
+  @@map("nhomquyen")
+}
+
+/// Chi tiết quyền (role × chức năng × hành động) — bảng `chitietquyen`
+model ChiTietQuyen {
+  manhomquyen Int
+  chucnang    String
+  hanhdong    String
+
+  nhomQuyen       NhomQuyen       @relation(fields: [manhomquyen], references: [manhomquyen], onDelete: Cascade)
+  danhMucChucNang DanhMucChucNang @relation(fields: [chucnang], references: [chucnang])
+
+  @@id([manhomquyen, chucnang, hanhdong])
+  @@map("chitietquyen")
+}
+
+/// Danh mục chức năng (resource) — bảng `danhmucchucnang`
+model DanhMucChucNang {
+  chucnang    String  @id
+  tenchucnang String?
+
+  chiTietQuyen ChiTietQuyen[]
+
+  @@map("danhmucchucnang")
+}
