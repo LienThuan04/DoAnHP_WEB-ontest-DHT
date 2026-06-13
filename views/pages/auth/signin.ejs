@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <%- include('../../partials/head') %>
+  </head>
+  <body class="bg-light">
+    <div class="container" style="max-width: 420px">
+      <div class="card shadow-sm mt-5">
+        <div class="card-body p-4">
+          <h4 class="card-title text-center mb-4">Đăng nhập OnTest</h4>
+          <form id="loginForm">
+            <div class="mb-3">
+              <label class="form-label">Mã đăng nhập</label>
+              <input name="id" class="form-control" autocomplete="username" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Mật khẩu</label>
+              <input
+                name="password"
+                type="password"
+                class="form-control"
+                autocomplete="current-password"
+              />
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <%- include('../../partials/script') %>
+    <script>
+      // jQuery cũ giữ nguyên thói quen $.post — chỉ đổi endpoint sang NestJS.
+      $('#loginForm').on('submit', function (e) {
+        e.preventDefault();
+        $.ajax({
+          url: '/auth/login',
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({
+            id: this.id.value,
+            password: this.password.value,
+          }),
+        })
+          .done(function () {
+            window.location.href = '/dashboard';
+          })
+          .fail(function (xhr) {
+            const msg =
+              (xhr.responseJSON && xhr.responseJSON.message) ||
+              'Đăng nhập thất bại';
+            Swal.fire({ icon: 'error', title: 'Lỗi', text: msg });
+          });
+      });
+    </script>
+  </body>
+</html>
