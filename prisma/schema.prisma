@@ -1,0 +1,92 @@
+// prisma/schema.prisma
+// Define your database models
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  userName      String    @unique
+  googleId      String?   @unique
+  accountType   String    @default("local")
+  avatarUrl     String?
+  backgroundUrl String?
+  description   String?
+  password      String?
+  roleId        String
+  role          Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  sessions      Session[]
+  files         File[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  roleName    String   @unique
+  description String?
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model File {
+  id           String   @id @default(uuid())
+  fileName     String
+  originalName String
+  path         String   @unique
+  mimeType     String
+  size         Int?
+  bucket       String
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String   @unique
+  deviceId     String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, deviceId])
+  @@index([deviceId])
+}
+
+model PendingRegistration {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  userName     String    @unique
+  passwordHash String
+  otpHash      String
+  otpExpiresAt DateTime
+  attemptCount Int       @default(0)
+  resendAfter  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model PendingUserUpdate {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  newEmail       String?
+  newUserName    String?
+  newDescription String?
+  otpHash        String
+  otpExpiresAt   DateTime
+  attemptCount   Int       @default(0)
+  resendAfter    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
