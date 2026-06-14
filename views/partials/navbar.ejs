@@ -44,7 +44,7 @@
         <!-- Menu nghiệp vụ (Phase sau sẽ render động theo quyền — xem docs/06) -->
         <li class="nav-main-heading">Quản lý</li>
         <li class="nav-main-item">
-          <a class="nav-main-link" href="#"><i class="nav-main-link-icon fa fa-users"></i><span class="nav-main-link-name">Người dùng</span></a>
+          <a class="nav-main-link <%= page === 'user' ? 'active' : '' %>" href="/user"><i class="nav-main-link-icon fa fa-users"></i><span class="nav-main-link-name">Người dùng</span></a>
         </li>
         <li class="nav-main-item">
           <a class="nav-main-link <%= page === 'roles' ? 'active' : '' %>" href="/roles"><i class="nav-main-link-icon fa fa-user-shield"></i><span class="nav-main-link-name">Nhóm quyền</span></a>
