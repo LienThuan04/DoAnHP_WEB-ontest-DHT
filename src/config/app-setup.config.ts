@@ -15,6 +15,10 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'roles/getUsers', 'roles/add', 'roles/edit', 'roles/delete',
           // Bản đồ quyền cho permission.js (ẩn/hiện nút theo RBAC).
           'account/getRole',
+          // Quản lý người dùng (user.php) — trang + AJAX ở path gốc.
+          'user', 'user/getTotalPages', 'user/pagination', 'user/checkUser',
+          'user/getDetail', 'user/add', 'user/update', 'user/deleteData',
+          'user/setStatus',
         ],
       });
       app.enableVersioning({
