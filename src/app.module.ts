@@ -17,6 +17,7 @@ import { ExamAuthModule } from '@/exam-auth/exam-auth.module';
 import { PagesModule } from '@/pages/pages.module';
 import { RolesModule } from '@/roles/roles.module';
 import { AccountModule } from '@/account/account.module';
+import { UsersModule } from '@/users/users.module';
 
 /**
  * Hệ thi OnTest là stack DUY NHẤT. Bộ khung demo (users/role/session/auth/files
@@ -31,7 +32,7 @@ import { AccountModule } from '@/account/account.module';
     SeedDbModule,
     EmailModule,
     ThrottlerConfigModule,
-    ExamAuthModule, PagesModule, RolesModule, AccountModule,
+    ExamAuthModule, PagesModule, RolesModule, AccountModule, UsersModule,
   ],
   controllers: [AppController],
   providers: [
