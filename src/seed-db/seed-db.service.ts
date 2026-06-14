@@ -1,7 +1,6 @@
 // seed-db.service.ts
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { roles, users } from '@/seed-db/seed/sample';
 import {
   examRoles,
   examResources,
@@ -19,74 +18,6 @@ export class SeedDbService implements OnModuleInit {
     ) { }
 
     private readonly logger = new Logger(SeedDbService.name);
-
-    private async seedRoles() {
-        try {
-            const existingRoles = await this.prisma.role.findMany();
-
-            if (existingRoles.length > 0) {
-                this.logger.warn(`Roles already exist (${existingRoles.length} roles found). Skipping seeding roles.`);
-                return;
-            }
-
-            // Sử dụng createMany để tối ưu performance
-            const result = await this.prisma.role.createMany({
-                data: roles,
-                skipDuplicates: true, // Bỏ qua nếu trùng
-            });
-
-            this.logger.log(`Seeded ${result.count} roles successfully.`);
-
-            // Log chi tiết từng role (optional)
-            for (const role of roles) {
-                this.logger.debug(`Seeded role: ${role.roleName}`);
-            }
-        } catch (error: any) {
-            this.logger.error(`Error seeding roles: ${error.message}`);
-            throw error; // Ném lỗi để dừng quá trình seed
-        }
-    }
-
-    private async seedUsers() {
-        try {
-            const existingUsers = await this.prisma.user.findMany();
-            if (existingUsers.length > 0) {
-                this.logger.warn(`Users already exist (${existingUsers.length} users found). Skipping seeding users.`);
-                return;
-            }
-            // Lấy số salt rounds từ config, mặc định là 10 nếu không có biến môi trường
-            const saltRounds = parseInt(this.configService.get<string>('BCRYPT_SALT_ROUNDS') || '10', 10);
-            //find role id for USER and ADMIN
-            const ID_ROLE_USER = await this.prisma.role.findUnique({
-                where: { roleName: this.configService.get<string>('NAME_ROLE_USER') || 'USER' },
-            });
-            const ID_ROLE_ADMIN = await this.prisma.role.findUnique({
-                where: { roleName: this.configService.get<string>('NAME_ROLE_ADMIN') || 'ADMIN' },
-            });
-            if (!ID_ROLE_USER || !ID_ROLE_ADMIN) {
-                throw new Error('One or more required roles not found. Please ensure the roles are seeded before seeding users.');
-            }
-            const LIST_USERS = await Promise.all(users.map(async user => ({
-                email: user.email,
-                userName: user.userName,
-                password: await generatePasswordHash(user.password || this.configService.get<string>('DEFAULT_PASSWORD')!, saltRounds),
-                roleId: user.roleName === (this.configService.get<string>('NAME_ROLE_ADMIN') || 'ADMIN') ? ID_ROLE_ADMIN.id : ID_ROLE_USER.id,
-            })));
-            const result = await this.prisma.user.createMany({
-                data: LIST_USERS,
-                skipDuplicates: true, // Bỏ qua nếu trùng
-            });
-            this.logger.log(`Seeded ${result.count} users successfully.`);
-            // Log chi tiết từng user (optional)
-            for (const user of LIST_USERS) {
-                this.logger.debug(`Seeded user: ${user.email} with roleId: ${user.roleId}`);
-            }
-
-        } catch (error: any) {
-            this.logger.error(`Error seeding users: ${error.message}`);
-            throw error;
-        }
-    }
 
     // ─── Hệ thi OnTest (nguoidung / nhomquyen / chitietquyen / danhmucchucnang) ───
 
@@ -165,9 +96,6 @@ export class SeedDbService implements OnModuleInit {
     async seed() {
         try {
             this.logger.log('Starting database seeding...');
-            // Seed theo thứ tự dependency
-            await this.seedRoles();
-            await this.seedUsers();
             // Hệ thi OnTest
             await this.seedExam();
 
@@ -180,11 +108,6 @@ export class SeedDbService implements OnModuleInit {
 
     async clear() {
         try {
-            await this.prisma.pendingRegistration.deleteMany();
-            await this.prisma.pendingUserUpdate.deleteMany();
-            await this.prisma.session.deleteMany();
-            await this.prisma.user.deleteMany();
-            await this.prisma.role.deleteMany();
             // Hệ thi OnTest — xoá theo thứ tự khoá ngoại
             await this.prisma.chiTietQuyen.deleteMany();
             await this.prisma.nguoiDung.deleteMany();
