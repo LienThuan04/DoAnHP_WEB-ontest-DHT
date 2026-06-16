@@ -19,6 +19,9 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'user', 'user/getTotalPages', 'user/pagination', 'user/checkUser',
           'user/getDetail', 'user/add', 'user/update', 'user/deleteData',
           'user/setStatus',
+          // Năm học & Học kỳ (namhoc.php) — trang + AJAX ở path gốc.
+          'namhoc', 'namhoc/getNamHoc', 'namhoc/getHocKy', 'namhoc/addNamHoc',
+          'namhoc/updateNamHoc', 'namhoc/deleteNamHoc',
         ],
       });
       app.enableVersioning({
