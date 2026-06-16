@@ -101,3 +101,33 @@ model HocKy {
 
   @@map("hocky")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2 — Dữ liệu nền: Môn học & Chương (port từ MonHocModel/ChuongModel.php).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Môn học — bảng `monhoc`. Khoá chính là mã môn (chuỗi, vd 'LTW001').
+model MonHoc {
+  mamonhoc       String @id
+  tenmonhoc      String
+  sotinchi       Int?
+  sotietlythuyet Int?
+  sotietthuchanh Int?
+  trangthai      Int?
+
+  chuong Chuong[]
+
+  @@map("monhoc")
+}
+
+/// Chương của môn học — bảng `chuong`. Xoá mềm bằng trangthai = 0.
+model Chuong {
+  machuong  Int     @id @default(autoincrement())
+  tenchuong String
+  mamonhoc  String
+  trangthai Int?
+
+  monHoc MonHoc @relation(fields: [mamonhoc], references: [mamonhoc], onDelete: Cascade)
+
+  @@map("chuong")
+}
