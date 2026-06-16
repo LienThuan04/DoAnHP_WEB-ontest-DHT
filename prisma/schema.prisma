@@ -72,3 +72,32 @@ model DanhMucChucNang {
 
   @@map("danhmucchucnang")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2 — Dữ liệu nền: Năm học & Học kỳ (port từ NamHocModel.php).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Năm học — bảng `namhoc`. Mỗi năm học có nhiều học kỳ (tự sinh khi thêm).
+model NamHoc {
+  manamhoc  Int      @id @default(autoincrement())
+  tennamhoc String
+  trangthai Int?     @default(1)
+  ngaytao   DateTime @default(now())
+
+  hocKy HocKy[]
+
+  @@map("namhoc")
+}
+
+/// Học kỳ — bảng `hocky`. Thuộc 1 năm học; `sohocky` là thứ tự kỳ (1,2,3...).
+model HocKy {
+  mahocky  Int      @id @default(autoincrement())
+  tenhocky String
+  manamhoc Int
+  ngaytao  DateTime @default(now())
+  sohocky  Int      @default(1)
+
+  namHoc NamHoc @relation(fields: [manamhoc], references: [manamhoc], onDelete: Cascade)
+
+  @@map("hocky")
+}
