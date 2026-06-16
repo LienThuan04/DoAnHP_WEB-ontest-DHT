@@ -22,6 +22,12 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           // Năm học & Học kỳ (namhoc.php) — trang + AJAX ở path gốc.
           'namhoc', 'namhoc/getNamHoc', 'namhoc/getHocKy', 'namhoc/addNamHoc',
           'namhoc/updateNamHoc', 'namhoc/deleteNamHoc',
+          // Môn học & Chương (subject.php) — trang + AJAX ở path gốc.
+          'subject', 'subject/getTotalPages', 'subject/pagination',
+          'subject/search', 'subject/checkSubject', 'subject/getDetail',
+          'subject/add', 'subject/update', 'subject/delete',
+          'subject/getAllChapter', 'subject/addChapter',
+          'subject/updateChapter', 'subject/chapterDelete',
         ],
       });
       app.enableVersioning({
