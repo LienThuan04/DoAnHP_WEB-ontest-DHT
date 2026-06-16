@@ -18,12 +18,14 @@ import { PagesModule } from '@/pages/pages.module';
 import { RolesModule } from '@/roles/roles.module';
 import { AccountModule } from '@/account/account.module';
 import { UsersModule } from '@/users/users.module';
+import { AcademicYearsModule } from '@/academic-years/academic-years.module';
 
 /**
  * Hệ thi OnTest là stack DUY NHẤT. Bộ khung demo (users/role/session/auth/files
  * + model User/Role/Session) đã được gỡ; chỉ giữ HẠ TẦNG tái dùng:
  * prisma, common (interceptor/filter/guard), config/core, lib, email, seed-db.
- * Nghiệp vụ hệ thi nằm ở: exam-auth, roles, account, pages (+ phase sau).
+ * Nghiệp vụ hệ thi nằm ở: exam-auth, roles, account, pages, users,
+ * academic-years (+ phase sau).
  */
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { UsersModule } from '@/users/users.module';
     EmailModule,
     ThrottlerConfigModule,
     ExamAuthModule, PagesModule, RolesModule, AccountModule, UsersModule,
+    AcademicYearsModule,
   ],
   controllers: [AppController],
   providers: [
