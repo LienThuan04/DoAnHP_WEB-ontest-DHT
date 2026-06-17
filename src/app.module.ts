@@ -20,6 +20,7 @@ import { AccountModule } from '@/account/account.module';
 import { UsersModule } from '@/users/users.module';
 import { AcademicYearsModule } from '@/academic-years/academic-years.module';
 import { SubjectsModule } from '@/subjects/subjects.module';
+import { QuestionsModule } from '@/questions/questions.module';
 
 /**
  * Hệ thi OnTest là stack DUY NHẤT. Bộ khung demo (users/role/session/auth/files
@@ -36,7 +37,7 @@ import { SubjectsModule } from '@/subjects/subjects.module';
     EmailModule,
     ThrottlerConfigModule,
     ExamAuthModule, PagesModule, RolesModule, AccountModule, UsersModule,
-    AcademicYearsModule, SubjectsModule,
+    AcademicYearsModule, SubjectsModule, QuestionsModule,
   ],
   controllers: [AppController],
   providers: [

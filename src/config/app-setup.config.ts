@@ -28,6 +28,9 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'subject/add', 'subject/update', 'subject/delete',
           'subject/getAllChapter', 'subject/addChapter',
           'subject/updateChapter', 'subject/chapterDelete',
+          // Ngân hàng câu hỏi (question.php) — AJAX đọc + xoá mềm ở path gốc.
+          'question/getQuestionBySubject', 'question/getTotalPageQuestionBySubject',
+          'question/getQuestionById', 'question/getAnswerById', 'question/delete',
         ],
       });
       app.enableVersioning({
