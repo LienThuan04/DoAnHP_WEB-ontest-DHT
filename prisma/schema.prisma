@@ -131,3 +131,57 @@ model Chuong {
 
   @@map("chuong")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 3 — Ngân hàng câu hỏi (port từ CauHoiModel/CauTraLoiModel.php + doan_van).
+// Giữ FK dạng scalar như DB gốc (MySQL không khai báo FOREIGN KEY thật).
+// Riêng cauhoi ↔ cautraloi có quan hệ để cascade xoá đáp án khi xoá câu hỏi.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Đoạn văn dùng cho câu hỏi đọc hiểu (reading) — bảng `doan_van`.
+model DoanVan {
+  madv     Int      @id @default(autoincrement())
+  noidung  String
+  tieude   String?
+  mamonhoc String
+  machuong Int?
+  nguoitao String?
+  trangthai Int?    @default(1)
+  ngaytao  DateTime @default(now())
+
+  @@map("doan_van")
+}
+
+/// Câu hỏi — bảng `cauhoi`. loai: 'mcq' | 'essay' | 'reading'.
+/// dapan_dung chỉ dùng cho mcq (A-D). madv trỏ tới đoạn văn khi loai='reading'.
+/// hinhanh lưu blob ảnh (mediumblob → Bytes).
+model CauHoi {
+  macauhoi   Int     @id @default(autoincrement())
+  noidung    String
+  dapan_dung String? @db.Char(1)
+  dokho      Int
+  mamonhoc   String
+  machuong   Int
+  nguoitao   String?
+  trangthai  Int?    @default(1)
+  loai       String  @default("mcq")
+  madv       Int?
+  hinhanh    Bytes?
+
+  cauTraLoi CauTraLoi[]
+
+  @@map("cauhoi")
+}
+
+/// Đáp án của câu hỏi — bảng `cautraloi`. ladapan: 1 = đáp án đúng.
+model CauTraLoi {
+  macautl   Int     @id @default(autoincrement())
+  macauhoi  Int
+  noidungtl String
+  ladapan   Int     @db.SmallInt
+  hinhanh   Bytes?
+
+  cauHoi CauHoi @relation(fields: [macauhoi], references: [macauhoi], onDelete: Cascade)
+
+  @@map("cautraloi")
+}
