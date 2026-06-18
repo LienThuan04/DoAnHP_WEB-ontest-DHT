@@ -50,3 +50,41 @@ export interface IReadingAnswerRow {
   question_image_base64: string | null;
   option_image_base64: string | null;
 }
+
+/**
+ * Một option/đáp án parse từ JSON `cautraloi` của FormData (addQues/editQuesion).
+ * `image` = base64 ảnh CŨ giữ lại; `delete_image` = cờ xoá ảnh; ảnh MỚI tải lên
+ * đến qua multipart (option_hinhanh[]) chứ không nằm ở đây.
+ */
+export interface IIncomingOption {
+  content?: string;
+  check?: number | string | boolean;
+  image?: string | null;
+  delete_image?: number | string | boolean;
+}
+
+/** Phần tử `cautraloi`: đáp án (mcq/essay) hoặc câu hỏi con reading (có options). */
+export interface IIncomingAnswer extends IIncomingOption {
+  options?: IIncomingOption[];
+}
+
+/** Dữ liệu text (không kể file) gửi lên addQues/editQuesion. */
+export interface IWriteQuestionInput {
+  id?: string;
+  mamon?: string;
+  machuong?: string;
+  dokho?: string;
+  loai?: string;
+  noidung?: string;
+  doanvan_noidung?: string;
+  doanvan_tieude?: string;
+  cautraloi?: string;
+  delete_question_image?: string;
+}
+
+/** Kết quả trả cho addQues/editQuesion — khớp shape question.js mong đợi. */
+export interface IWriteQuestionResult {
+  status: 'success' | 'error';
+  message: string;
+  loai?: string;
+}

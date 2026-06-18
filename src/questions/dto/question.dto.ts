@@ -49,3 +49,50 @@ export class QuestionBySubjectDto {
   @IsInt()
   page?: number = 1;
 }
+
+/**
+ * Body (text fields) của addQues/editQuesion — gửi multipart/form-data kèm file.
+ * Mọi field tới dạng chuỗi (kể cả số & JSON `cautraloi`); service tự parse/ép kiểu
+ * như controller PHP. Tên property snake_case để khớp tên field FormData gốc.
+ */
+export class WriteQuestionDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @IsOptional()
+  @IsString()
+  mamon?: string;
+
+  @IsOptional()
+  @IsString()
+  machuong?: string;
+
+  @IsOptional()
+  @IsString()
+  dokho?: string;
+
+  @IsOptional()
+  @IsString()
+  loai?: string;
+
+  @IsOptional()
+  @IsString()
+  noidung?: string;
+
+  @IsOptional()
+  @IsString()
+  doanvan_noidung?: string;
+
+  @IsOptional()
+  @IsString()
+  doanvan_tieude?: string;
+
+  @IsOptional()
+  @IsString()
+  cautraloi?: string;
+
+  @IsOptional()
+  @IsString()
+  delete_question_image?: string;
+}
