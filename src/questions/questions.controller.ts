@@ -1,4 +1,14 @@
-import { Body, Controller, Post, VERSION_NEUTRAL } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Req,
+  UploadedFiles,
+  UseInterceptors,
+  VERSION_NEUTRAL,
+} from '@nestjs/common';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import type { Request } from 'express';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
 import { QuestionsService } from '@/questions/questions.service';
@@ -6,7 +16,9 @@ import {
   DeleteQuestionDto,
   QuestionBySubjectDto,
   QuestionIdDto,
+  WriteQuestionDto,
 } from '@/questions/dto/question.dto';
+import type { IExamJwtPayload } from '@/exam-auth/interfaces/exam-auth.types';
 
 /**
  * Ngân hàng câu hỏi (AJAX) — thay controller question.php của DHT_OneTest.
@@ -71,5 +83,33 @@ export class QuestionsController {
   @Post('delete')
   delete(@Body() dto: DeleteQuestionDto) {
     return this.questions.delete(dto.macauhoi);
+  }
+
+  /** POST /question/addQues — thêm câu hỏi (multipart: text + ảnh). */
+  @Permissions('cauhoi', 'create')
+  @SkipTransform()
+  @UseInterceptors(AnyFilesInterceptor())
+  @Post('addQues')
+  addQues(
+    @Body() dto: WriteQuestionDto,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Req() req: Request,
+  ) {
+    const user = req.user as IExamJwtPayload;
+    return this.questions.addQuestion(dto, files ?? [], user.id);
+  }
+
+  /** POST /question/editQuesion — sửa câu hỏi (multipart: text + ảnh). */
+  @Permissions('cauhoi', 'update')
+  @SkipTransform()
+  @UseInterceptors(AnyFilesInterceptor())
+  @Post('editQuesion')
+  editQuesion(
+    @Body() dto: WriteQuestionDto,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Req() req: Request,
+  ) {
+    const user = req.user as IExamJwtPayload;
+    return this.questions.editQuestion(dto, files ?? [], user.id);
   }
 }
