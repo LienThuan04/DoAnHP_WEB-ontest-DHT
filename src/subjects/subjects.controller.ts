@@ -95,6 +95,18 @@ export class SubjectsController {
     return this.subjects.getById(dto.mamon);
   }
 
+  /**
+   * GET /subject/getSubjectAssignment — môn được phân công cho user đang đăng nhập
+   * (thay subject.php::getSubjectAssignment). Dùng cho dropdown trang câu hỏi.
+   * Không gate quyền riêng (như PHP): chỉ trả môn của chính user → an toàn.
+   */
+  @SkipTransform()
+  @Get('getSubjectAssignment')
+  getSubjectAssignment(@Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    return this.subjects.getAllSubjectAssignment(user.id);
+  }
+
   /** POST /subject/add — thêm môn học (thay add). */
   @Permissions('monhoc', 'create')
   @SkipTransform()
