@@ -15,6 +15,39 @@ export interface IQuestionRow {
   num_subquestions: number; // số câu hỏi con (chỉ reading), còn lại = 0
 }
 
+/**
+ * Tham số phân trang gửi từ pagination.js (giống users/subjects):
+ * args JSON → {controller, model, limit, page, input/content, filter, custom}.
+ */
+export interface IPaginationArgs {
+  controller?: string;
+  model?: string;
+  limit?: number | string;
+  page?: number | string;
+  input?: string;
+  content?: string;
+  filter?: Record<string, unknown>;
+  custom?: Record<string, unknown>;
+}
+
+/**
+ * Một dòng của bảng danh sách câu hỏi chính (trang /question) — thay
+ * CauHoiModel::getQuery(). Gộp mcq/essay + reading (1 dòng/đoạn văn). Có thêm
+ * mamonhoc/madv/tieude_doanvan so với IQuestionRow để khớp cột UNION của SQL gốc.
+ */
+export interface IQuestionListRow {
+  macauhoi: number;
+  noidung: string;
+  dokho: number;
+  mamonhoc: string;
+  machuong: number;
+  tenmonhoc: string;
+  loai: string;
+  madv: number | null;
+  tieude_doanvan: string;
+  num_subquestions: number;
+}
+
 /** Chi tiết 1 câu hỏi để mở modal sửa — thay getQuestionById() (đã bỏ blob). */
 export interface IQuestionDetail {
   macauhoi: number;
