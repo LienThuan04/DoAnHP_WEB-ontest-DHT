@@ -185,3 +185,23 @@ model CauTraLoi {
 
   @@map("cautraloi")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 5 (kéo lên trước) — Phân công giảng dạy: bảng `phancong`.
+// Gắn người dùng (giảng viên) với môn học theo năm học + học kỳ. Trang ngân hàng
+// câu hỏi dùng để chỉ cho phép thao tác trên môn được phân công (getSubjectAssignment).
+// PK ghép (mamonhoc, manguoidung, namhoc, hocky) như DB gốc; FK để dạng scalar.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Phân công giảng dạy — bảng `phancong`. trangthai = 1: còn hiệu lực.
+model PhanCong {
+  mamonhoc    String
+  manguoidung String
+  namhoc      Int
+  hocky       Int
+  trangthai   Int      @default(1) @db.SmallInt
+  ngaytao     DateTime @default(now())
+
+  @@id([mamonhoc, manguoidung, namhoc, hocky])
+  @@map("phancong")
+}
