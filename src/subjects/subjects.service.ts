@@ -81,8 +81,28 @@ export class SubjectsService {
     return this.prisma.monHoc.findUnique({ where: { mamonhoc: mamon } });
   }
 
-  // NOTE: getAllSubjectAssignment() (môn được phân công cho GV) cần bảng `phancong`
-  // — sẽ bổ sung ở Phase 5 (assignments). Hiện chưa có model PhanCong nên tạm bỏ.
+  /**
+   * Môn học được phân công cho 1 người dùng (giảng viên) — thay
+   * MonHocModel::getAllSubjectAssignment(). Dùng cho dropdown trang ngân hàng
+   * câu hỏi (chỉ thao tác trên môn được phân công).
+   *
+   * SQL gốc: `SELECT DISTINCT monhoc.* FROM phancong JOIN monhoc ... WHERE
+   * phancong.manguoidung = ? AND monhoc.trangthai = 1`. Giữ NGUYÊN hành vi gốc:
+   * KHÔNG lọc theo phancong.trangthai (phân công ngưng vẫn hiện môn).
+   */
+  async getAllSubjectAssignment(userid: string): Promise<ISubjectRow[]> {
+    const assignments = await this.prisma.phanCong.findMany({
+      where: { manguoidung: userid },
+      select: { mamonhoc: true },
+      distinct: ['mamonhoc'],
+    });
+    const codes = assignments.map((a) => a.mamonhoc);
+    if (codes.length === 0) return [];
+    return this.prisma.monHoc.findMany({
+      where: { mamonhoc: { in: codes }, trangthai: 1 },
+      orderBy: { mamonhoc: 'asc' },
+    });
+  }
 
   /** Thêm môn học — thay create(). Trùng mã → 'exist'; ok → true; lỗi → false. */
   async create(
