@@ -7,6 +7,12 @@ import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
  * @Type(() => Number) khi cần.
  */
 
+/** $_POST['args'] (JSON phân trang) của pagination()/getTotalPages(). */
+export class PaginationBodyDto {
+  @IsString()
+  args!: string;
+}
+
 /** $_POST['id'] của getQuestionById()/getAnswerById(). */
 export class QuestionIdDto {
   @Type(() => Number)
