@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
+  Render,
   Req,
   UploadedFiles,
   UseInterceptors,
@@ -14,25 +16,62 @@ import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
 import { QuestionsService } from '@/questions/questions.service';
 import {
   DeleteQuestionDto,
+  PaginationBodyDto,
   QuestionBySubjectDto,
   QuestionIdDto,
   WriteQuestionDto,
 } from '@/questions/dto/question.dto';
+import type { IPaginationArgs } from '@/questions/interfaces/questions.types';
 import type { IExamJwtPayload } from '@/exam-auth/interfaces/exam-auth.types';
 
 /**
- * Ngân hàng câu hỏi (AJAX) — thay controller question.php của DHT_OneTest.
+ * Ngân hàng câu hỏi (SSR + AJAX) — thay controller question.php của DHT_OneTest.
  * Route ở path gốc (VERSION_NEUTRAL, trong exclude của global prefix /api) để
  * khớp URL `/question/...` mà question.js gọi. AJAX dùng @SkipTransform để trả
  * nguyên shape JS gốc mong đợi (mảng / object / số / boolean).
  *
- * Phạm vi đợt này: đọc (getQuestionById, getAnswerById, getQuestionBySubject,
- * getTotalPageQuestionBySubject) + xoá mềm. Trang SSR + thêm/sửa + import
- * Excel/Word làm sau (xem [[conversion-progress]]).
+ * Đã port: trang SSR, danh sách chính (pagination/getTotalPages, JOIN phancong),
+ * đọc/thêm/sửa/xoá. CHƯA port: import Excel/Word (addQuesFile/addExcel/
+ * updateQuestionJSON) — tab "Thêm từ file" tạm vô hiệu (xem [[conversion-progress]]).
  */
 @Controller({ path: 'question', version: VERSION_NEUTRAL })
 export class QuestionsController {
   constructor(private readonly questions: QuestionsService) {}
+
+  private parseArgs(raw: string): IPaginationArgs {
+    try {
+      return JSON.parse(raw) as IPaginationArgs;
+    } catch {
+      return {};
+    }
+  }
+
+  /** GET /question — trang ngân hàng câu hỏi (thay Question::default). */
+  @Permissions('cauhoi', 'view')
+  @Get()
+  @Render('pages/question')
+  page(@Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    return { Title: 'Câu hỏi', Page: 'question', user };
+  }
+
+  /** POST /question/getTotalPages — tổng số trang danh sách (pagination.js). */
+  @Permissions('cauhoi', 'view')
+  @SkipTransform()
+  @Post('getTotalPages')
+  getTotalPages(@Body() dto: PaginationBodyDto, @Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    return this.questions.countQuestionPages(user.id, this.parseArgs(dto.args));
+  }
+
+  /** POST /question/pagination — 1 trang danh sách câu hỏi (pagination.js). */
+  @Permissions('cauhoi', 'view')
+  @SkipTransform()
+  @Post('pagination')
+  paginate(@Body() dto: PaginationBodyDto, @Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    return this.questions.listQuestions(user.id, this.parseArgs(dto.args));
+  }
 
   /** POST /question/getQuestionBySubject — danh sách câu hỏi theo môn. */
   @Permissions('cauhoi', 'view')
