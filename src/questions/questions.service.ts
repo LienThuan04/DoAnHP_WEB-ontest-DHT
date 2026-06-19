@@ -5,7 +5,9 @@ import type {
   IAnswerRow,
   IIncomingAnswer,
   IIncomingOption,
+  IPaginationArgs,
   IQuestionDetail,
+  IQuestionListRow,
   IQuestionRow,
   IReadingAnswerRow,
   IWriteQuestionInput,
@@ -148,6 +150,112 @@ export class QuestionsService {
       where: this.buildWhere(mamonhoc, machuong, dokho, content),
     });
     return Math.ceil(total / PAGE_SIZE);
+  }
+
+  // ── Danh sách chính trang /question (thay CauHoiModel::getQuery + base pagination) ──
+  //
+  // Liệt kê TẤT CẢ câu hỏi của những môn được phân công (JOIN phancong theo
+  // userId) — KHÔNG cố định 1 môn như getQuestionBySubject. Gộp 2 nhánh:
+  //   1. mcq/essay: mỗi câu = 1 dòng.
+  //   2. reading: gộp về 1 dòng/đoạn văn (madv), noidung = đoạn văn cắt 150 ký tự,
+  //      num_subquestions = số câu con.
+  // Lọc tuỳ chọn mamonhoc/machuong/dokho/loai. Dùng $queryRaw vì cần UNION +
+  // GROUP BY — Prisma findMany không diễn đạt được gọn.
+  //
+  // KHÁC bản PHP: nhánh tìm kiếm (input) VẪN ràng buộc phancong (PHP gốc bỏ
+  // phancong khi search → lộ câu của môn không được phân công). Đây là sửa lỗi
+  // an toàn, giữ đúng tinh thần "chỉ thấy môn mình được phân công".
+
+  /** Bộ lọc "đang áp dụng" theo quy ước PHP !empty(): bỏ qua '', '0', 0, null. */
+  private isActiveFilter(v: unknown): boolean {
+    return v != null && v !== '' && v !== '0' && v !== 0;
+  }
+
+  /** Điều kiện lọc ngoài (combined.*) dùng chung cho list & count. */
+  private buildListConditions(filter: Record<string, unknown>): Prisma.Sql {
+    const conds: Prisma.Sql[] = [];
+    if (this.isActiveFilter(filter.mamonhoc))
+      conds.push(Prisma.sql`AND combined.mamonhoc = ${String(filter.mamonhoc)}`);
+    if (this.isActiveFilter(filter.machuong))
+      conds.push(Prisma.sql`AND combined.machuong = ${Number(filter.machuong)}`);
+    if (this.isActiveFilter(filter.dokho))
+      conds.push(Prisma.sql`AND combined.dokho = ${Number(filter.dokho)}`);
+    if (this.isActiveFilter(filter.loai))
+      conds.push(Prisma.sql`AND combined.loai = ${String(filter.loai)}`);
+    return conds.length ? Prisma.join(conds, ' ') : Prisma.empty;
+  }
+
+  /** Truy vấn UNION mcq/essay + reading (gộp 1 dòng/đoạn văn), ràng buộc phancong. */
+  private buildCombinedQuery(userId: string, input: string): Prisma.Sql {
+    const like = `%${input}%`;
+    const normalSearch = input
+      ? Prisma.sql`AND c.noidung ILIKE ${like}`
+      : Prisma.empty;
+    const readingSearch = input
+      ? Prisma.sql`AND (d.noidung ILIKE ${like} OR COALESCE(d.tieude, '') ILIKE ${like})`
+      : Prisma.empty;
+    return Prisma.sql`
+      SELECT c.macauhoi, c.noidung, c.dokho, c.mamonhoc, c.machuong,
+             m.tenmonhoc, c.loai, NULL::int AS madv, NULL::text AS tieude_doanvan,
+             0::int AS num_subquestions
+      FROM cauhoi c
+      JOIN monhoc m ON c.mamonhoc = m.mamonhoc
+      JOIN phancong p ON p.mamonhoc = c.mamonhoc AND p.manguoidung = ${userId}
+      WHERE c.trangthai = 1 AND c.madv IS NULL ${normalSearch}
+      UNION ALL
+      SELECT MIN(c.macauhoi) AS macauhoi,
+             LEFT(d.noidung, 150) || (CASE WHEN CHAR_LENGTH(d.noidung) > 150 THEN '...' ELSE '' END) AS noidung,
+             MIN(c.dokho) AS dokho, d.mamonhoc, d.machuong, m.tenmonhoc,
+             'reading' AS loai, d.madv, COALESCE(d.tieude, '') AS tieude_doanvan,
+             (SELECT COUNT(*)::int FROM cauhoi sub WHERE sub.madv = d.madv AND sub.loai = 'reading' AND sub.trangthai = 1) AS num_subquestions
+      FROM doan_van d
+      JOIN cauhoi c ON c.madv = d.madv AND c.loai = 'reading' AND c.trangthai = 1
+      JOIN monhoc m ON d.mamonhoc = m.mamonhoc
+      JOIN phancong p ON p.mamonhoc = d.mamonhoc AND p.manguoidung = ${userId}
+      WHERE d.trangthai = 1 ${readingSearch}
+      GROUP BY d.madv, d.noidung, d.tieude, d.mamonhoc, d.machuong, m.tenmonhoc
+    `;
+  }
+
+  /** POST /question/pagination — 1 trang danh sách câu hỏi (pagination.js). */
+  listQuestions(userId: string, args: IPaginationArgs): Promise<IQuestionListRow[]> {
+    const limit = Number(args.limit) || PAGE_SIZE;
+    const page = Math.max(Number(args.page) || 1, 1);
+    const offset = (page - 1) * limit;
+    const input = (args.input ?? args.content ?? '').trim();
+    const combined = this.buildCombinedQuery(userId, input);
+    const extra = this.buildListConditions(args.filter ?? {});
+    return this.prisma.$queryRaw<IQuestionListRow[]>(Prisma.sql`
+      SELECT DISTINCT combined.macauhoi, combined.noidung, combined.dokho,
+             combined.mamonhoc, combined.machuong, combined.tenmonhoc,
+             combined.loai, combined.madv, combined.tieude_doanvan,
+             combined.num_subquestions
+      FROM ( ${combined} ) AS combined
+      WHERE 1 = 1 ${extra}
+      ORDER BY combined.macauhoi ASC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
+  }
+
+  /** POST /question/getTotalPages — tổng số trang danh sách (pagination.js). */
+  async countQuestionPages(
+    userId: string,
+    args: IPaginationArgs,
+  ): Promise<{ totalPages: number }> {
+    const limit = Number(args.limit) || PAGE_SIZE;
+    const input = (args.input ?? args.content ?? '').trim();
+    const combined = this.buildCombinedQuery(userId, input);
+    const extra = this.buildListConditions(args.filter ?? {});
+    const rows = await this.prisma.$queryRaw<{ total: number }[]>(Prisma.sql`
+      SELECT COUNT(*)::int AS total FROM (
+        SELECT DISTINCT combined.macauhoi, combined.mamonhoc, combined.machuong,
+               combined.dokho, combined.loai, combined.madv
+        FROM ( ${combined} ) AS combined
+        WHERE 1 = 1 ${extra}
+      ) AS counted
+    `);
+    const total = rows[0]?.total ?? 0;
+    return { totalPages: Math.ceil(total / limit) };
   }
 
   /** POST /question/getQuestionById — chi tiết 1 câu hỏi để mở modal sửa. */
