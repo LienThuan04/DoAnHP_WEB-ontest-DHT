@@ -121,3 +121,53 @@ export interface IWriteQuestionResult {
   message: string;
   loai?: string;
 }
+
+// ── Import từ file Word (.docx) — thay xulydoanvan/xulytracnghiem/xulytuluan ──
+//
+// Các parser trả về MẢNG item theo đúng shape JSON mà question.js dựng preview
+// (renderPreview) rồi gửi lại addQuesFile. Trường `answer` là số 1-based (A=1).
+
+/** Một câu trắc nghiệm cấp cao nhất parse từ file. */
+export interface IParsedMcq {
+  type: 'mcq';
+  level: number;
+  question: string;
+  option: string[];
+  answer: number;
+}
+
+/** Một câu hỏi con của khối đọc hiểu (loai='reading' trong DB gốc). */
+export interface ISubQuestion {
+  type: 'reading';
+  level: number;
+  question: string;
+  option: string[];
+  answer: number;
+}
+
+/** Một câu tự luận parse từ file. */
+export interface IParsedEssay {
+  type: 'essay';
+  level: number;
+  question: string;
+}
+
+/** Một khối đọc hiểu parse từ file (đoạn văn + câu hỏi con). */
+export interface IParsedReading {
+  type: 'reading';
+  level: number;
+  title: string;
+  passage: string;
+  questions: ISubQuestion[];
+}
+
+/** Một mục bất kỳ trong JSON gửi lên updateQuestionJSON/addQuesFile. */
+export type IParsedItem = IParsedMcq | IParsedEssay | IParsedReading;
+
+/** Kết quả addQuesFile — khớp shape question.js mong đợi (inserted + errors). */
+export interface IAddFileResult {
+  status: 'success' | 'error';
+  inserted?: number;
+  errors?: string[];
+  message?: string;
+}
