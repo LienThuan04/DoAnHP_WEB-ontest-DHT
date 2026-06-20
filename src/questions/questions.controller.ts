@@ -1,27 +1,34 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   Post,
   Render,
   Req,
+  UploadedFile,
   UploadedFiles,
   UseInterceptors,
   VERSION_NEUTRAL,
 } from '@nestjs/common';
-import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
 import { QuestionsService } from '@/questions/questions.service';
 import {
+  AddQuesFileDto,
   DeleteQuestionDto,
   PaginationBodyDto,
   QuestionBySubjectDto,
   QuestionIdDto,
+  UpdateQuestionJsonDto,
   WriteQuestionDto,
 } from '@/questions/dto/question.dto';
-import type { IPaginationArgs } from '@/questions/interfaces/questions.types';
+import type {
+  IPaginationArgs,
+  IParsedItem,
+} from '@/questions/interfaces/questions.types';
 import type { IExamJwtPayload } from '@/exam-auth/interfaces/exam-auth.types';
 
 /**
@@ -31,8 +38,9 @@ import type { IExamJwtPayload } from '@/exam-auth/interfaces/exam-auth.types';
  * nguyên shape JS gốc mong đợi (mảng / object / số / boolean).
  *
  * Đã port: trang SSR, danh sách chính (pagination/getTotalPages, JOIN phancong),
- * đọc/thêm/sửa/xoá. CHƯA port: import Excel/Word (addQuesFile/addExcel/
- * updateQuestionJSON) — tab "Thêm từ file" tạm vô hiệu (xem [[conversion-progress]]).
+ * đọc/thêm/sửa/xoá, import từ file Word (.docx): parse (xulydoanvan/xulytracnghiem/
+ * xulytuluan) + chuẩn hoá (updateQuestionJSON) + ghi lô (addQuesFile).
+ * CHƯA port: addExcel — nút Excel ở UI đang vô hiệu ("sắp có").
  */
 @Controller({ path: 'question', version: VERSION_NEUTRAL })
 export class QuestionsController {
@@ -44,6 +52,25 @@ export class QuestionsController {
     } catch {
       return {};
     }
+  }
+
+  /** Parse JSON `questions` từ FormData; lỗi cú pháp → 400. */
+  private parseItems(raw: string): IParsedItem[] {
+    try {
+      const v = JSON.parse(raw) as unknown;
+      if (!Array.isArray(v)) throw new Error('not array');
+      return v as IParsedItem[];
+    } catch {
+      throw new BadRequestException('Dữ liệu câu hỏi không hợp lệ');
+    }
+  }
+
+  /** Lấy buffer file .docx đã upload (field `fileToUpload`); thiếu → 400. */
+  private requireDocx(file: Express.Multer.File | undefined): Buffer {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('No file uploaded');
+    }
+    return file.buffer;
   }
 
   /** GET /question — trang ngân hàng câu hỏi (thay Question::default). */
@@ -150,5 +177,59 @@ export class QuestionsController {
   ) {
     const user = req.user as IExamJwtPayload;
     return this.questions.editQuestion(dto, files ?? [], user.id);
+  }
+
+  /** POST /question/xulydoanvan — parse .docx đọc hiểu → mảng preview. */
+  @Permissions('cauhoi', 'create')
+  @SkipTransform()
+  @UseInterceptors(FileInterceptor('fileToUpload'))
+  @Post('xulydoanvan')
+  parseReading(@UploadedFile() file: Express.Multer.File) {
+    return this.questions.parseReadingFile(this.requireDocx(file));
+  }
+
+  /** POST /question/xulytracnghiem — parse .docx trắc nghiệm → mảng preview. */
+  @Permissions('cauhoi', 'create')
+  @SkipTransform()
+  @UseInterceptors(FileInterceptor('fileToUpload'))
+  @Post('xulytracnghiem')
+  parseMcq(@UploadedFile() file: Express.Multer.File) {
+    return this.questions.parseMcqFile(this.requireDocx(file));
+  }
+
+  /** POST /question/xulytuluan — parse .docx tự luận → mảng preview. */
+  @Permissions('cauhoi', 'create')
+  @SkipTransform()
+  @UseInterceptors(FileInterceptor('fileToUpload'))
+  @Post('xulytuluan')
+  parseEssay(@UploadedFile() file: Express.Multer.File) {
+    return this.questions.parseEssayFile(this.requireDocx(file));
+  }
+
+  /** POST /question/updateQuestionJSON — chuẩn hoá mảng preview (tự lưu). */
+  @Permissions('cauhoi', 'create')
+  @SkipTransform()
+  @Post('updateQuestionJSON')
+  updateQuestionJSON(@Body() dto: UpdateQuestionJsonDto) {
+    const items = this.parseItems(dto.questions);
+    return {
+      status: 'success' as const,
+      questions: this.questions.normalizeQuestions(items),
+    };
+  }
+
+  /** POST /question/addQuesFile — ghi cả lô câu hỏi (đã preview) vào DB. */
+  @Permissions('cauhoi', 'create')
+  @SkipTransform()
+  @Post('addQuesFile')
+  addQuesFile(@Body() dto: AddQuesFileDto, @Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    const items = this.parseItems(dto.questions);
+    return this.questions.addQuestionsFromFile(
+      dto.monhoc,
+      dto.chuong,
+      items,
+      user.id,
+    );
   }
 }
