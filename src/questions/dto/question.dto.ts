@@ -13,6 +13,28 @@ export class PaginationBodyDto {
   args!: string;
 }
 
+/** $_POST['questions'] (JSON mảng câu hỏi preview) của updateQuestionJSON(). */
+export class UpdateQuestionJsonDto {
+  @IsNotEmpty({ message: 'Không có dữ liệu' })
+  @IsString()
+  questions!: string;
+}
+
+/** $_POST của addQuesFile(): môn/chương + JSON mảng câu hỏi đã preview. */
+export class AddQuesFileDto {
+  @IsNotEmpty({ message: 'Thiếu môn học' })
+  @IsString()
+  monhoc!: string;
+
+  @IsNotEmpty({ message: 'Thiếu chương' })
+  @IsString()
+  chuong!: string;
+
+  @IsNotEmpty({ message: 'Không có dữ liệu' })
+  @IsString()
+  questions!: string;
+}
+
 /** $_POST['id'] của getQuestionById()/getAnswerById(). */
 export class QuestionIdDto {
   @Type(() => Number)
