@@ -2,10 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import type {
+  IAddFileResult,
   IAnswerRow,
   IIncomingAnswer,
   IIncomingOption,
   IPaginationArgs,
+  IParsedEssay,
+  IParsedItem,
+  IParsedMcq,
+  IParsedReading,
   IQuestionDetail,
   IQuestionListRow,
   IQuestionRow,
@@ -13,6 +18,12 @@ import type {
   IWriteQuestionInput,
   IWriteQuestionResult,
 } from '@/questions/interfaces/questions.types';
+import {
+  extractDocxLines,
+  parseEssayDocx,
+  parseMcqDocx,
+  parseReadingDocx,
+} from '@/questions/question-file.parser';
 
 const PAGE_SIZE = 10;
 
@@ -765,6 +776,208 @@ export class QuestionsService {
       return {
         status: 'error',
         message: 'Lỗi hệ thống: ' + (err as Error).message,
+      };
+    }
+  }
+
+  // ── Import từ file Word (.docx) — thay xulydoanvan/xulytracnghiem/xulytuluan ──
+
+  /** POST /question/xulydoanvan — đọc .docx → mảng khối đọc hiểu (preview). */
+  async parseReadingFile(buffer: Buffer): Promise<IParsedReading[]> {
+    const lines = await extractDocxLines(buffer);
+    return parseReadingDocx(lines);
+  }
+
+  /** POST /question/xulytracnghiem — đọc .docx → mảng câu trắc nghiệm (preview). */
+  async parseMcqFile(buffer: Buffer): Promise<IParsedMcq[]> {
+    const lines = await extractDocxLines(buffer);
+    return parseMcqDocx(lines);
+  }
+
+  /** POST /question/xulytuluan — đọc .docx → mảng câu tự luận (preview). */
+  async parseEssayFile(buffer: Buffer): Promise<IParsedEssay[]> {
+    const lines = await extractDocxLines(buffer);
+    return parseEssayDocx(lines);
+  }
+
+  /**
+   * POST /question/updateQuestionJSON — chuẩn hoá mảng câu hỏi preview (tự lưu).
+   * Thay updateQuestionJSON(): điền mặc định level=1, đảm bảo các trường tồn tại;
+   * reading thì ÉP level câu con = level của khối; essay thì option=[]/answer=null.
+   */
+  normalizeQuestions(items: IParsedItem[]): IParsedItem[] {
+    for (const item of items) {
+      if (!item.level) item.level = 1;
+
+      if (item.type === 'reading') {
+        if (item.title == null) item.title = '';
+        if (item.passage == null) item.passage = '';
+        if (!item.level) item.level = 1;
+        if (!Array.isArray(item.questions)) item.questions = [];
+        for (const sub of item.questions) {
+          sub.level = item.level; // ép level câu con = level khối reading.
+          if (!Array.isArray(sub.option)) sub.option = [];
+          if (!sub.answer) sub.answer = 1;
+          if (sub.question == null) sub.question = '';
+        }
+      } else if (item.type === 'mcq') {
+        if (item.question == null) item.question = '';
+        if (!Array.isArray(item.option)) item.option = [];
+        if (!item.answer) item.answer = 1;
+      } else if (item.type === 'essay') {
+        if (item.question == null) item.question = '';
+        // PHP gán option=[]/answer=null cho tự luận (JS không dùng) — bổ sung để khớp.
+        (item as IParsedEssay & { option: unknown[]; answer: null }).option = [];
+        (item as IParsedEssay & { option: unknown[]; answer: null }).answer =
+          null;
+      }
+    }
+    return items;
+  }
+
+  /**
+   * POST /question/addQuesFile — ghi cả lô câu hỏi (đã preview) vào DB.
+   * Thay addQuesFile(): mỗi mục là mcq/essay/reading. Mục/câu con sai dữ liệu bị
+   * BỎ QUA và ghi vào `errors` (không làm hỏng cả lô) — giống bản PHP. Tất cả nằm
+   * trong 1 transaction để đảm bảo nhất quán.
+   */
+  async addQuestionsFromFile(
+    monhoc: string,
+    chuong: string,
+    items: IParsedItem[],
+    nguoitao: string,
+  ): Promise<IAddFileResult> {
+    if (!nguoitao || !monhoc || !chuong || !Array.isArray(items)) {
+      return { status: 'error', message: 'Dữ liệu không hợp lệ' };
+    }
+
+    const machuong = Number(chuong);
+    const errors: string[] = [];
+    let inserted = 0;
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        for (let idx = 0; idx < items.length; idx++) {
+          const item = items[idx];
+          if (!item || !item.type) {
+            errors.push(`Mục ${idx}: Dữ liệu sai`);
+            continue;
+          }
+
+          if (item.type === 'reading') {
+            const passage = (item.passage ?? '').trim();
+            if (passage === '') {
+              errors.push(`Mục ${idx}: Đoạn văn trống`);
+              continue;
+            }
+            const dv = await tx.doanVan.create({
+              data: {
+                noidung: this.encodeHTML(passage),
+                tieude: item.title ?? null,
+                mamonhoc: monhoc,
+                machuong,
+                nguoitao,
+              },
+              select: { madv: true },
+            });
+
+            const subQuestions = item.questions ?? [];
+            for (let subIdx = 0; subIdx < subQuestions.length; subIdx++) {
+              const sub = subQuestions[subIdx];
+              const qText = (sub.question ?? '').trim();
+              const opts = Array.isArray(sub.option) ? sub.option : [];
+              const ans = Number(sub.answer ?? 0);
+              if (qText === '' || opts.length < 2 || ans < 1) {
+                errors.push(`Mục ${idx} câu ${subIdx}: Dữ liệu không hợp lệ`);
+                continue;
+              }
+              const q = await tx.cauHoi.create({
+                data: {
+                  noidung: this.encodeHTML(qText),
+                  dokho: Number(sub.level ?? 1),
+                  mamonhoc: monhoc,
+                  machuong,
+                  nguoitao,
+                  loai: 'reading',
+                  madv: dv.madv,
+                },
+                select: { macauhoi: true },
+              });
+              await tx.cauTraLoi.createMany({
+                data: opts.map((opt, i) => ({
+                  macauhoi: q.macauhoi,
+                  noidungtl: this.encodeHTML(opt),
+                  ladapan: i + 1 === ans ? 1 : 0,
+                })),
+              });
+              inserted++;
+            }
+            continue;
+          }
+
+          if (item.type === 'mcq') {
+            const qText = (item.question ?? '').trim();
+            const opts = Array.isArray(item.option) ? item.option : [];
+            const ans = Number(item.answer ?? 0);
+            if (qText === '' || opts.length < 2 || ans < 1) {
+              errors.push(`Mục ${idx}: Dữ liệu câu hỏi không hợp lệ`);
+              continue;
+            }
+            const q = await tx.cauHoi.create({
+              data: {
+                noidung: this.encodeHTML(qText),
+                dokho: Number(item.level ?? 1),
+                mamonhoc: monhoc,
+                machuong,
+                nguoitao,
+                loai: 'mcq',
+                madv: null,
+              },
+              select: { macauhoi: true },
+            });
+            await tx.cauTraLoi.createMany({
+              data: opts.map((opt, i) => ({
+                macauhoi: q.macauhoi,
+                noidungtl: this.encodeHTML(opt),
+                ladapan: i + 1 === ans ? 1 : 0,
+              })),
+            });
+            inserted++;
+            continue;
+          }
+
+          if (item.type === 'essay') {
+            const qText = (item.question ?? '').trim();
+            if (qText === '') {
+              errors.push(`Mục ${idx}: Câu hỏi trống`);
+              continue;
+            }
+            await tx.cauHoi.create({
+              data: {
+                noidung: this.encodeHTML(qText),
+                dokho: Number(item.level ?? 1),
+                mamonhoc: monhoc,
+                machuong,
+                nguoitao,
+                loai: 'essay',
+                madv: null,
+              },
+            });
+            inserted++;
+            continue;
+          }
+
+          errors.push(`Mục ${idx}: Loại câu hỏi không hợp lệ`);
+        }
+      });
+
+      return { status: 'success', inserted, errors };
+    } catch (err) {
+      this.logger.error('Thêm câu hỏi từ file thất bại', err as Error);
+      return {
+        status: 'error',
+        message: (err as Error).message,
+        errors,
       };
     }
   }
