@@ -34,6 +34,9 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'question/getQuestionBySubject', 'question/getTotalPageQuestionBySubject',
           'question/getQuestionById', 'question/getAnswerById', 'question/delete',
           'question/addQues', 'question/editQuesion',
+          // Import từ file Word (.docx).
+          'question/xulydoanvan', 'question/xulytracnghiem', 'question/xulytuluan',
+          'question/updateQuestionJSON', 'question/addQuesFile',
         ],
       });
       app.enableVersioning({
