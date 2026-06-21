@@ -86,3 +86,20 @@ export interface IDeleteExamResult {
   success: boolean;
   message: string;
 }
+
+/** Số câu theo mức độ của 1 loại — { de, tb, kho }. */
+export interface ISoCauLevels {
+  de?: number;
+  tb?: number;
+  kho?: number;
+}
+
+/** Cấu hình số câu theo loại — { mcq:{...}, essay:{...}, reading:{...} }. */
+export type ISoCauMap = Record<string, ISoCauLevels>;
+
+/** Kết quả addTest()/updateTest() — khớp action_test.js (success/made/error). */
+export interface ICreateTestResult {
+  success: boolean;
+  made?: number;
+  error?: string;
+}

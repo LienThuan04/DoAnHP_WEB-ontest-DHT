@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
+  NotFoundException,
+  Param,
   Post,
   Render,
   Req,
@@ -12,9 +15,11 @@ import { Permissions } from '@/common/decorators/permissions.decorator';
 import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
 import { ExamsService } from '@/exams/exams.service';
 import {
+  CreateTestDto,
   DeleteExamDto,
   ExamIdDto,
   ExamPaginationBodyDto,
+  UpdateTestDto,
 } from '@/exams/dto/exam.dto';
 import type { IExamPaginationArgs } from '@/exams/interfaces/exams.types';
 import type { IExamJwtPayload } from '@/exam-auth/interfaces/exam-auth.types';
@@ -50,6 +55,46 @@ export class ExamsController {
   page(@Req() req: Request) {
     const user = req.user as IExamJwtPayload;
     return { Title: 'Đề kiểm tra', Page: 'test', user };
+  }
+
+  /** GET /test/add — trang tạo đề (thay Test::add, Action=create). */
+  @Permissions('dethi', 'create')
+  @Get('add')
+  @Render('pages/add_update_test')
+  addPage(@Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    return {
+      Title: 'Tạo đề kiểm tra',
+      Page: 'add_update_test',
+      Action: 'create',
+      user,
+    };
+  }
+
+  /**
+   * GET /test/update/:made — trang sửa đề (thay Test::update). Chỉ chủ đề mới
+   * vào được (kiểm tra tồn tại + nguoitao == user). Quyền dethi.update đã gate.
+   */
+  @Permissions('dethi', 'update')
+  @Get('update/:made')
+  @Render('pages/add_update_test')
+  async updatePage(@Param('made') madeRaw: string, @Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    const made = Number(madeRaw);
+    if (!Number.isInteger(made) || made <= 0) {
+      throw new NotFoundException('Đề thi không tồn tại');
+    }
+    const dethi = await this.exams.getById(made);
+    if (!dethi) throw new NotFoundException('Đề thi không tồn tại');
+    if (dethi.nguoitao !== user.id) {
+      throw new ForbiddenException('Bạn không có quyền sửa đề thi này');
+    }
+    return {
+      Title: 'Cập nhật đề kiểm tra',
+      Page: 'add_update_test',
+      Action: 'update',
+      user,
+    };
   }
 
   /** GET /test/get_subjects — môn được phân công (dropdown lọc). */
@@ -101,5 +146,23 @@ export class ExamsController {
   @Post('delete')
   delete(@Body() dto: DeleteExamDto) {
     return this.exams.delete(dto.made);
+  }
+
+  /** POST /test/addTest — tạo đề thi (AJAX action_test.js). */
+  @Permissions('dethi', 'create')
+  @SkipTransform()
+  @Post('addTest')
+  addTest(@Body() dto: CreateTestDto, @Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    return this.exams.createTest(user.id, dto);
+  }
+
+  /** POST /test/updateTest — cập nhật đề thi (AJAX action_test.js). */
+  @Permissions('dethi', 'update')
+  @SkipTransform()
+  @Post('updateTest')
+  updateTest(@Body() dto: UpdateTestDto, @Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    return this.exams.updateTest(user.id, dto);
   }
 }
