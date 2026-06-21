@@ -21,6 +21,7 @@ import {
   DeleteQuestionDto,
   PaginationBodyDto,
   QuestionBySubjectDto,
+  QuestionCountDto,
   QuestionIdDto,
   UpdateQuestionJsonDto,
   WriteQuestionDto,
@@ -149,6 +150,22 @@ export class QuestionsController {
   @Post('delete')
   delete(@Body() dto: DeleteQuestionDto) {
     return this.questions.delete(dto.macauhoi);
+  }
+
+  /**
+   * POST /question/getsoluongcauhoi — đếm số câu theo loại/mức độ (trang tạo đề).
+   * Trả {success, data:{[loai]:{de,tb,kho}}} đúng shape action_test.js.
+   */
+  @Permissions('cauhoi', 'view')
+  @SkipTransform()
+  @Post('getsoluongcauhoi')
+  async getsoluongcauhoi(@Body() dto: QuestionCountDto) {
+    const data = await this.questions.getQuestionCounts(
+      dto.chuong,
+      dto.monhoc,
+      dto.loaicauhoi,
+    );
+    return { success: true, data };
   }
 
   /** POST /question/addQues — thêm câu hỏi (multipart: text + ảnh). */

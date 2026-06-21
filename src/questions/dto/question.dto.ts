@@ -1,5 +1,25 @@
-import { Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+
+/** Ép giá trị form (1 phần tử → chuỗi, nhiều → mảng) về mảng số nguyên. */
+const toIntArray = ({ value }: { value: unknown }): number[] => {
+  if (value == null || value === '') return [];
+  const arr = Array.isArray(value) ? value : [value];
+  return arr.map((v) => parseInt(String(v), 10)).filter((n) => !isNaN(n));
+};
+
+/** Ép giá trị form về mảng chuỗi (giữ nguyên giá trị, bỏ rỗng). */
+const toStringArray = ({ value }: { value: unknown }): string[] => {
+  if (value == null || value === '') return [];
+  const arr = Array.isArray(value) ? value : [value];
+  return arr.map((v) => String(v).trim()).filter((s) => s !== '');
+};
 
 /**
  * DTO cho các route AJAX trang Câu hỏi (gửi qua $_POST trong question.js).
@@ -33,6 +53,32 @@ export class AddQuesFileDto {
   @IsNotEmpty({ message: 'Không có dữ liệu' })
   @IsString()
   questions!: string;
+}
+
+/**
+ * $_POST của getsoluongcauhoi() — đếm số câu theo loại/mức độ cho trang tạo đề.
+ * `chuong[]` & `loaicauhoi[]` tới dạng mảng (urlencoded); `dokho` bị bỏ qua như
+ * PHP (controller tính cả 3 mức). chuong rỗng = đếm toàn môn.
+ */
+export class QuestionCountDto {
+  @IsOptional()
+  @Transform(toIntArray)
+  @IsArray()
+  chuong: number[] = [];
+
+  @IsNotEmpty({ message: 'Thiếu mã môn học' })
+  @IsString()
+  monhoc!: string;
+
+  @IsOptional()
+  @Transform(toStringArray)
+  @IsArray()
+  loaicauhoi: string[] = [];
+
+  /** action_test.js gửi kèm nhưng controller bỏ qua (tính cả 3 mức). */
+  @IsOptional()
+  @IsString()
+  dokho?: string;
 }
 
 /** $_POST['id'] của getQuestionById()/getAnswerById(). */

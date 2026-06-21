@@ -981,4 +981,47 @@ export class QuestionsService {
       };
     }
   }
+
+  /**
+   * Đếm số câu hỏi đang dùng được theo loại & mức độ — thay
+   * CauHoiModel::getsoluongcauhoi (gọi 3 lần/loại trong question.php).
+   * Trả `{ [loai]: { de, tb, kho } }` đúng shape action_test.js mong đợi.
+   * Chỉ tính câu trangthai=1 (như PHP). Chương rỗng → đếm toàn môn (bỏ lọc
+   * machuong, đúng PHP). Gộp 1 query GROUP BY thay vì 9 lần truy vấn.
+   */
+  async getQuestionCounts(
+    chuong: number[],
+    monhoc: string,
+    loaicauhoi: string[],
+  ): Promise<Record<string, { de: number; tb: number; kho: number }>> {
+    const types = loaicauhoi.length ? loaicauhoi : ['mcq'];
+    const result: Record<string, { de: number; tb: number; kho: number }> = {};
+    for (const t of types) result[t] = { de: 0, tb: 0, kho: 0 };
+    if (!monhoc) return result;
+
+    const chuongCond = chuong.length
+      ? Prisma.sql`AND machuong IN (${Prisma.join(chuong)})`
+      : Prisma.empty;
+    const rows = await this.prisma.$queryRaw<
+      { loai: string; dokho: number; cnt: number }[]
+    >(Prisma.sql`
+      SELECT loai, dokho, COUNT(*)::int AS cnt
+      FROM cauhoi
+      WHERE mamonhoc = ${monhoc}
+        AND trangthai = 1
+        AND loai IN (${Prisma.join(types)})
+        AND dokho IN (1, 2, 3)
+        ${chuongCond}
+      GROUP BY loai, dokho
+    `);
+
+    for (const r of rows) {
+      const bucket = result[r.loai];
+      if (!bucket) continue;
+      if (r.dokho === 1) bucket.de = r.cnt;
+      else if (r.dokho === 2) bucket.tb = r.cnt;
+      else if (r.dokho === 3) bucket.kho = r.cnt;
+    }
+    return result;
+  }
 }
