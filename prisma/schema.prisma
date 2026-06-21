@@ -356,3 +356,79 @@ model ChamTuLuan {
 
   @@map("cham_tuluan")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Kéo lên trước cho Phase 4 — Nhóm/lớp (Phase 5) & Thông báo (Phase 6).
+// Đề thi cần: giao đề cho nhóm (giaodethi.manhom), kiểm tra SV thuộc nhóm
+// (chitietnhom), và tự sinh thông báo khi tạo đề (thongbao/chitietthongbao/
+// trangthaithongbao). Chỉ thêm MODEL ở đây; UI quản lý nhóm/thông báo làm ở
+// Phase 5/6. FK để scalar như DB gốc trừ chỗ cần cascade.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Nhóm/lớp học phần — bảng `nhom`. mamoi: mã mời SV tham gia. trangthai=1 còn hiệu lực.
+model Nhom {
+  manhom    Int     @id @default(autoincrement())
+  tennhom   String
+  mamoi     String?
+  siso      Int?    @default(0)
+  ghichu    String?
+  namhoc    Int?
+  hocky     Int?
+  trangthai Int?    @default(1)
+  hienthi   Int?    @default(1)
+  giangvien String  @default("")
+  mamonhoc  String
+
+  chiTietNhom ChiTietNhom[]
+
+  @@map("nhom")
+}
+
+/// Thành viên nhóm — bảng `chitietnhom`. hienthi=1: còn trong nhóm.
+model ChiTietNhom {
+  manhom      Int
+  manguoidung String @default("0")
+  hienthi     Int?   @default(1)
+
+  nhom Nhom @relation(fields: [manhom], references: [manhom], onDelete: Cascade)
+
+  @@id([manhom, manguoidung])
+  @@map("chitietnhom")
+}
+
+/// Thông báo — bảng `thongbao`. is_auto=1: sinh tự động (vd khi tạo đề thi).
+model ThongBao {
+  matb        Int       @id @default(autoincrement())
+  noidung     String?
+  thoigiantao DateTime?
+  nguoitao    String    @default("")
+  is_auto     Int?      @default(0)
+
+  chiTietThongBao   ChiTietThongBao[]
+  trangThaiThongBao TrangThaiThongBao[]
+
+  @@map("thongbao")
+}
+
+/// Nhóm nhận thông báo — bảng `chitietthongbao`.
+model ChiTietThongBao {
+  matb   Int
+  manhom Int
+
+  thongBao ThongBao @relation(fields: [matb], references: [matb], onDelete: Cascade)
+
+  @@id([matb, manhom])
+  @@map("chitietthongbao")
+}
+
+/// Trạng thái đọc thông báo theo người dùng — bảng `trangthaithongbao`.
+model TrangThaiThongBao {
+  matb        Int
+  manguoidung String
+  trangthai   String? @default("chưa xem")
+
+  thongBao ThongBao @relation(fields: [matb], references: [matb], onDelete: Cascade)
+
+  @@id([matb, manguoidung])
+  @@map("trangthaithongbao")
+}
