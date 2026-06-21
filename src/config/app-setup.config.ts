@@ -37,9 +37,15 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           // Import từ file Word (.docx).
           'question/xulydoanvan', 'question/xulytracnghiem', 'question/xulytuluan',
           'question/updateQuestionJSON', 'question/addQuesFile',
+          // Ngân hàng câu hỏi — đếm số câu cho trang tạo đề.
+          'question/getsoluongcauhoi',
           // Đề thi (test.php) — trang SSR + AJAX ở path gốc.
           'test', 'test/get_subjects', 'test/get_groups', 'test/getTotalPages',
           'test/pagination', 'test/getDetail', 'test/delete',
+          // Tạo/sửa đề (add_update_test) — SSR + AJAX.
+          'test/add', 'test/update/:made', 'test/addTest', 'test/updateTest',
+          // Nhóm học phần (module.php) — loadData cấp dropdown nhóm cho tạo đề.
+          'module/loadData',
         ],
       });
       app.enableVersioning({
