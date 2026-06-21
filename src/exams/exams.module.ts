@@ -1,0 +1,10 @@
+import { Module } from '@nestjs/common';
+import { ExamsController } from '@/exams/exams.controller';
+import { ExamsService } from '@/exams/exams.service';
+
+/** Module Đề thi (dethi + chitietdethi + giaodethi + ketqua...) — thay test.php. */
+@Module({
+  controllers: [ExamsController],
+  providers: [ExamsService],
+})
+export class ExamsModule {}
