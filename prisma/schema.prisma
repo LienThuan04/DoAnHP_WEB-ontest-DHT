@@ -205,3 +205,154 @@ model PhanCong {
   @@id([mamonhoc, manguoidung, namhoc, hocky])
   @@map("phancong")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 4 — Đề thi & làm bài (port từ test.php + DeThiModel/KetQua/ChiTietDeThi).
+// Giữ FK scalar như DB gốc (MySQL không khai báo FOREIGN KEY thật) trừ các quan hệ
+// cần cascade khi xoá đề / kết quả. Tên cột tiếng Việt giữ nguyên qua @map.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Đề thi — bảng `dethi`. loaide: 0 = thủ công, 1 = tự động (random theo độ khó).
+/// Các cờ tinyint hiển thị/trộn lưu dạng Int (0/1) như DB gốc.
+model DeThi {
+  made            Int       @id @default(autoincrement())
+  monthi          String?
+  nguoitao        String?
+  tende           String?
+  thoigiantao     DateTime  @default(now())
+  thoigianthi     Int?
+  thoigianbatdau  DateTime?
+  thoigianketthuc DateTime?
+  hienthibailam   Int?
+  xemdiemthi      Int?
+  xemdapan        Int?
+  troncauhoi      Int?
+  trondapan       Int?
+  nopbaichuyentab Int?
+  loaide          Int?
+  mcq_de          Int?
+  mcq_tb          Int?
+  mcq_kho         Int?
+  trangthai       Int?      @default(1)
+  essay_de        Int?      @default(0)
+  essay_tb        Int?      @default(0)
+  essay_kho       Int?      @default(0)
+  reading_de      Int?      @default(0)
+  reading_tb      Int?      @default(0)
+  reading_kho     Int?      @default(0)
+  diem_tracnghiem Decimal?  @default(0) @db.Decimal(5, 2)
+  diem_tuluan     Decimal?  @default(0) @db.Decimal(5, 2)
+  diem_dochieu    Decimal?  @default(0) @db.Decimal(5, 2)
+
+  chiTietDeThi ChiTietDeThi[]
+  deThiTuDong  DeThiTuDong[]
+  giaoDeThi    GiaoDeThi[]
+
+  @@map("dethi")
+}
+
+/// Câu hỏi trong đề (đề thủ công) — bảng `chitietdethi`. thutu: thứ tự câu.
+model ChiTietDeThi {
+  made     Int
+  macauhoi Int
+  thutu    Int?
+
+  deThi DeThi @relation(fields: [made], references: [made], onDelete: Cascade)
+
+  @@id([made, macauhoi])
+  @@map("chitietdethi")
+}
+
+/// Chương dùng cho đề tự động — bảng `dethitudong`. Gắn đề với các chương để random.
+model DeThiTuDong {
+  made     Int
+  machuong Int
+
+  deThi DeThi @relation(fields: [made], references: [made], onDelete: Cascade)
+
+  @@id([made, machuong])
+  @@map("dethitudong")
+}
+
+/// Giao đề cho nhóm/lớp — bảng `giaodethi`. manhom trỏ tới nhom (Phase 5, FK scalar).
+model GiaoDeThi {
+  made   Int
+  manhom Int
+
+  deThi DeThi @relation(fields: [made], references: [made], onDelete: Cascade)
+
+  @@id([made, manhom])
+  @@map("giaodethi")
+}
+
+/// Kết quả bài thi — bảng `ketqua`. makq là id tự tăng; ràng buộc duy nhất theo
+/// (made, manguoidung) — mỗi người 1 kết quả/đề. trangthai: 'Chưa nộp'|'Đã nộp'.
+/// trangthai_tuluan: 'Chưa chấm'|'Đang chấm'|'Đã chấm'.
+model KetQua {
+  makq             Int       @id @default(autoincrement())
+  made             Int
+  manguoidung      String    @default("")
+  diemthi          Float?
+  diem_dochieu     Float?    @default(0)
+  thoigianvaothi   DateTime  @default(now())
+  thoigianlambai   Int?
+  socaudung        Int?
+  solanchuyentab   Int?      @default(0)
+  diem_tuluan      Float?    @default(0)
+  trangthai_tuluan String?   @default("Chưa chấm")
+  trangthai        String?   @default("Chưa nộp")
+  thoigianketthuc  DateTime?
+
+  chiTietKetQua ChiTietKetQua[]
+
+  @@unique([made, manguoidung])
+  @@map("ketqua")
+}
+
+/// Chi tiết bài làm (mỗi câu) — bảng `chitietketqua`. dapanchon: macautl được chọn.
+model ChiTietKetQua {
+  makq      Int
+  macauhoi  Int
+  thutu     Int? @default(0)
+  dapanchon Int?
+
+  ketQua KetQua @relation(fields: [makq], references: [makq], onDelete: Cascade)
+
+  @@id([makq, macauhoi])
+  @@map("chitietketqua")
+}
+
+/// Bài làm tự luận của SV — bảng `traloi_tuluan`. noidung: HTML câu trả lời.
+model TraLoiTuLuan {
+  id          Int      @id @default(autoincrement())
+  makq        Int
+  macauhoi    Int
+  noidung     String?
+  thoigianlam DateTime @default(now())
+
+  hinhAnh HinhAnhTraLoiTuLuan[]
+
+  @@map("traloi_tuluan")
+}
+
+/// Ảnh đính kèm bài làm tự luận — bảng `hinhanh_traloi_tuluan`. hinhanh: blob.
+model HinhAnhTraLoiTuLuan {
+  id        Int      @id @default(autoincrement())
+  traloi_id Int
+  hinhanh   Bytes?
+  thoigian  DateTime @default(now())
+
+  traLoiTuLuan TraLoiTuLuan @relation(fields: [traloi_id], references: [id], onDelete: Cascade)
+
+  @@map("hinhanh_traloi_tuluan")
+}
+
+/// Điểm chấm tay từng câu tự luận — bảng `cham_tuluan`.
+model ChamTuLuan {
+  id       Int   @id @default(autoincrement())
+  makq     Int
+  macauhoi Int
+  diem     Float @default(0)
+
+  @@map("cham_tuluan")
+}
