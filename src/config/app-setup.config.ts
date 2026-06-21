@@ -37,6 +37,9 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           // Import từ file Word (.docx).
           'question/xulydoanvan', 'question/xulytracnghiem', 'question/xulytuluan',
           'question/updateQuestionJSON', 'question/addQuesFile',
+          // Đề thi (test.php) — trang SSR + AJAX ở path gốc.
+          'test', 'test/get_subjects', 'test/get_groups', 'test/getTotalPages',
+          'test/pagination', 'test/getDetail', 'test/delete',
         ],
       });
       app.enableVersioning({

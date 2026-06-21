@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <%- include('../partials/head') %>
+  <link rel="stylesheet" href="/public/js/plugins/sweetalert2/sweetalert2.min.css" />
+</head>
+<body>
+  <div id="page-container" class="sidebar-o sidebar-light enable-page-overlay side-scroll page-header-fixed main-content-narrow remember-theme">
+    <%- include('../partials/navbar') %>
+    <%- include('../partials/header') %>
+
+    <!-- Main Container -->
+    <main id="main-container">
+      <!-- Port từ DHT_OneTest/mvc/views/pages/test.php -->
+      <div class="content" data-id="<%= user.id %>">
+        <form action="#" method="POST" id="search-form" onsubmit="return false;">
+          <div class="row mb-4">
+            <div class="col-md-8">
+              <div class="d-flex gap-2 flex-wrap mb-2">
+                <!-- Trạng thái -->
+                <div class="dropdown">
+                  <button class="btn btn-outline-primary dropdown-toggle btn-filtered-by-state" type="button"
+                    id="dropdown-filter-state" data-bs-toggle="dropdown" aria-expanded="false">
+                    Tất cả trạng thái
+                  </button>
+                  <ul class="dropdown-menu" aria-labelledby="dropdown-filter-state">
+                    <li><a class="dropdown-item filtered-by-state" href="javascript:void(0)" data-value="0">Chưa mở</a></li>
+                    <li><a class="dropdown-item filtered-by-state" href="javascript:void(0)" data-value="1">Đang mở</a></li>
+                    <li><a class="dropdown-item filtered-by-state" href="javascript:void(0)" data-value="2">Đã đóng</a></li>
+                    <li><a class="dropdown-item filtered-by-state" href="javascript:void(0)" data-value="3">Tất cả</a></li>
+                  </ul>
+                </div>
+
+                <!-- Môn học -->
+                <div class="dropdown">
+                  <button class="btn btn-outline-primary dropdown-toggle btn-filtered-by-subject" type="button"
+                    id="dropdown-filter-subject" data-bs-toggle="dropdown" aria-expanded="false">
+                    Tất cả môn học
+                  </button>
+                  <ul class="dropdown-menu" id="subject-filter-menu" aria-labelledby="dropdown-filter-subject">
+                    <li><a class="dropdown-item filtered-by-subject" href="javascript:void(0)" data-value="">Tất cả môn học</a></li>
+                  </ul>
+                </div>
+
+                <!-- Nhóm -->
+                <div class="dropdown">
+                  <button class="btn btn-outline-primary dropdown-toggle btn-filtered-by-group" type="button"
+                    id="dropdown-filter-group" data-bs-toggle="dropdown" aria-expanded="false">
+                    Tất cả nhóm
+                  </button>
+                  <ul class="dropdown-menu" id="group-filter-menu" aria-labelledby="dropdown-filter-group">
+                    <li><a class="dropdown-item filtered-by-group" href="javascript:void(0)" data-value="">Tất cả nhóm</a></li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Ô tìm kiếm -->
+              <input type="text" class="form-control" id="search-input" name="search-input"
+                placeholder="Tìm kiếm đề thi...">
+            </div>
+
+            <!-- Nút tạo đề -->
+            <div class="col-md-4 text-end mt-3 mt-md-0">
+              <a href="./test/add" class="btn btn-hero btn-primary" data-role="dethi" data-action="create">
+                <i class="fa fa-fw fa-plus me-1"></i> Tạo đề thi
+              </a>
+            </div>
+          </div>
+        </form>
+
+        <div class="list-test" id="list-test"></div>
+
+        <!-- Pagination (port inc/pagination.php) -->
+        <div class="row my-3">
+          <div class="pagination-class-name" data-pagination-class-name='[]'></div>
+          <nav class="pagination-container">
+            <ul class="pagination justify-content-end mt-2">
+              <li class="page-item"><a class="page-link first-page disabled" href="javascript:void(0)" tabindex="-1" aria-label="First" data-page="1"><i class="fas fa-angle-double-left"></i></a></li>
+              <li class="page-item"><a class="page-link prev-page disabled" href="javascript:void(0)" tabindex="-1" aria-label="Previous"><i class="fas fa-angle-left"></i></a></li>
+              <div class="d-flex list-page"></div>
+              <li class="page-item"><a class="page-link next-page disabled" href="javascript:void(0)" tabindex="-1" aria-label="Next"><i class="fas fa-angle-right"></i></a></li>
+              <li class="page-item"><a class="page-link last-page disabled" href="javascript:void(0)" tabindex="-1" aria-label="Last"><i class="fas fa-angle-double-right"></i></a></li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </div>
+
+  <%- include('../partials/script') %>
+  <!-- Plugin trang Đề thi (bê từ DHT_OneTest): sweetalert2 + notify -->
+  <script src="/public/js/plugins/sweetalert2/sweetalert2.all.min.js"></script>
+  <script src="/public/js/plugins/bootstrap-notify/bootstrap-notify.min.js"></script>
+
+  <script src="/public/js/permission.js"></script>
+  <script src="/public/js/pagination.js"></script>
+  <script src="/public/js/pages/test.js"></script>
+
+  <style>
+    .list-test .block-content { overflow-x: auto; }
+    .table-responsive { display: block; width: 100%; overflow-x: auto; }
+    .table thead th, .table tbody td { white-space: nowrap; vertical-align: middle; }
+    .table .btn { font-size: 0.85rem; padding: 0.35rem 0.7rem; }
+  </style>
+</body>
+</html>
