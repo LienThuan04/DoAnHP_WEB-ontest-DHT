@@ -13,14 +13,69 @@ export interface IExamPaginationArgs {
   controller?: string;
   model?: string;
   id?: string;
+  mamonhoc?: string; // môn của đề (trang chọn câu hỏi getQuestionsForTest)
   limit?: number | string;
   page?: number | string;
   input?: string;
   content?: string;
-  filter?: string | number; // trạng thái "0"|"1"|"2" (chưa mở/đang mở/đã đóng)
+  // Danh sách đề GV: trạng thái "0"|"1"|"2". Trang chọn câu hỏi: object lọc câu.
+  filter?: string | number | IQuestionForTestFilter;
   subject?: string;
   group?: string | number;
   custom?: { function?: string };
+}
+
+/** Bộ lọc câu hỏi khi chọn câu cho đề thủ công (select_question.js → filter). */
+export interface IQuestionForTestFilter {
+  machuong?: number | string;
+  dokho?: number | string;
+  loai?: string;
+  keyword?: string;
+}
+
+/**
+ * Một dòng câu hỏi để chọn vào đề thủ công — thay getQuery("getQuestionsForTest").
+ * Trả cả đoạn văn (reading) + ảnh base64 (KHÁC PHP trả blob thô qua cauhoi.*).
+ */
+export interface IQuestionForTestRow {
+  macauhoi: number;
+  noidung: string;
+  noidungplaintext: string;
+  dokho: number;
+  loai: string;
+  madv: number | null;
+  machuong: number;
+  mamonhoc: string;
+  doanvan_noidung: string | null;
+  doanvan_tieude: string | null;
+  hinhanh: string | null; // data-URI base64 (PHP để blob thô → JS hỏng)
+}
+
+/** Một câu hỏi trong đề thủ công (theo thứ tự) — thay getQuestionOfTestManual. */
+export interface IManualTestQuestion {
+  macauhoi: number;
+  thutu: number | null;
+  noidung: string;
+  noidungplaintext: string;
+  dokho: number;
+  loai: string;
+  madv: number | null;
+  cautraloi: IManualAnswerOption[];
+  doanvan_tieude: string;
+  doanvan_noidung: string;
+}
+
+/** Đáp án (không kèm ladapan) — thay CauTraLoiModel::getAllWithoutAnswer. */
+export interface IManualAnswerOption {
+  macautl: number;
+  noidungtl: string;
+  hinhanhtl: string; // base64 thuần (giữ y PHP) — bị JS ghi đè sau khi nạp đáp án
+}
+
+/** Kết quả addDetail() — thay ChiTietDeThiModel::createMultiple (success/error). */
+export interface IAddDetailResult {
+  success: boolean;
+  error?: string;
 }
 
 /** Một dòng danh sách đề thi GV đã tạo — thay getQuery("getAllCreatedTest"). */

@@ -1,5 +1,11 @@
 import { Transform, Type } from 'class-transformer';
-import { IsArray, IsInt, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 /**
  * DTO cho các route AJAX trang Đề thi (gửi qua $_POST trong test.js / action_test.js).
@@ -132,4 +138,37 @@ export class UpdateTestDto extends CreateTestDto {
   @Type(() => Number)
   @IsInt()
   made!: number;
+}
+
+/**
+ * Một câu hỏi trong danh sách chọn cho đề thủ công — gửi qua `cauhoi[i][...]`
+ * (urlencoded) trong select_question.js. macauhoi/thutu tới dạng chuỗi.
+ */
+export class ChiTietDeThiItemDto {
+  @Type(() => Number)
+  @IsInt()
+  macauhoi!: number;
+
+  @Type(() => Number)
+  @IsInt()
+  thutu!: number;
+}
+
+/**
+ * Body của addDetail() (lưu câu hỏi cho đề thủ công) — thay
+ * ChiTietDeThiModel::createMultiple. `action` được JS gửi kèm nhưng không dùng.
+ */
+export class AddDetailDto {
+  @Type(() => Number)
+  @IsInt()
+  made!: number;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ChiTietDeThiItemDto)
+  cauhoi!: ChiTietDeThiItemDto[];
+
+  @IsOptional()
+  @IsString()
+  action?: string;
 }
