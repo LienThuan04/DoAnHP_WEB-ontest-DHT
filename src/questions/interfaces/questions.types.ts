@@ -74,6 +74,20 @@ export interface IAnswerRow {
   option_image_base64: string | null;
 }
 
+/**
+ * Một đáp án trả cho getAnswersForMultipleQuestions() (trang chọn câu hỏi).
+ * ladapan trả dạng CHUỖI để khớp so sánh `da.ladapan === "1"` của select_question.js
+ * (mysqli PHP cũng trả chuỗi). hinhanhtl = data-URI base64 (KHÁC PHP trả blob thô
+ * qua SELECT * khiến ảnh đáp án không hiển thị).
+ */
+export interface IMultiAnswerRow {
+  macautl: number;
+  macauhoi: number;
+  noidungtl: string;
+  ladapan: string;
+  hinhanhtl: string | null;
+}
+
 /** Một đáp án câu hỏi con của reading trả cho getAnswerById(). */
 export interface IReadingAnswerRow {
   macauhoicon: number;

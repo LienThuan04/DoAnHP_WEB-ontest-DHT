@@ -96,6 +96,17 @@ export class DeleteQuestionDto {
 }
 
 /**
+ * $_POST['questions'] của getAnswersForMultipleQuestions() — mảng macauhoi gửi
+ * qua `questions[]` (urlencoded). Ép về mảng số nguyên như array_map('intval').
+ */
+export class AnswersForMultipleDto {
+  @IsOptional()
+  @Transform(toIntArray)
+  @IsArray()
+  questions: number[] = [];
+}
+
+/**
  * $_POST của getQuestionBySubject()/getTotalPageQuestionBySubject().
  * machuong/dokho = 0 nghĩa là "tất cả" (không lọc) — giữ đúng quy ước PHP.
  */

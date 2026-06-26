@@ -12,6 +12,7 @@ import type {
   IParsedMcq,
   IParsedReading,
   IQuestionDetail,
+  IMultiAnswerRow,
   IQuestionListRow,
   IQuestionRow,
   IReadingAnswerRow,
@@ -352,6 +353,34 @@ export class QuestionsService {
       ladapan: ans.ladapan,
       macauhoi: ans.macauhoi,
       option_image_base64: this.toBase64(ans.hinhanh),
+    }));
+  }
+
+  /**
+   * POST /question/getAnswersForMultipleQuestions — đáp án của nhiều câu hỏi (trang
+   * chọn câu cho đề thủ công). Thay CauTraLoiModel::getAnswersForMultipleQuestions
+   * (SELECT * cautraloi WHERE macauhoi IN (...)). ladapan → chuỗi + ảnh → data-URI.
+   */
+  async getAnswersForMultipleQuestions(
+    ids: number[],
+  ): Promise<IMultiAnswerRow[]> {
+    if (!ids.length) return [];
+    const rows = await this.prisma.cauTraLoi.findMany({
+      where: { macauhoi: { in: ids } },
+      select: {
+        macautl: true,
+        macauhoi: true,
+        noidungtl: true,
+        ladapan: true,
+        hinhanh: true,
+      },
+    });
+    return rows.map((r) => ({
+      macautl: r.macautl,
+      macauhoi: r.macauhoi,
+      noidungtl: r.noidungtl,
+      ladapan: String(r.ladapan),
+      hinhanhtl: this.toBase64(r.hinhanh),
     }));
   }
 

@@ -18,6 +18,7 @@ import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
 import { QuestionsService } from '@/questions/questions.service';
 import {
   AddQuesFileDto,
+  AnswersForMultipleDto,
   DeleteQuestionDto,
   PaginationBodyDto,
   QuestionBySubjectDto,
@@ -142,6 +143,14 @@ export class QuestionsController {
   @Post('getAnswerById')
   getAnswerById(@Body() dto: QuestionIdDto) {
     return this.questions.getAnswerById(dto.id);
+  }
+
+  /** POST /question/getAnswersForMultipleQuestions — đáp án nhiều câu (chọn câu cho đề). */
+  @Permissions('cauhoi', 'view')
+  @SkipTransform()
+  @Post('getAnswersForMultipleQuestions')
+  getAnswersForMultipleQuestions(@Body() dto: AnswersForMultipleDto) {
+    return this.questions.getAnswersForMultipleQuestions(dto.questions);
   }
 
   /** POST /question/delete — xoá mềm câu hỏi. */
