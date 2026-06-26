@@ -15,6 +15,7 @@ import { Permissions } from '@/common/decorators/permissions.decorator';
 import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
 import { ExamsService } from '@/exams/exams.service';
 import {
+  AddDetailDto,
   CreateTestDto,
   DeleteExamDto,
   ExamIdDto,
@@ -97,6 +98,30 @@ export class ExamsController {
     };
   }
 
+  /**
+   * GET /test/select/:made — trang chọn câu hỏi cho đề thủ công (thay Test::select).
+   * Điều kiện như PHP: đề tồn tại + (quyền dethi create HOẶC update) + loaide==0
+   * (thủ công) + nguoitao == user. Không gắn @Permissions (cần OR) — kiểm thủ công.
+   */
+  @Get('select/:made')
+  @Render('pages/select_question')
+  async selectPage(@Param('made') madeRaw: string, @Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    const made = Number(madeRaw);
+    if (!Number.isInteger(made) || made <= 0) {
+      throw new NotFoundException('Đề thi không tồn tại');
+    }
+    const dethi = await this.exams.getById(made);
+    if (!dethi) throw new NotFoundException('Đề thi không tồn tại');
+    const allowed = await this.exams.hasDethiCreateOrUpdate(user.manhomquyen);
+    if (!allowed || dethi.loaide !== 0 || dethi.nguoitao !== user.id) {
+      throw new ForbiddenException(
+        'Bạn không có quyền chọn câu hỏi cho đề thi này',
+      );
+    }
+    return { Title: 'Chọn câu hỏi', Page: 'select_question', user };
+  }
+
   /** GET /test/get_subjects — môn được phân công (dropdown lọc). */
   @Permissions('dethi', 'view')
   @SkipTransform()
@@ -114,22 +139,50 @@ export class ExamsController {
     return this.exams.getAllGroups();
   }
 
-  /** POST /test/getTotalPages — tổng số trang danh sách (pagination.js). */
+  /**
+   * POST /test/getTotalPages — tổng số trang (pagination.js). Phân nhánh theo
+   * custom.function: "getQuestionsForTest" = câu hỏi để chọn (trang chọn câu),
+   * mặc định = danh sách đề thi GV đã tạo.
+   */
   @Permissions('dethi', 'view')
   @SkipTransform()
   @Post('getTotalPages')
   getTotalPages(@Body() dto: ExamPaginationBodyDto, @Req() req: Request) {
     const user = req.user as IExamJwtPayload;
-    return this.exams.countCreatedTestPages(user.id, this.parseArgs(dto.args));
+    const args = this.parseArgs(dto.args);
+    if (args.custom?.function === 'getQuestionsForTest') {
+      return this.exams.countQuestionsForTestPages(user.id, args);
+    }
+    return this.exams.countCreatedTestPages(user.id, args);
   }
 
-  /** POST /test/pagination — 1 trang danh sách đề thi (pagination.js). */
+  /** POST /test/pagination — 1 trang dữ liệu (pagination.js), phân nhánh như trên. */
   @Permissions('dethi', 'view')
   @SkipTransform()
   @Post('pagination')
   paginate(@Body() dto: ExamPaginationBodyDto, @Req() req: Request) {
     const user = req.user as IExamJwtPayload;
-    return this.exams.listCreatedTests(user.id, this.parseArgs(dto.args));
+    const args = this.parseArgs(dto.args);
+    if (args.custom?.function === 'getQuestionsForTest') {
+      return this.exams.listQuestionsForTest(user.id, args);
+    }
+    return this.exams.listCreatedTests(user.id, args);
+  }
+
+  /** POST /test/getQuestionOfTestManual — câu hỏi hiện có của đề thủ công. */
+  @Permissions('dethi', 'view')
+  @SkipTransform()
+  @Post('getQuestionOfTestManual')
+  getQuestionOfTestManual(@Body() dto: ExamIdDto) {
+    return this.exams.getQuestionOfTestManual(dto.made);
+  }
+
+  /** POST /test/addDetail — lưu danh sách câu hỏi cho đề thủ công. */
+  @Permissions('dethi', 'update')
+  @SkipTransform()
+  @Post('addDetail')
+  addDetail(@Body() dto: AddDetailDto) {
+    return this.exams.addDetail(dto.made, dto.cauhoi);
   }
 
   /** POST /test/getDetail — chi tiết 1 đề thi (kèm chương + nhóm). */

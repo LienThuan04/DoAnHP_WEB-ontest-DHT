@@ -2,16 +2,21 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import type {
+  IAddDetailResult,
   ICreatedTestRow,
   ICreateTestResult,
   IDeleteExamResult,
   IExamDetail,
   IExamPaginationArgs,
   IGroupOption,
+  IManualTestQuestion,
+  IQuestionForTestFilter,
+  IQuestionForTestRow,
   ISoCauLevels,
   ISoCauMap,
   ISubjectOption,
 } from '@/exams/interfaces/exams.types';
+import type { ChiTietDeThiItemDto } from '@/exams/dto/exam.dto';
 import type { CreateTestDto, UpdateTestDto } from '@/exams/dto/exam.dto';
 
 const PAGE_SIZE = 10;
@@ -233,6 +238,266 @@ export class ExamsService {
     } catch (e) {
       this.logger.error(`delete(${made}) lỗi: ${(e as Error).message}`);
       return { success: false, message: (e as Error).message };
+    }
+  }
+
+  // ============== CHỌN CÂU HỎI CHO ĐỀ THỦ CÔNG (slice 3) ==============
+
+  /**
+   * Có quyền dethi.create HOẶC dethi.update không (cho trang chọn câu hỏi).
+   * Thay điều kiện `checkPermission('dethi','create') || checkPermission('dethi','update')`
+   * của PHP — PermissionsGuard chỉ kiểm 1 quyền nên kiểm OR ở đây.
+   */
+  async hasDethiCreateOrUpdate(manhomquyen: number): Promise<boolean> {
+    const c = await this.prisma.chiTietQuyen.count({
+      where: {
+        manhomquyen,
+        chucnang: 'dethi',
+        hanhdong: { in: ['create', 'update'] },
+      },
+    });
+    return c > 0;
+  }
+
+  /** Chuyển blob ảnh → data-URI base64 (null nếu rỗng). Nhận diện MIME magic-bytes. */
+  private toBase64(blob: Uint8Array | null | undefined): string | null {
+    if (!blob || blob.length === 0) return null;
+    const buf = Buffer.from(blob);
+    let mime = 'image/jpeg';
+    if (buf.length >= 2 && buf[0] === 0x89 && buf[1] === 0x50) mime = 'image/png';
+    else if (
+      buf.length >= 3 &&
+      buf[0] === 0x47 &&
+      buf[1] === 0x49 &&
+      buf[2] === 0x46
+    )
+      mime = 'image/gif';
+    return `data:${mime};base64,${buf.toString('base64')}`;
+  }
+
+  /**
+   * POST /test/getQuestionOfTestManual — câu hỏi hiện có của đề thủ công (theo
+   * thứ tự). Thay DeThiModel::getQuestionOfTestManual. Trộn đáp án/câu hỏi nếu
+   * đề bật cờ trondapan/troncauhoi. KHÁC PHP: không trả ảnh câu hỏi (PHP gốc
+   * cũng chỉ select macauhoi/thutu/noidung/dokho/loai/madv) — JS sẽ nạp lại đáp
+   * án (kèm ảnh) qua /question/getAnswersForMultipleQuestions.
+   */
+  async getQuestionOfTestManual(made: number): Promise<IManualTestQuestion[]> {
+    const dethi = await this.prisma.deThi.findUnique({
+      where: { made },
+      select: { trondapan: true, troncauhoi: true },
+    });
+    const troncauhoi = dethi?.troncauhoi ?? 0;
+    const trondapan = dethi?.trondapan ?? 0;
+
+    const rows = await this.prisma.$queryRaw<
+      {
+        macauhoi: number;
+        thutu: number | null;
+        noidung: string;
+        dokho: number;
+        loai: string;
+        madv: number | null;
+      }[]
+    >(Prisma.sql`
+      SELECT CTDT.macauhoi, CTDT.thutu, CH.noidung, CH.dokho, CH.loai, CH.madv
+      FROM chitietdethi CTDT
+      JOIN cauhoi CH ON CTDT.macauhoi = CH.macauhoi
+      WHERE CTDT.made = ${made}
+      ORDER BY CTDT.thutu ASC
+    `);
+
+    const result: IManualTestQuestion[] = [];
+    for (const row of rows) {
+      const item: IManualTestQuestion = {
+        macauhoi: row.macauhoi,
+        thutu: row.thutu,
+        noidung: row.noidung,
+        noidungplaintext: row.noidung,
+        dokho: row.dokho,
+        loai: row.loai,
+        madv: row.madv,
+        cautraloi: [],
+        doanvan_tieude: '',
+        doanvan_noidung: '',
+      };
+
+      if (row.loai === 'mcq' || row.loai === 'reading') {
+        const ans = await this.prisma.cauTraLoi.findMany({
+          where: { macauhoi: row.macauhoi },
+          select: { macautl: true, noidungtl: true, hinhanh: true },
+        });
+        // Thay getAllWithoutAnswer: base64 thuần (giữ y PHP, không tiền tố data:).
+        item.cautraloi = ans.map((a) => ({
+          macautl: a.macautl,
+          noidungtl: a.noidungtl,
+          hinhanhtl:
+            a.hinhanh && a.hinhanh.length
+              ? Buffer.from(a.hinhanh).toString('base64')
+              : '',
+        }));
+        if (trondapan === 1) this.shuffle(item.cautraloi);
+      }
+
+      if (row.loai === 'reading' && row.madv) {
+        const dv = await this.prisma.doanVan.findFirst({
+          where: { madv: row.madv, trangthai: 1 },
+          select: { tieude: true, noidung: true },
+        });
+        item.doanvan_tieude = dv?.tieude ?? '';
+        item.doanvan_noidung = dv?.noidung ?? '';
+      }
+
+      result.push(item);
+    }
+
+    if (troncauhoi === 1) this.shuffle(result);
+    return result;
+  }
+
+  /** Điều kiện lọc câu hỏi (chương / mức độ / loại / từ khoá) cho trang chọn câu. */
+  private buildQuestionFilter(args: IExamPaginationArgs): Prisma.Sql {
+    const f: IQuestionForTestFilter =
+      args.filter && typeof args.filter === 'object' ? args.filter : {};
+    const conds: Prisma.Sql[] = [];
+    if (f.machuong)
+      conds.push(Prisma.sql`AND cauhoi.machuong = ${Number(f.machuong)}`);
+    if (f.dokho) conds.push(Prisma.sql`AND cauhoi.dokho = ${Number(f.dokho)}`);
+    if (f.loai) conds.push(Prisma.sql`AND cauhoi.loai = ${String(f.loai)}`);
+    // KHÁC PHP: PHP đọc $input (args.input/content) nên ô tìm kiếm (gửi
+    // filter.keyword) vô tác dụng — ở đây ưu tiên filter.keyword để search hoạt động.
+    const keyword = (
+      f.keyword ??
+      args.input ??
+      args.content ??
+      ''
+    ).trim();
+    if (keyword)
+      conds.push(Prisma.sql`AND cauhoi.noidung ILIKE ${`%${keyword}%`}`);
+    return conds.length ? Prisma.join(conds, ' ') : Prisma.empty;
+  }
+
+  /**
+   * POST /test/pagination (custom getQuestionsForTest) — 1 trang câu hỏi để chọn
+   * vào đề thủ công. Thay DeThiModel::getQuery("getQuestionsForTest"). Chỉ câu của
+   * môn đề + GV được phân công (userId từ JWT, KHÔNG tin args.id). ORDER BY macauhoi
+   * cho phân trang ổn định (PHP gốc không ORDER BY).
+   */
+  async listQuestionsForTest(
+    userId: string,
+    args: IExamPaginationArgs,
+  ): Promise<IQuestionForTestRow[]> {
+    const mamonhoc = (args.mamonhoc ?? '').trim();
+    if (!mamonhoc) return [];
+    const limit = Number(args.limit) || PAGE_SIZE;
+    const page = Math.max(Number(args.page) || 1, 1);
+    const offset = (page - 1) * limit;
+    const filters = this.buildQuestionFilter(args);
+    const rows = await this.prisma.$queryRaw<
+      (Omit<IQuestionForTestRow, 'hinhanh'> & { hinhanh: Uint8Array | null })[]
+    >(Prisma.sql`
+      SELECT cauhoi.macauhoi, cauhoi.noidung, cauhoi.noidung AS noidungplaintext,
+             cauhoi.dokho, cauhoi.loai, cauhoi.madv, cauhoi.machuong,
+             cauhoi.mamonhoc, cauhoi.hinhanh,
+             dv.noidung AS doanvan_noidung, dv.tieude AS doanvan_tieude
+      FROM cauhoi
+      LEFT JOIN doan_van dv ON cauhoi.madv = dv.madv
+      WHERE cauhoi.trangthai = 1 AND cauhoi.mamonhoc = ${mamonhoc}
+        AND EXISTS (
+          SELECT 1 FROM phancong pc
+          WHERE pc.mamonhoc = cauhoi.mamonhoc AND pc.manguoidung = ${userId}
+        )
+        ${filters}
+      ORDER BY cauhoi.macauhoi ASC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
+    return rows.map((r) => ({ ...r, hinhanh: this.toBase64(r.hinhanh) }));
+  }
+
+  /** POST /test/getTotalPages (custom getQuestionsForTest) — tổng số trang câu hỏi. */
+  async countQuestionsForTestPages(
+    userId: string,
+    args: IExamPaginationArgs,
+  ): Promise<{ totalPages: number }> {
+    const mamonhoc = (args.mamonhoc ?? '').trim();
+    const limit = Number(args.limit) || PAGE_SIZE;
+    if (!mamonhoc) return { totalPages: 0 };
+    const filters = this.buildQuestionFilter(args);
+    const rows = await this.prisma.$queryRaw<{ total: number }[]>(Prisma.sql`
+      SELECT COUNT(*)::int AS total
+      FROM cauhoi
+      WHERE cauhoi.trangthai = 1 AND cauhoi.mamonhoc = ${mamonhoc}
+        AND EXISTS (
+          SELECT 1 FROM phancong pc
+          WHERE pc.mamonhoc = cauhoi.mamonhoc AND pc.manguoidung = ${userId}
+        )
+        ${filters}
+    `);
+    const total = rows[0]?.total ?? 0;
+    return { totalPages: Math.ceil(total / limit) };
+  }
+
+  /**
+   * POST /test/addDetail — lưu danh sách câu hỏi cho đề thủ công. Thay
+   * ChiTietDeThiModel::createMultiple: chặn nếu đã có thí sinh làm, kiểm tra câu
+   * tồn tại, xoá chitietdethi cũ rồi chèn lại theo thutu. Bọc $transaction.
+   */
+  async addDetail(
+    made: number,
+    cauhoi: ChiTietDeThiItemDto[],
+  ): Promise<IAddDetailResult> {
+    if (!made || !cauhoi?.length) {
+      return {
+        success: false,
+        error: 'Mã đề hoặc danh sách câu hỏi không hợp lệ',
+      };
+    }
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const test = await tx.deThi.findUnique({
+          where: { made },
+          select: { made: true },
+        });
+        if (!test) return { success: false, error: 'Đề thi không tồn tại' };
+
+        const soKetQua = await tx.ketQua.count({ where: { made } });
+        if (soKetQua > 0) {
+          return {
+            success: false,
+            error: 'Đề thi đã có thí sinh làm, không thể thay đổi câu hỏi',
+          };
+        }
+
+        // Kiểm tra mọi câu hỏi tồn tại (như create() kiểm từng macauhoi).
+        const ids = [...new Set(cauhoi.map((c) => c.macauhoi))];
+        const existing = await tx.cauHoi.findMany({
+          where: { macauhoi: { in: ids } },
+          select: { macauhoi: true },
+        });
+        const existSet = new Set(existing.map((e) => e.macauhoi));
+        for (const item of cauhoi) {
+          if (!existSet.has(item.macauhoi)) {
+            return {
+              success: false,
+              error: `Lỗi khi thêm câu hỏi với macauhoi: ${item.macauhoi}`,
+            };
+          }
+        }
+
+        await tx.chiTietDeThi.deleteMany({ where: { made } });
+        await tx.chiTietDeThi.createMany({
+          data: cauhoi.map((c) => ({
+            made,
+            macauhoi: c.macauhoi,
+            thutu: c.thutu,
+          })),
+          skipDuplicates: true,
+        });
+        return { success: true };
+      });
+    } catch (e) {
+      this.logger.error(`addDetail(${made}) lỗi: ${(e as Error).message}`);
+      return { success: false, error: (e as Error).message };
     }
   }
 
