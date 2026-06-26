@@ -39,11 +39,15 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'question/updateQuestionJSON', 'question/addQuesFile',
           // Ngân hàng câu hỏi — đếm số câu cho trang tạo đề.
           'question/getsoluongcauhoi',
+          // Ngân hàng câu hỏi — đáp án nhiều câu (trang chọn câu cho đề thủ công).
+          'question/getAnswersForMultipleQuestions',
           // Đề thi (test.php) — trang SSR + AJAX ở path gốc.
           'test', 'test/get_subjects', 'test/get_groups', 'test/getTotalPages',
           'test/pagination', 'test/getDetail', 'test/delete',
           // Tạo/sửa đề (add_update_test) — SSR + AJAX.
           'test/add', 'test/update/:made', 'test/addTest', 'test/updateTest',
+          // Chọn câu hỏi cho đề thủ công (select_question) — SSR + AJAX.
+          'test/select/:made', 'test/getQuestionOfTestManual', 'test/addDetail',
           // Nhóm học phần (module.php) — loadData cấp dropdown nhóm cho tạo đề.
           'module/loadData',
         ],
