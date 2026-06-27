@@ -154,6 +154,27 @@ export class ChiTietDeThiItemDto {
   thutu!: number;
 }
 
+/** $_POST['made'] cho getQuestion/startTest/chuyentab (de_thi.js, vaothi.js). */
+export class TestMadeDto {
+  @Type(() => Number)
+  @IsInt()
+  made!: number;
+}
+
+/** $_POST['dethi'] cho getTimeTest/getTimeEndTest (de_thi.js). */
+export class TestTimeDto {
+  @Type(() => Number)
+  @IsInt()
+  dethi!: number;
+}
+
+/** $_POST['makq'] cho getResultDetail (vaothi.js). */
+export class ResultDetailDto {
+  @Type(() => Number)
+  @IsInt()
+  makq!: number;
+}
+
 /**
  * Body của addDetail() (lưu câu hỏi cho đề thủ công) — thay
  * ChiTietDeThiModel::createMultiple. `action` được JS gửi kèm nhưng không dùng.

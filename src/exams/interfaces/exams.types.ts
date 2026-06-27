@@ -158,3 +158,94 @@ export interface ICreateTestResult {
   made?: number;
   error?: string;
 }
+
+// ===================== LUỒNG LÀM BÀI SV (slice 4) =====================
+
+/** Bản ghi ketqua của 1 SV cho 1 đề — thay KetQuaModel::getMaKQ. */
+export interface IKetQuaRow {
+  makq: number;
+  made: number;
+  manguoidung: string;
+  diemthi: number | null;
+  diem_dochieu: number | null;
+  thoigianvaothi: Date;
+  thoigianlambai: number | null;
+  socaudung: number | null;
+  solanchuyentab: number | null;
+  diem_tuluan: number | null;
+  trangthai_tuluan: string | null;
+  trangthai: string | null;
+  thoigianketthuc: Date | null;
+}
+
+/** Một đáp án hiển thị cho SV (không kèm ladapan) — getAllWithoutAnswer. */
+export interface IStudentAnswerOption {
+  macautl: number;
+  noidungtl: string;
+  hinhanhtl: string; // base64 thuần (renderImage tự nhận diện)
+}
+
+/** Một câu hỏi khi SV làm bài — thay getQuestionByUser (mỗi phần tử cauhoi[]). */
+export interface IStudentQuestion {
+  macauhoi: number;
+  noidung: string;
+  dokho: number;
+  loai: string;
+  hinhanh: string | null; // base64 thuần
+  context: string | null;
+  tieude_context: string | null;
+  thutu: number;
+  dapanchon: number | null;
+  cautraloi: IStudentAnswerOption[];
+  thutu_hien_thi?: number;
+}
+
+/** Thông tin đề nạp vào nav khi làm bài — phần `dethi` của getQuestionByUser. */
+export interface IStudentTestInfo {
+  tende: string | null;
+  thoigianthi: number | null;
+  thoigianbatdau: Date | null;
+  thoigianketthuc: Date | null;
+  tenmonhoc: string | null;
+  troncauhoi: number | null;
+  trondapan: number | null;
+  loaide: number | null;
+}
+
+/** Kết quả getQuestionByUser — { dethi, cauhoi } (de_thi.js đọc 2 khoá này). */
+export interface IGetQuestionByUser {
+  dethi: IStudentTestInfo | Record<string, never>;
+  cauhoi: IStudentQuestion[];
+}
+
+/** Một dòng chi tiết bài làm — thay DeThiModel::getResultDetail (vaothi.js). */
+export interface IResultDetailRow {
+  macauhoi: number;
+  noidung: string;
+  dokho: number;
+  loai: string;
+  context: string | null;
+  tieude_context: string | null;
+  dapanchon: number | null;
+  traloi_id: number | null;
+  noidung_tra_loi: string | null;
+  thoigianlam_tra_loi: Date | null;
+  diem_cham_tuluan: number | null;
+  ds_hinhanh_base64: string | null;
+  cautraloi: IResultAnswerOption[];
+}
+
+/** Đáp án kèm ladapan + ảnh (showTestDetail dùng) — getAll(). */
+export interface IResultAnswerOption {
+  macautl: number;
+  macauhoi: number;
+  noidungtl: string;
+  ladapan: number;
+  hinhanh: string | null; // data-URI (KHÁC PHP trả blob thô → JS hỏng)
+}
+
+/** Dữ liệu trang vào thi (vao_thi.ejs) — Test (đề + tổng câu) + Check (ketqua). */
+export interface IStartPageData {
+  Test: Record<string, unknown>;
+  Check: IKetQuaRow | null;
+}
