@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <!-- base href="/" để vaothi.js (URL tương đối) resolve đúng từ gốc dù trang ở
+       path sâu /test/start/:made. -->
+  <base href="/" />
+  <%- include('../partials/head') %>
+</head>
+<body>
+<%
+  // Port từ DHT_OneTest/mvc/views/pages/vao_thi.php — helper & logic.
+  function fmtDate(d) {
+    if (!d) return 'Chưa đặt';
+    const dt = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dt.getTime())) return 'Chưa đặt';
+    const p = (n) => String(n).padStart(2, '0');
+    return `${p(dt.getHours())}:${p(dt.getMinutes())} ${p(dt.getDate())}/${p(dt.getMonth() + 1)}/${dt.getFullYear()}`;
+  }
+  function num(v) { const n = Number(v); return isNaN(n) ? 0 : n; }
+  function tsOf(d) {
+    if (!d) return null;
+    const dt = (d instanceof Date) ? d : new Date(d);
+    return isNaN(dt.getTime()) ? null : dt.getTime();
+  }
+
+  const T = (typeof Test !== 'undefined' && Test) ? Test : {};
+  const C = (typeof Check !== 'undefined' && Check) ? Check : null;
+
+  const keys = ['mcq_de','mcq_tb','mcq_kho','essay_de','essay_tb','essay_kho','reading_de','reading_tb','reading_kho'];
+  let totalQuestions = keys.reduce((s, k) => s + num(T[k]), 0);
+  if (totalQuestions === 0) {
+    totalQuestions = num(T.socaude) + num(T.socautb) + num(T.socaukho);
+  }
+  if (totalQuestions <= 0) totalQuestions = 1;
+
+  const mcq = num(T.mcq_de) + num(T.mcq_tb) + num(T.mcq_kho);
+  const essay = num(T.essay_de) + num(T.essay_tb) + num(T.essay_kho);
+  const reading = num(T.reading_de) + num(T.reading_tb) + num(T.reading_kho);
+  function getLoaiDe() {
+    if (mcq && !essay && !reading) return 'Trắc nghiệm';
+    if (!mcq && essay && !reading) return 'Tự luận';
+    if (!mcq && !essay && reading) return 'Đọc hiểu';
+    if (mcq && essay && !reading) return 'Trắc nghiệm, Tự luận';
+    if (mcq && !essay && reading) return 'Trắc nghiệm, Đọc hiểu';
+    if (!mcq && essay && reading) return 'Tự luận, Đọc hiểu';
+    if (mcq && essay && reading) return 'Trắc nghiệm, Tự luận, Đọc hiểu';
+    return 'Chưa chọn loại câu hỏi';
+  }
+  const loaide = getLoaiDe();
+
+  const now = Date.now();
+  const startTime = tsOf(T.thoigianbatdau) ?? 0;
+  const endTime = tsOf(T.thoigianketthuc) ?? Number.MAX_SAFE_INTEGER;
+
+  const hasAttempt = !!(C && C.makq);
+  const hasScore = !!(C && C.diemthi !== null && C.diemthi !== undefined && C.diemthi !== '');
+  const canViewScore = num(T.xemdiemthi) === 1;
+  const showDetailBtn = num(T.hienthibailam) === 1;
+
+  const startFormatted = fmtDate(T.thoigianbatdau);
+  const endFormatted = fmtDate(T.thoigianketthuc);
+
+  const diemTong = num(C && (C.diem ?? C.diemthi));
+  const diemDochieu = num(C && (C.diem ?? C.diem_dochieu));
+  const diemTracNghiem = diemTong - diemDochieu;
+  const diemTuLuan = num(C && C.diem_tuluan);
+  const trangThaiTuLuan = (C && C.trangthai_tuluan) || 'Chưa chấm';
+  const daChamTuLuan = trangThaiTuLuan === 'Đã chấm';
+  const diemCuoiCung = daChamTuLuan ? (Math.round((diemTong + diemTuLuan) * 100) / 100) : null;
+  const fmt2 = (n) => Number(n).toFixed(2);
+%>
+  <div id="page-container" class="sidebar-o sidebar-light enable-page-overlay side-scroll page-header-fixed main-content-narrow remember-theme">
+    <%- include('../partials/navbar') %>
+    <%- include('../partials/header') %>
+
+    <main id="main-container">
+      <div class="content row justify-content-center align-items-center min-vh-100 py-5">
+        <div class="col-lg-6 col-md-10 bg-white p-4 rounded shadow-sm">
+          <h4 class="text-center mb-4 text-primary fw-bold"><%= T.tende || '' %></h4>
+
+          <div class="exam-info mb-4 border-top pt-3">
+            <div class="row mb-3 align-items-center">
+              <div class="col-6"><i class="far fa-clock text-primary me-2"></i><span class="fw-medium">Thời gian làm bài</span></div>
+              <div class="col-6 text-end"><span class="badge bg-primary-subtle text-primary"><%= num(T.thoigianthi) %> phút</span></div>
+            </div>
+            <div class="row mb-3 align-items-center">
+              <div class="col-6"><i class="far fa-calendar-days text-primary me-2"></i><span class="fw-medium">Thời gian mở đề</span></div>
+              <div class="col-6 text-end"><span class="badge bg-primary-subtle text-primary"><%= startFormatted %></span></div>
+            </div>
+            <div class="row mb-3 align-items-center">
+              <div class="col-6"><i class="far fa-calendar-xmark text-primary me-2"></i><span class="fw-medium">Thời gian kết thúc</span></div>
+              <div class="col-6 text-end"><span class="badge bg-primary-subtle text-primary"><%= endFormatted %></span></div>
+            </div>
+            <div class="row mb-3 align-items-center">
+              <div class="col-6"><i class="far fa-circle-question text-primary me-2"></i><span class="fw-medium">Số lượng câu hỏi</span></div>
+              <div class="col-6 text-end"><span class="badge bg-primary-subtle text-primary"><%= totalQuestions %></span></div>
+            </div>
+            <div class="row mb-3 align-items-center">
+              <div class="col-6"><i class="far fa-list-check text-primary me-2"></i><span class="fw-medium">Loại đề thi</span></div>
+              <div class="col-6 text-end"><span class="badge bg-primary-subtle text-primary"><%= loaide %></span></div>
+            </div>
+            <div class="row mb-3 align-items-center">
+              <div class="col-6"><i class="far fa-file-lines text-primary me-2"></i><span class="fw-medium">Môn học</span></div>
+              <div class="col-6 text-end"><span class="badge bg-primary-subtle text-primary"><%= T.tenmonhoc || '' %></span></div>
+            </div>
+          </div>
+
+          <!-- NÚT HÀNH ĐỘNG CHÍNH -->
+          <% if (hasAttempt && hasScore) { %>
+            <% if (canViewScore) { %>
+              <% if (showDetailBtn) { %>
+                <button class="btn btn-success w-100 rounded-pill py-3 shadow-sm" data-bs-toggle="collapse" data-bs-target="#xemkq">
+                  Xem kết quả
+                </button>
+              <% } else { %>
+                <button type="button" data-id="<%= C.makq %>" id="show-exam-detail" class="btn btn-primary w-100 rounded-pill py-3 shadow-sm">
+                  Xem kết quả của tôi
+                </button>
+              <% } %>
+            <% } else { %>
+              <button class="btn btn-danger w-100 rounded-pill py-3" disabled>Đã hoàn thành</button>
+            <% } %>
+          <% } else if (hasAttempt && !hasScore) { %>
+            <button class="btn btn-danger w-100 rounded-pill py-3" disabled>Đã hoàn thành (Chưa chấm)</button>
+          <% } else { %>
+            <% if (now < startTime) { %>
+              <button class="btn btn-light w-100 rounded-pill py-3" disabled>Chưa tới thời gian mở đề</button>
+            <% } else if (now > endTime) { %>
+              <button class="btn btn-danger w-100 rounded-pill py-3" disabled>Bài thi đã quá hạn</button>
+            <% } else { %>
+              <button name="start-test" id="start-test" data-id="<%= T.made %>"
+                      class="btn btn-info w-100 rounded-pill py-3 text-white shadow-sm btn-st">
+                Bắt đầu thi <i class='fa fa-angle-right ms-2'></i>
+              </button>
+            <% } %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- ==================== KẾT QUẢ (nếu được phép xem) ==================== -->
+      <% if (canViewScore) { %>
+        <div class="collapse mt-4" id="xemkq">
+          <div class="row justify-content-center">
+            <div class="col-lg-7 col-md-10">
+              <% if (daChamTuLuan && hasScore) { %>
+                <div class="bg-white p-4 rounded shadow-sm">
+                  <h3 class="text-center text-uppercase fw-bold mb-3 text-primary">KẾT QUẢ BÀI THI</h3>
+                  <h4 class="text-center mb-4 text-success">
+                    Điểm của bạn:
+                    <span class="display-6 fw-bold text-danger"><%= fmt2(diemCuoiCung) %></span>
+                    <% if (diemTuLuan > 0) { %>
+                      <small class="d-block text-muted mt-2">
+                        (Trắc nghiệm: <%= fmt2(diemTracNghiem) %> +
+                         Đọc hiểu: <%= fmt2(diemDochieu) %> +
+                         Tự luận: <%= fmt2(diemTuLuan) %>)
+                      </small>
+                    <% } %>
+                  </h4>
+                  <div class="exam-info mb-4 border-top pt-3">
+                    <div class="row mb-3 align-items-center">
+                      <div class="col-6">Thời gian làm bài</div>
+                      <div class="col-6 text-end"><span class="badge bg-primary-subtle text-primary">
+                        <%= (C && C.thoigianlambai != null) ? Math.max(1, Math.round(num(C.thoigianlambai) / 60)) : 0 %> phút
+                      </span></div>
+                    </div>
+                    <div class="row mb-3 align-items-center">
+                      <div class="col-6">Thời gian vào thi</div>
+                      <div class="col-6 text-end"><span class="badge bg-primary-subtle text-primary">
+                        <%= (C && C.thoigianvaothi) ? fmtDate(C.thoigianvaothi) : 'Chưa ghi nhận' %>
+                      </span></div>
+                    </div>
+                    <div class="row mb-3 align-items-center">
+                      <div class="col-6">Số câu đúng (trắc nghiệm)</div>
+                      <div class="col-6 text-end"><span class="badge bg-success-subtle text-success">
+                        <%= (C && C.socaudung != null) ? C.socaudung : 0 %>
+                      </span></div>
+                    </div>
+                    <div class="row mb-3 align-items-center">
+                      <div class="col-6">Tổng số câu</div>
+                      <div class="col-6 text-end"><span class="badge bg-primary-subtle text-primary"><%= totalQuestions %></span></div>
+                    </div>
+                    <% if (diemTuLuan > 0) { %>
+                      <div class="row mb-3 align-items-center">
+                        <div class="col-6">Điểm tự luận</div>
+                        <div class="col-6 text-end"><span class="badge bg-info-subtle text-info fw-bold"><%= fmt2(diemTuLuan) %></span></div>
+                      </div>
+                    <% } %>
+                  </div>
+                  <% if (showDetailBtn && C && C.makq) { %>
+                    <button data-id="<%= C.makq %>" id="show-exam-detail" class="btn btn-primary w-100 rounded-pill py-3 shadow-sm">
+                      Xem chi tiết bài làm
+                    </button>
+                  <% } %>
+                </div>
+              <% } else { %>
+                <div class="text-center py-5">
+                  <i class="fas fa-hourglass-half fa-5x text-warning mb-4"></i>
+                  <h3 class="fw-bold text-dark mb-3">Đang chờ chấm tự luận</h3>
+                  <p class="lead text-muted px-4">
+                    Giáo viên đang chấm phần tự luận của bạn.<br>
+                    <strong class="d-block mt-3">Điểm chính thức sẽ được cập nhật ngay khi chấm xong!</strong>
+                  </p>
+                  <div class="mt-4">
+                    <img src="/public/media/avatars/ChamDiem.gif" alt="Đang chờ..." style="width: 300px; height: 300px;">
+                  </div>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+        <script>
+          $(document).ready(function () {
+            if ($('#xemkq').hasClass('show')) {
+              $('html, body').animate({ scrollTop: $('#xemkq').offset().top - 100 }, 800);
+            }
+            $('#xemkq').on('shown.bs.collapse', function () {
+              $('html, body').animate({ scrollTop: $('#xemkq').offset().top - 100 }, 300);
+            });
+            $('#show-exam-detail').on('click', function () { $('#xemkq').collapse('show'); });
+          });
+        </script>
+      <% } %>
+
+      <!-- ==================== MODAL XEM CHI TIẾT ==================== -->
+      <div class="modal fade" id="modal-show-test" tabindex="-1" aria-labelledby="modal-view-test-label" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-xl">
+          <div class="modal-content shadow-lg">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title" id="modal-view-test-label">Chi tiết bài thi</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="content-file"></div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Đóng</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </div>
+
+  <%- include('../partials/script') %>
+  <!-- Plugin trang Vào thi: notify (Dashmix jq-notify). -->
+  <script src="/public/js/plugins/bootstrap-notify/bootstrap-notify.min.js"></script>
+  <script src="/public/js/pages/vaothi.js"></script>
+</body>
+</html>
