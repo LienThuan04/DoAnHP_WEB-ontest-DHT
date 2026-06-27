@@ -48,6 +48,10 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'test/add', 'test/update/:made', 'test/addTest', 'test/updateTest',
           // Chọn câu hỏi cho đề thủ công (select_question) — SSR + AJAX.
           'test/select/:made', 'test/getQuestionOfTestManual', 'test/addDetail',
+          // Luồng làm bài SV (vao_thi/de_thi) — SSR + AJAX.
+          'test/start/:made', 'test/taketest/:made', 'test/getQuestion',
+          'test/startTest', 'test/getTimeTest', 'test/getTimeEndTest',
+          'test/chuyentab', 'test/submit', 'test/getResultDetail',
           // Nhóm học phần (module.php) — loadData cấp dropdown nhóm cho tạo đề.
           'module/loadData',
         ],
