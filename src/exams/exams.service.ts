@@ -6,12 +6,18 @@ import type {
   ICreatedTestRow,
   ICreateTestResult,
   IDeleteExamResult,
+  IEssayAnswerDetail,
+  IEssaySubmissionRow,
   IExamDetail,
   IExamPaginationArgs,
+  IExamResultRow,
   IGetQuestionByUser,
   IGroupOption,
+  IInfoTestBasic,
   IKetQuaRow,
   IManualTestQuestion,
+  ISaveEssayResult,
+  IStaticticalResult,
   IQuestionForTestFilter,
   IQuestionForTestRow,
   IResultDetailRow,
@@ -1566,5 +1572,467 @@ export class ExamsService {
       });
     }
     return result;
+  }
+
+  // ========== CHI TIẾT/KẾT QUẢ ĐỀ (GV) + CHẤM TỰ LUẬN (slice 5) ==========
+
+  /**
+   * Thông tin cơ bản đề cho trang test_detail — thay DeThiModel::getInfoTestBasic.
+   * Trả null nếu đề không tồn tại. Kèm danh sách nhóm được giao (manhom + tennhom)
+   * để render dropdown lọc & offcanvas thông tin.
+   */
+  async getInfoTestBasic(made: number): Promise<IInfoTestBasic | null> {
+    const rows = await this.prisma.$queryRaw<
+      Omit<IInfoTestBasic, 'nhom'>[]
+    >(Prisma.sql`
+      SELECT DT.made, DT.tende, DT.thoigiantao, DT.loaide, DT.nguoitao,
+             MH.mamonhoc, MH.tenmonhoc
+      FROM dethi DT
+      JOIN monhoc MH ON DT.monthi = MH.mamonhoc
+      WHERE DT.made = ${made}
+      LIMIT 1
+    `);
+    const dethi = rows[0];
+    if (!dethi) return null;
+    const nhom = await this.prisma.$queryRaw<
+      { manhom: number; tennhom: string }[]
+    >(Prisma.sql`
+      SELECT GDT.manhom, N.tennhom
+      FROM giaodethi GDT
+      JOIN nhom N ON GDT.manhom = N.manhom
+      WHERE GDT.made = ${made}
+    `);
+    return { ...dethi, nhom };
+  }
+
+  /** Điều kiện lọc nhóm cho bảng điểm (manhom là số hoặc mảng số). */
+  private examResultManhom(manhom: IExamPaginationArgs['manhom']): Prisma.Sql {
+    if (Array.isArray(manhom)) {
+      const list = manhom.map((m) => Number(m)).filter((n) => Number.isFinite(n));
+      if (list.length === 0) return Prisma.sql`AND FALSE`;
+      return Prisma.sql`AND CTN.manhom IN (${Prisma.join(list)})`;
+    }
+    return Prisma.sql`AND CTN.manhom = ${Number(manhom)}`;
+  }
+
+  /** ORDER BY cho bảng điểm — whitelist cột như KetQuaModel::getQuery (sort). */
+  private examResultOrder(args: IExamPaginationArgs): Prisma.Sql {
+    if (args.custom?.function === 'sort') {
+      const ord =
+        String(args.custom?.order).toLowerCase() === 'desc'
+          ? Prisma.sql`DESC`
+          : Prisma.sql`ASC`;
+      switch (args.custom?.column) {
+        case 'manguoidung':
+          return Prisma.sql`ORDER BY manguoidung ${ord}`;
+        case 'diemthi':
+          return Prisma.sql`ORDER BY diemthi ${ord}`;
+        case 'thoigianvaothi':
+          return Prisma.sql`ORDER BY thoigianvaothi ${ord}`;
+        case 'thoigianlambai':
+          return Prisma.sql`ORDER BY thoigianlambai ${ord}`;
+        case 'solanchuyentab':
+          return Prisma.sql`ORDER BY solanchuyentab ${ord}`;
+        case 'hoten':
+          // firstname = từ cuối của họ tên (thay SUBSTRING_INDEX(hoten,' ',-1)).
+          return Prisma.sql`ORDER BY substring(hoten from '[^ ]+$') ${ord}`;
+        default:
+          break;
+      }
+    }
+    return Prisma.sql`ORDER BY manguoidung ASC`;
+  }
+
+  /** Nhánh "đã thi/đang thi" (present/interrupted/all-present) — SELECT ketqua. */
+  private examResultPresentSql(
+    made: number,
+    diemCond: Prisma.Sql,
+    manhom: Prisma.Sql,
+    search: Prisma.Sql,
+  ): Prisma.Sql {
+    return Prisma.sql`
+      SELECT DISTINCT
+        KQ.makq, KQ.made, KQ.manguoidung, KQ.diemthi, KQ.diem_tuluan,
+        KQ.trangthai, KQ.trangthai_tuluan, KQ.thoigianvaothi, KQ.thoigianlambai,
+        KQ.socaudung, KQ.solanchuyentab,
+        ND.email, ND.hoten, ND.avatar, DT.thoigianbatdau, DT.thoigianketthuc
+      FROM ketqua KQ
+      JOIN nguoidung ND ON KQ.manguoidung = ND.id
+      JOIN chitietnhom CTN ON CTN.manguoidung = ND.id
+      JOIN dethi DT ON DT.made = KQ.made
+      WHERE KQ.made = ${made} ${diemCond} ${manhom} ${search}
+    `;
+  }
+
+  /**
+   * Nhánh "vắng thi" (absent) — SV thuộc nhóm nhưng CHƯA có ketqua.
+   * Thay KetQuaModel::getListAbsentFromTest. KHÁC PHP: có kèm giờ đề
+   * (thoigianbatdau/thoigianketthuc) để JS tính đúng trạng thái "Vắng/Đang/Chưa".
+   */
+  private examResultAbsentSql(
+    made: number,
+    manhom: Prisma.Sql,
+    search: Prisma.Sql,
+  ): Prisma.Sql {
+    return Prisma.sql`
+      SELECT DISTINCT
+        NULL::int AS makq, ${made}::int AS made, CTN.manguoidung,
+        NULL::double precision AS diemthi, NULL::double precision AS diem_tuluan,
+        NULL::text AS trangthai, NULL::text AS trangthai_tuluan,
+        NULL::timestamp AS thoigianvaothi, NULL::int AS thoigianlambai,
+        NULL::int AS socaudung, NULL::int AS solanchuyentab,
+        ND.email, ND.hoten, ND.avatar, DT.thoigianbatdau, DT.thoigianketthuc
+      FROM chitietnhom CTN
+      JOIN nguoidung ND ON ND.id = CTN.manguoidung
+      JOIN dethi DT ON DT.made = ${made}
+      LEFT JOIN ketqua KQ ON CTN.manguoidung = KQ.manguoidung AND KQ.made = ${made}
+      WHERE KQ.made IS NULL ${manhom} ${search}
+    `;
+  }
+
+  /** Dựng câu truy vấn bảng điểm theo filter (present/interrupted/absent/all). */
+  private buildExamResultQuery(
+    args: IExamPaginationArgs,
+    countOnly: boolean,
+  ): Prisma.Sql {
+    const made = Number(args.made);
+    const filter = String(args.filter ?? 'present');
+    const manhom = this.examResultManhom(args.manhom);
+    const input = (args.input ?? args.content ?? '').trim();
+    const like = `%${input}%`;
+    const search = input
+      ? Prisma.sql`AND (ND.hoten ILIKE ${like} OR CTN.manguoidung ILIKE ${like})`
+      : Prisma.empty;
+    const order = countOnly ? Prisma.empty : this.examResultOrder(args);
+
+    if (filter === 'all') {
+      const present = this.examResultPresentSql(
+        made,
+        Prisma.empty,
+        manhom,
+        search,
+      );
+      const absent = this.examResultAbsentSql(made, manhom, search);
+      const outerSearch = input
+        ? Prisma.sql`WHERE (hoten ILIKE ${like} OR manguoidung ILIKE ${like})`
+        : Prisma.empty;
+      return Prisma.sql`
+        SELECT * FROM ((${present}) UNION (${absent})) AS combined
+        ${outerSearch} ${order}`;
+    }
+    if (filter === 'absent') {
+      return Prisma.sql`${this.examResultAbsentSql(made, manhom, search)} ${order}`;
+    }
+    const diemCond =
+      filter === 'interrupted'
+        ? Prisma.sql`AND KQ.diemthi IS NULL`
+        : Prisma.sql`AND KQ.diemthi IS NOT NULL`; // "present" mặc định
+    return Prisma.sql`${this.examResultPresentSql(made, diemCond, manhom, search)} ${order}`;
+  }
+
+  /**
+   * POST /test/pagination (model=KetQuaModel) — 1 trang bảng điểm thí sinh.
+   * Thay KetQuaModel::getQuery. showData (test_detail.js) đọc mảng dòng này.
+   */
+  listExamResults(args: IExamPaginationArgs): Promise<IExamResultRow[]> {
+    const limit = Number(args.limit) || PAGE_SIZE;
+    const page = Math.max(Number(args.page) || 1, 1);
+    const offset = (page - 1) * limit;
+    const inner = this.buildExamResultQuery(args, false);
+    return this.prisma.$queryRaw<IExamResultRow[]>(
+      Prisma.sql`${inner} LIMIT ${limit} OFFSET ${offset}`,
+    );
+  }
+
+  /** POST /test/getTotalPages (model=KetQuaModel) — tổng số trang bảng điểm. */
+  async countExamResultPages(
+    args: IExamPaginationArgs,
+  ): Promise<{ totalPages: number }> {
+    const limit = Number(args.limit) || PAGE_SIZE;
+    const inner = this.buildExamResultQuery(args, true);
+    const rows = await this.prisma.$queryRaw<{ count: number }[]>(
+      Prisma.sql`SELECT COUNT(*)::int AS count FROM (${inner}) AS sub`,
+    );
+    const total = Number(rows[0]?.count ?? 0);
+    return { totalPages: Math.ceil(total / limit) };
+  }
+
+  /**
+   * POST /test/getStatictical — thống kê điểm cho tab Thống kê (biểu đồ + thẻ).
+   * Thay KetQuaModel::getStatictical. Giữ quirk PHP: KHÔNG DISTINCT nên SV thuộc
+   * nhiều nhóm được giao đề có thể bị đếm nhiều lần (khi lọc "Tất cả").
+   */
+  async getStatictical(
+    made: number,
+    manhom: number,
+  ): Promise<IStaticticalResult> {
+    const nhomCond =
+      manhom && manhom !== 0
+        ? Prisma.sql`AND CTN.manhom = ${manhom}`
+        : Prisma.empty;
+    const rows = await this.prisma.$queryRaw<
+      { mandkq: string | null; diemthi: number | null }[]
+    >(Prisma.sql`
+      SELECT CTN.manguoidung, KQ.manguoidung AS mandkq, KQ.makq, KQ.made, KQ.diemthi
+      FROM chitietnhom CTN
+      JOIN giaodethi GDT ON CTN.manhom = GDT.manhom
+      LEFT JOIN ketqua KQ ON KQ.manguoidung = CTN.manguoidung AND KQ.made = ${made}
+      WHERE GDT.made = ${made} ${nhomCond}
+    `);
+
+    const diemthiBins = new Array<number>(10).fill(0);
+    let tongdiem = 0;
+    let soluong = 0;
+    let max = 0;
+    let chuanop = 0;
+    let khongthi = 0;
+    for (const row of rows) {
+      if (row.diemthi != null) {
+        tongdiem += row.diemthi;
+        soluong++;
+        const idx = Math.ceil(row.diemthi) > 0 ? Math.ceil(row.diemthi) - 1 : 0;
+        if (idx >= 0 && idx < 10) diemthiBins[idx]++;
+        if (row.diemthi > max) max = row.diemthi;
+      } else if (row.mandkq != null) {
+        chuanop++;
+      } else {
+        khongthi++;
+      }
+    }
+    return {
+      diem_trung_binh: soluong !== 0 ? Math.round((tongdiem / soluong) * 100) / 100 : 0,
+      da_nop_bai: soluong,
+      chua_nop_bai: chuanop,
+      khong_thi: khongthi,
+      diem_cao_nhat: max,
+      thong_ke_diem: diemthiBins,
+    };
+  }
+
+  /**
+   * POST /test/getListEssaySubmissionsAction — danh sách SV có bài tự luận cần chấm.
+   * Thay CauTraLoiModel::getAllEssaySubmissions. status: 'all'|'graded'|'ungraded'.
+   * KHÁC PHP: có trả `avatar` (PHP quên map) để hiển thị ảnh SV.
+   */
+  async getEssaySubmissions(
+    made: number,
+    search: string | null,
+    status: string,
+  ): Promise<{ success: boolean; data: IEssaySubmissionRow[] }> {
+    const s = (search ?? '').trim();
+    const like = `%${s}%`;
+    const searchCond = s
+      ? Prisma.sql`AND (nd.hoten ILIKE ${like} OR k.manguoidung ILIKE ${like})`
+      : Prisma.empty;
+    const statusCond =
+      status === 'graded'
+        ? Prisma.sql`AND (k.diem_tuluan IS NOT NULL AND k.diem_tuluan > 0)`
+        : status === 'ungraded'
+          ? Prisma.sql`AND (k.diem_tuluan IS NULL OR k.diem_tuluan = 0)`
+          : Prisma.empty;
+
+    const rows = await this.prisma.$queryRaw<
+      {
+        makq: number;
+        manguoidung: string;
+        hoten: string;
+        avatar: string | null;
+        diemthi: number | null;
+        diem_dochieu: number | null;
+        diem_tuluan: number | null;
+      }[]
+    >(Prisma.sql`
+      SELECT k.makq, k.manguoidung, COALESCE(nd.hoten, k.manguoidung) AS hoten,
+             nd.avatar, k.diemthi, k.diem_dochieu, k.diem_tuluan,
+             k.trangthai_tuluan, k.thoigianvaothi, k.thoigianlambai
+      FROM ketqua k
+      INNER JOIN (
+        SELECT DISTINCT makq FROM traloi_tuluan
+        WHERE makq IN (SELECT makq FROM ketqua WHERE made = ${made})
+      ) tt ON tt.makq = k.makq
+      LEFT JOIN nguoidung nd ON nd.id = k.manguoidung
+      WHERE k.made = ${made} ${searchCond} ${statusCond}
+      ORDER BY (k.thoigianvaothi + (COALESCE(k.thoigianlambai, 0) || ' seconds')::interval) DESC
+    `);
+
+    const data: IEssaySubmissionRow[] = rows.map((r) => {
+      const diemTL = Math.round((r.diem_tuluan ?? 0) * 100) / 100;
+      return {
+        makq: r.makq,
+        manguoidung: r.manguoidung,
+        hoten: r.hoten,
+        avatar: r.avatar,
+        diemthi: r.diemthi,
+        diem_dochieu: r.diem_dochieu,
+        diem_tuluan_hien_tai: diemTL,
+        trangthai_cham: diemTL > 0 ? 'Đã chấm' : 'Chưa chấm',
+      };
+    });
+    return { success: true, data };
+  }
+
+  /**
+   * POST /test/getEssayDetailAction — chi tiết bài làm tự luận 1 thí sinh (form chấm).
+   * Thay CauTraLoiModel::getEssayAnswersByMakq. hinhanh trả base64 THUẦN (JS tự
+   * thêm data:image/png;base64,). Gộp theo macauhoi (mỗi câu 1 khối + list ảnh).
+   */
+  async getEssayDetail(makq: number): Promise<{
+    success: boolean;
+    makq: number;
+    manguoidung: string | null;
+    hoten: string | null;
+    avatar: string | null;
+    tong_diem_tuluan: number;
+    tong_cau: number;
+    da_cham: number;
+    cautraloi: IEssayAnswerDetail[];
+  }> {
+    const userRows = await this.prisma.$queryRaw<
+      { manguoidung: string; hoten: string; avatar: string | null }[]
+    >(Prisma.sql`
+      SELECT kq.manguoidung, COALESCE(nd.hoten, kq.manguoidung) AS hoten, nd.avatar
+      FROM ketqua kq
+      LEFT JOIN nguoidung nd ON nd.id = kq.manguoidung
+      WHERE kq.makq = ${makq}
+      LIMIT 1
+    `);
+    const info = userRows[0] ?? null;
+
+    const rows = await this.prisma.$queryRaw<
+      {
+        traloi_id: number;
+        macauhoi: number;
+        noidung_tra_loi: string | null;
+        thoigianlam: Date | null;
+        noidung_cauhoi: string | null;
+        diem_da_cham: number | null;
+      }[]
+    >(Prisma.sql`
+      SELECT tt.id AS traloi_id, tt.macauhoi, tt.noidung AS noidung_tra_loi,
+             tt.thoigianlam, ch.noidung AS noidung_cauhoi, ct.diem AS diem_da_cham
+      FROM traloi_tuluan tt
+      INNER JOIN cauhoi ch ON ch.macauhoi = tt.macauhoi
+      LEFT JOIN cham_tuluan ct ON ct.makq = tt.makq AND ct.macauhoi = tt.macauhoi
+      WHERE tt.makq = ${makq}
+      ORDER BY tt.macauhoi ASC
+    `);
+
+    const byCau = new Map<number, IEssayAnswerDetail>();
+    let tongDiem = 0;
+    let daCham = 0;
+    for (const row of rows) {
+      if (!byCau.has(row.macauhoi)) {
+        const diemCham = row.diem_da_cham != null ? Number(row.diem_da_cham) : null;
+        byCau.set(row.macauhoi, {
+          macauhoi: row.macauhoi,
+          noidung_cauhoi: row.noidung_cauhoi ?? '(Câu hỏi đã bị xóa)',
+          noidung_tra_loi: row.noidung_tra_loi ?? '',
+          thoigianlam: row.thoigianlam,
+          diem_cham: diemCham,
+          hinhanh: [],
+        });
+        if (diemCham != null) {
+          tongDiem += diemCham;
+          daCham++;
+        }
+      }
+      const imgs = await this.prisma.hinhAnhTraLoiTuLuan.findMany({
+        where: { traloi_id: row.traloi_id },
+        select: { hinhanh: true },
+        orderBy: { id: 'asc' },
+      });
+      const target = byCau.get(row.macauhoi)!;
+      for (const im of imgs) {
+        if (im.hinhanh && im.hinhanh.length > 0) {
+          target.hinhanh.push(Buffer.from(im.hinhanh).toString('base64'));
+        }
+      }
+    }
+
+    const cautraloi = [...byCau.values()];
+    return {
+      success: true,
+      makq,
+      manguoidung: info?.manguoidung ?? null,
+      hoten: info?.hoten ?? null,
+      avatar: info?.avatar ?? null,
+      tong_diem_tuluan: Math.round(tongDiem * 100) / 100,
+      tong_cau: cautraloi.length,
+      da_cham: daCham,
+      cautraloi,
+    };
+  }
+
+  /**
+   * POST /test/saveEssayScoreAction — lưu điểm tự luận (tổng + từng câu).
+   * Thay KetquaModel::luuDiemTuLuan. Chặn nếu tổng vượt diem_tuluan tối đa của đề.
+   * KHÁC PHP: thay "INSERT ... ON DUPLICATE KEY" bằng xoá điểm cũ (theo makq +
+   * các macauhoi gửi lên) rồi createMany — vì bảng cham_tuluan không có unique
+   * (makq,macauhoi) trong schema Prisma. Kết quả tương đương (ghi đè).
+   */
+  async saveEssayScore(
+    makq: number,
+    diemTong: number,
+    diemTungCau: Record<string, number | string>,
+  ): Promise<ISaveEssayResult> {
+    if (!Number.isInteger(makq) || makq <= 0) {
+      return { success: false, message: 'Mã kết quả không hợp lệ' };
+    }
+    const diemTongRounded = Math.round(diemTong * 100) / 100;
+
+    const maxRows = await this.prisma.$queryRaw<{ diem_tuluan_max: number }[]>(
+      Prisma.sql`
+        SELECT d.diem_tuluan AS diem_tuluan_max
+        FROM ketqua k
+        JOIN dethi d ON k.made = d.made
+        WHERE k.makq = ${makq}
+        LIMIT 1
+      `,
+    );
+    if (maxRows.length === 0) {
+      return { success: false, message: 'Kết quả không tồn tại' };
+    }
+    const diemMax = Number(maxRows[0].diem_tuluan_max ?? 0);
+    if (diemTongRounded > diemMax) {
+      return {
+        success: false,
+        message: `Điểm chấm <span style='color:green; font-size:1.5em; font-weight:bold;'>${diemTongRounded} </span>điểm vượt quá tối đa <span style='color:red; font-size:1.5em; font-weight:bold;'>${diemMax}</span> điểm cho phần tự luận`,
+      };
+    }
+
+    const rows = Object.entries(diemTungCau)
+      .map(([mc, d]) => ({
+        macauhoi: Number(mc),
+        diem: Math.round(Number(d) * 100) / 100,
+      }))
+      .filter((r) => Number.isInteger(r.macauhoi) && r.macauhoi > 0);
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        if (rows.length > 0) {
+          await tx.chamTuLuan.deleteMany({
+            where: { makq, macauhoi: { in: rows.map((r) => r.macauhoi) } },
+          });
+          await tx.chamTuLuan.createMany({
+            data: rows.map((r) => ({ makq, macauhoi: r.macauhoi, diem: r.diem })),
+          });
+        }
+        await tx.ketQua.update({
+          where: { makq },
+          data: {
+            diem_tuluan: diemTongRounded,
+            trangthai_tuluan: diemTongRounded > 0 ? 'Đã chấm' : 'Chưa chấm',
+          },
+        });
+      });
+    } catch (e) {
+      return { success: false, message: 'Lỗi: ' + (e as Error).message };
+    }
+
+    return {
+      success: true,
+      message: 'Lưu điểm tự luận thành công!',
+      diem_tuluan: diemTongRounded,
+    };
   }
 }
