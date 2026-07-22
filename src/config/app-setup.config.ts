@@ -56,8 +56,22 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'test/detail/:made', 'test/getStatictical',
           'test/getListEssaySubmissionsAction', 'test/getEssayDetailAction',
           'test/saveEssayScoreAction', 'test/exportPdf/:makq', 'test/exportExcel',
-          // Nhóm học phần (module.php) — loadData cấp dropdown nhóm cho tạo đề.
-          'module/loadData',
+          // Nhóm học phần (module.php) — trang SSR + AJAX quản lý nhóm của GV.
+          'module', 'module/loadData', 'module/getNamHoc', 'module/getHocKy',
+          'module/checkDuplicate', 'module/add', 'module/update',
+          'module/delete', 'module/hide', 'module/getDetail',
+          // Chi tiết nhóm (class_detail) — SSR + AJAX danh sách/quản lý thành viên.
+          'module/detail/:manhom', 'module/pagination', 'module/getTotalPages',
+          'module/getSvList', 'module/getInvitedCode', 'module/updateInvitedCode',
+          'module/checkAcc', 'module/addSvGroup', 'module/addSV',
+          'module/addStudentsByClassCode', 'module/kickUser',
+          'module/getGroupSize', 'module/exportExcelStudentS',
+          // Phân công giảng dạy (assignment.php) — trang SSR + AJAX ở path gốc.
+          'assignment', 'assignment/getGiangVien', 'assignment/getMonHoc',
+          'assignment/getNamHoc', 'assignment/getHocKy', 'assignment/getTotalPages',
+          'assignment/pagination', 'assignment/checkDuplicate',
+          'assignment/addAssignment', 'assignment/checkDuplicateForUpdate',
+          'assignment/update', 'assignment/delete',
         ],
       });
       app.enableVersioning({
