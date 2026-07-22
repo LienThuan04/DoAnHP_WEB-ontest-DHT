@@ -47,11 +47,14 @@ Giữ **nguyên nghiệp vụ + giao diện** của hệ thi cũ; chỉ đổi c
 
 Hạ tầng + Phase 1/2/3 **XONG**. Phase 4 (đề thi & làm bài, module lớn nhất) **gần
 xong**: slice 1–5 xong (danh sách/tạo-sửa/chọn câu/làm bài SV/chi tiết-kết quả +
-chấm tự luận); còn export PDF/Excel thật (đang stub) + `test_schedule`. Phase 5/6/7
-(nhóm-lớp/thông báo-thống kê/hoàn thiện) **chưa làm**.
+chấm tự luận); còn export PDF/Excel thật (đang stub) + `test_schedule`. **Phase 5
+đang làm:** quản lý nhóm học phần GV (`module.php`) + chi tiết nhóm/thành viên
+(`class_detail.php`, path `/module`) + **phân công GV↔môn (`assignment.php`, path
+`/assignment`, module `src/assignments/`)** đều **XONG** (2026-07-22, xem
+`../docs/11` §4b). `assignment` MỞ KHOÁ dữ liệu thật (dropdown môn lọc qua
+`phancong`). Còn phía SV (`client.php`). Phase 6/7 **chưa làm**.
 
-→ Việc kế tiếp gợi ý: **Phase 5** (UI nhóm/lớp `module.php`+`client.php` + phân công
-`assignment.php`) để mở khoá dữ liệu thật cho các trang đang phụ thuộc `phancong`/
-`giaodethi`/`nhom`.
+→ Việc kế tiếp gợi ý: phía SV (`client.php`/`client_group.php` — SV xem/tham gia
+nhóm), rồi Phase 6 (thông báo/thống kê/dashboard).
 
 **Sau mỗi phiên: cập nhật `docs/03-tien-do.md`** để phiên/agent sau không mất mạch.
