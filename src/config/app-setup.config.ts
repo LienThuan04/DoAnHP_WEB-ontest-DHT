@@ -52,6 +52,10 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'test/start/:made', 'test/taketest/:made', 'test/getQuestion',
           'test/startTest', 'test/getTimeTest', 'test/getTimeEndTest',
           'test/chuyentab', 'test/submit', 'test/getResultDetail',
+          // Chi tiết/kết quả đề GV (test_detail) — SSR + AJAX thống kê + chấm tự luận.
+          'test/detail/:made', 'test/getStatictical',
+          'test/getListEssaySubmissionsAction', 'test/getEssayDetailAction',
+          'test/saveEssayScoreAction', 'test/exportPdf/:makq', 'test/exportExcel',
           // Nhóm học phần (module.php) — loadData cấp dropdown nhóm cho tạo đề.
           'module/loadData',
         ],
