@@ -14,15 +14,18 @@ export interface IExamPaginationArgs {
   model?: string;
   id?: string;
   mamonhoc?: string; // môn của đề (trang chọn câu hỏi getQuestionsForTest)
+  made?: number | string; // mã đề (bảng điểm test_detail, model=KetQuaModel)
+  manhom?: number | string | (number | string)[]; // nhóm lọc (bảng điểm test_detail)
   limit?: number | string;
   page?: number | string;
   input?: string;
   content?: string;
-  // Danh sách đề GV: trạng thái "0"|"1"|"2". Trang chọn câu hỏi: object lọc câu.
+  // Danh sách đề GV: trạng thái "0"|"1"|"2". Bảng điểm: "present"|"absent"|
+  // "interrupted"|"all". Trang chọn câu hỏi: object lọc câu.
   filter?: string | number | IQuestionForTestFilter;
   subject?: string;
   group?: string | number;
-  custom?: { function?: string };
+  custom?: { function?: string; column?: string; order?: string };
 }
 
 /** Bộ lọc câu hỏi khi chọn câu cho đề thủ công (select_question.js → filter). */
@@ -248,4 +251,80 @@ export interface IResultAnswerOption {
 export interface IStartPageData {
   Test: Record<string, unknown>;
   Check: IKetQuaRow | null;
+}
+
+// ============ CHI TIẾT/KẾT QUẢ ĐỀ (GV) + CHẤM TỰ LUẬN (slice 5) ============
+
+/** Thông tin cơ bản đề (trang test_detail) — thay getInfoTestBasic(). */
+export interface IInfoTestBasic {
+  made: number;
+  tende: string | null;
+  thoigiantao: Date;
+  loaide: number | null;
+  nguoitao: string | null;
+  mamonhoc: string;
+  tenmonhoc: string;
+  nhom: { manhom: number; tennhom: string }[];
+}
+
+/**
+ * Một dòng bảng điểm thí sinh (trang test_detail) — thay KetQuaModel::getQuery.
+ * Cho cả present/interrupted/absent/all. Cột absent để NULL trừ danh tính + giờ đề.
+ */
+export interface IExamResultRow {
+  makq: number | null;
+  made: number;
+  manguoidung: string;
+  diemthi: number | null;
+  diem_tuluan: number | null;
+  trangthai: string | null;
+  trangthai_tuluan: string | null;
+  thoigianvaothi: Date | null;
+  thoigianlambai: number | null;
+  socaudung: number | null;
+  solanchuyentab: number | null;
+  email: string | null;
+  hoten: string | null;
+  avatar: string | null;
+  thoigianbatdau: Date | null;
+  thoigianketthuc: Date | null;
+}
+
+/** Kết quả thống kê điểm (tab Thống kê) — thay KetQuaModel::getStatictical. */
+export interface IStaticticalResult {
+  diem_trung_binh: number;
+  da_nop_bai: number;
+  chua_nop_bai: number;
+  khong_thi: number;
+  diem_cao_nhat: number;
+  thong_ke_diem: number[]; // 10 khoảng điểm 0-1..9-10
+}
+
+/** 1 SV có bài tự luận cần chấm — thay CauTraLoiModel::getAllEssaySubmissions. */
+export interface IEssaySubmissionRow {
+  makq: number;
+  manguoidung: string;
+  hoten: string;
+  avatar: string | null;
+  diemthi: number | null;
+  diem_dochieu: number | null;
+  diem_tuluan_hien_tai: number;
+  trangthai_cham: string;
+}
+
+/** 1 câu tự luận trong bài chấm — thay getEssayAnswersByMakq (mỗi câu). */
+export interface IEssayAnswerDetail {
+  macauhoi: number;
+  noidung_cauhoi: string;
+  noidung_tra_loi: string;
+  thoigianlam: Date | null;
+  diem_cham: number | null;
+  hinhanh: string[]; // base64 thuần (JS tự thêm data:image/png;base64,)
+}
+
+/** Kết quả lưu điểm tự luận — thay KetQuaModel::luuDiemTuLuan. */
+export interface ISaveEssayResult {
+  success: boolean;
+  message: string;
+  diem_tuluan?: number;
 }
