@@ -1,27 +1,20 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {  } from '@prisma/client';
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
     constructor(
         private readonly configService: ConfigService
-     ) {
+    ) {
         const databaseUrl = configService.get<string>('DATABASE_URL');
         if (!databaseUrl) {
-            throw new Error('DATABASE_URL environment variable is not set. Please set it to your Prisma Data API URL !!!');
+            throw new Error('DATABASE_URL environment variable is not set. Please set it to your Prisma Accelerate (prisma+postgres://) connection string !!!');
         }
-        const adapter = new PrismaPg({
-            connectionString: databaseUrl,
-            ssl: {
-                rejectUnauthorized: false, // For development only. In production, ensure proper SSL configuration.
-            },
-        })
-        super({ adapter: adapter }); // use the Prisma Data API URL from the environment variable for connection
-
-
+        // Dùng Prisma Accelerate để tăng tốc query: DATABASE_URL là URL dạng
+        // prisma+postgres:// (hoặc prisma://) → truyền accelerateUrl cho PrismaClient.
+        // KHÔNG dùng driver adapter PrismaPg ở đây (adapter chỉ nhận postgres:// trực tiếp).
+        super({ accelerateUrl: databaseUrl });
     }
 
     private readonly logger = new Logger(PrismaService.name);
@@ -29,7 +22,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     async onModuleInit() {
         try {
             await this.$connect();
-            this.logger.log('✅ Prisma connected to PostgreSQL successfully');
+            this.logger.log('✅ Prisma connected via Accelerate successfully');
         } catch (error: any) {
             this.logger.error('❌ Prisma connection failed:', error);
             throw error;
@@ -38,6 +31,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     async onModuleDestroy() {
         await this.$disconnect();
-        this.logger.log('✅ Prisma disconnected from PostgreSQL');
+        this.logger.log('✅ Prisma disconnected');
     }
 }
