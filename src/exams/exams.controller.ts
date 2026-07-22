@@ -21,9 +21,13 @@ import {
   AddDetailDto,
   CreateTestDto,
   DeleteExamDto,
+  EssayDetailDto,
   ExamIdDto,
   ExamPaginationBodyDto,
+  ListEssaySubmissionsDto,
   ResultDetailDto,
+  SaveEssayScoreDto,
+  StaticticalDto,
   TestMadeDto,
   TestTimeDto,
   UpdateTestDto,
@@ -37,11 +41,10 @@ import type { IExamJwtPayload } from '@/exam-auth/interfaces/exam-auth.types';
  * khớp URL `/test/...` mà test.js gọi. AJAX dùng @SkipTransform để trả nguyên
  * shape JS gốc mong đợi (mảng / object / boolean).
  *
- * Đã port (slice 1 — trang danh sách GV): trang SSR /test, danh sách chính
- * (pagination/getTotalPages, lọc trạng thái/môn/nhóm/từ khoá), xoá đề,
- * get_subjects/get_groups (dropdown lọc), getDetail.
- * CHƯA port: tạo/sửa đề (add/update + addTest/updateTest), chọn câu hỏi
- * (select_question), chi tiết kết quả (detail), luồng làm bài & chấm (Phase 4 tiếp).
+ * Đã port: danh sách GV (slice 1), tạo/sửa đề (slice 2), chọn câu hỏi cho đề
+ * thủ công (slice 3), luồng làm bài SV (slice 4), chi tiết/kết quả đề + chấm
+ * tự luận (slice 5). HOÃN: exportPdf (dompdf) & exportExcel (PhpSpreadsheet) —
+ * hiện là stub trả thông báo "đang phát triển".
  */
 @Controller({ path: 'test', version: VERSION_NEUTRAL })
 export class ExamsController {
@@ -128,6 +131,28 @@ export class ExamsController {
     return { Title: 'Chọn câu hỏi', Page: 'select_question', user };
   }
 
+  /**
+   * GET /test/detail/:made — trang chi tiết/kết quả đề (bảng điểm + thống kê +
+   * chấm tự luận). Thay Test::detail. Điều kiện PHP: đề tồn tại + quyền
+   * dethi.create + nguoitao == user → 404 / 403.
+   */
+  @Permissions('dethi', 'create')
+  @Get('detail/:made')
+  @Render('pages/test_detail')
+  async detailPage(@Param('made') madeRaw: string, @Req() req: Request) {
+    const user = req.user as IExamJwtPayload;
+    const made = Number(madeRaw);
+    if (!Number.isInteger(made) || made <= 0) {
+      throw new NotFoundException('Đề thi không tồn tại');
+    }
+    const test = await this.exams.getInfoTestBasic(made);
+    if (!test) throw new NotFoundException('Đề thi không tồn tại');
+    if (test.nguoitao !== user.id) {
+      throw new ForbiddenException('Bạn không có quyền xem chi tiết đề thi này');
+    }
+    return { Title: 'Danh sách đã thi', Page: 'test_detail', Test: test, user };
+  }
+
   /** GET /test/get_subjects — môn được phân công (dropdown lọc). */
   @Permissions('dethi', 'view')
   @SkipTransform()
@@ -156,6 +181,9 @@ export class ExamsController {
   getTotalPages(@Body() dto: ExamPaginationBodyDto, @Req() req: Request) {
     const user = req.user as IExamJwtPayload;
     const args = this.parseArgs(dto.args);
+    if (args.model === 'KetQuaModel') {
+      return this.exams.countExamResultPages(args);
+    }
     if (args.custom?.function === 'getQuestionsForTest') {
       return this.exams.countQuestionsForTestPages(user.id, args);
     }
@@ -169,6 +197,9 @@ export class ExamsController {
   paginate(@Body() dto: ExamPaginationBodyDto, @Req() req: Request) {
     const user = req.user as IExamJwtPayload;
     const args = this.parseArgs(dto.args);
+    if (args.model === 'KetQuaModel') {
+      return this.exams.listExamResults(args);
+    }
     if (args.custom?.function === 'getQuestionsForTest') {
       return this.exams.listQuestionsForTest(user.id, args);
     }
@@ -365,5 +396,68 @@ export class ExamsController {
     } catch {
       return { success: false, error: 'Lỗi server khi lấy chi tiết bài làm' };
     }
+  }
+
+  // ============ CHI TIẾT/KẾT QUẢ ĐỀ (GV) + CHẤM TỰ LUẬN (slice 5) ============
+
+  /** POST /test/getStatictical — thống kê điểm (tab Thống kê, biểu đồ). */
+  @Permissions('dethi', 'view')
+  @SkipTransform()
+  @Post('getStatictical')
+  getStatictical(@Body() dto: StaticticalDto) {
+    return this.exams.getStatictical(dto.made, dto.manhom);
+  }
+
+  /** POST /test/getListEssaySubmissionsAction — SV có bài tự luận cần chấm. */
+  @Permissions('dethi', 'view')
+  @SkipTransform()
+  @Post('getListEssaySubmissionsAction')
+  getListEssaySubmissions(@Body() dto: ListEssaySubmissionsDto) {
+    const search = dto.q ?? dto.search ?? null;
+    return this.exams.getEssaySubmissions(dto.made, search, dto.status ?? 'all');
+  }
+
+  /** POST /test/getEssayDetailAction — chi tiết bài tự luận 1 SV (form chấm). */
+  @Permissions('dethi', 'view')
+  @SkipTransform()
+  @Post('getEssayDetailAction')
+  getEssayDetail(@Body() dto: EssayDetailDto) {
+    return this.exams.getEssayDetail(dto.makq);
+  }
+
+  /** POST /test/saveEssayScoreAction — lưu điểm tự luận (cần quyền chấm/sửa đề). */
+  @Permissions('dethi', 'update')
+  @SkipTransform()
+  @Post('saveEssayScoreAction')
+  saveEssayScore(@Body() dto: SaveEssayScoreDto) {
+    const diem = Number(dto.diem) || 0;
+    return this.exams.saveEssayScore(dto.makq, diem, dto.cau ?? {});
+  }
+
+  /**
+   * GET /test/exportPdf/:makq — HOÃN (PHP dùng dompdf). Trả trang thông báo thay
+   * vì 404 (test_detail.js mở tab mới). TODO: port khi cần (dùng puppeteer/pdfkit).
+   */
+  @Permissions('dethi', 'view')
+  @SkipTransform()
+  @Get('exportPdf/:makq')
+  exportPdf(@Res() res: Response) {
+    res
+      .status(501)
+      .type('html')
+      .send(
+        '<!doctype html><meta charset="utf-8"><div style="font-family:sans-serif;padding:2rem;text-align:center"><h2>Xuất PDF đang được phát triển</h2><p>Tính năng in bài làm (PDF) sẽ được bổ sung ở giai đoạn sau.</p></div>',
+      );
+  }
+
+  /**
+   * POST /test/exportExcel — HOÃN (PHP dùng PhpSpreadsheet). Trả JSON không có
+   * `file` → test_detail.js hiện thông báo lỗi thân thiện. TODO: port bằng exceljs.
+   */
+  @Permissions('dethi', 'view')
+  @SkipTransform()
+  @Post('exportExcel')
+  exportExcel() {
+    return { success: false, error: 'Xuất Excel đang được phát triển' };
   }
 }
