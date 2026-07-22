@@ -23,6 +23,7 @@ import { SubjectsModule } from '@/subjects/subjects.module';
 import { QuestionsModule } from '@/questions/questions.module';
 import { ExamsModule } from '@/exams/exams.module';
 import { ClassModulesModule } from '@/class-modules/class-modules.module';
+import { AssignmentsModule } from '@/assignments/assignments.module';
 import { StorageModule } from '@/storage/storage.module';
 
 /**
@@ -42,7 +43,7 @@ import { StorageModule } from '@/storage/storage.module';
     ThrottlerConfigModule,
     ExamAuthModule, PagesModule, RolesModule, AccountModule, UsersModule,
     AcademicYearsModule, SubjectsModule, QuestionsModule, ExamsModule,
-    ClassModulesModule,
+    ClassModulesModule, AssignmentsModule,
   ],
   controllers: [AppController],
   providers: [
