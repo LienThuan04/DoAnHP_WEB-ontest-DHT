@@ -250,7 +250,7 @@ $(document).ready(function () {
   function renderEssayAnswer(item) {
     const hasText = item.noidung_tra_loi && item.noidung_tra_loi.trim() !== "";
     const hasImages =
-      item.ds_hinhanh_base64 && item.ds_hinhanh_base64.trim() !== "";
+      item.ds_hinhanh && item.ds_hinhanh.trim() !== "";
     let html = "";
 
     html += `
@@ -272,7 +272,7 @@ $(document).ready(function () {
       }
 
       if (hasImages) {
-        const imgs = item.ds_hinhanh_base64.split("||");
+        const imgs = item.ds_hinhanh.split("||");
         html += `<div class="${hasText ? "mt-2" : "mt-3"}">
     <div class="row g-3">`;
 
@@ -282,7 +282,7 @@ $(document).ready(function () {
         imgs.length === 1 ? "col-md-8 mx-auto" : "col-md-6"
       }">
         <div class="border rounded-3 overflow-hidden shadow-sm">
-          <img src="data:image/jpeg;base64,${b64}"
+          <img src="${b64}"
                class="img-fluid w-100"
                style="max-height:500px; object-fit:contain; background:#f8f9fa;">
         </div>
@@ -348,7 +348,7 @@ $(document).ready(function () {
   function renderEssayAnswer(item) {
     const hasText = item.noidung_tra_loi && item.noidung_tra_loi.trim() !== "";
     const hasImages =
-      item.ds_hinhanh_base64 && item.ds_hinhanh_base64.trim() !== "";
+      item.ds_hinhanh && item.ds_hinhanh.trim() !== "";
     let html = "";
 
     if (hasText || hasImages) {
@@ -371,7 +371,7 @@ $(document).ready(function () {
 
       // Ảnh (nếu có)
       if (hasImages) {
-        const imgs = item.ds_hinhanh_base64.split("||");
+        const imgs = item.ds_hinhanh.split("||");
 
         html += `<div class="${hasText ? "mt-2" : "mt-1"}">
         <div class="text-primary fw-bold mb-3 d-flex align-items-center gap-2">
@@ -386,7 +386,7 @@ $(document).ready(function () {
             imgs.length === 1 ? "col-md-8 mx-auto" : "col-md-6"
           }">
             <div class="border rounded-3 overflow-hidden shadow-sm">
-              <img src="data:image/jpeg;base64,${b64}"
+              <img src="${b64}"
                    class="img-fluid w-100"
                    style="max-height:500px; object-fit:contain; background:#f8f9fa;">
             </div>

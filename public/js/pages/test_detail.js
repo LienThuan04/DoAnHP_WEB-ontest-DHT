@@ -458,7 +458,7 @@ $(document).ready(function () {
   function renderEssayBlock(item) {
     const hasText = item.noidung_tra_loi && item.noidung_tra_loi.trim() !== "";
     const hasImages =
-      item.ds_hinhanh_base64 && item.ds_hinhanh_base64.trim() !== "";
+      item.ds_hinhanh && item.ds_hinhanh.trim() !== "";
 
     let html = `
     <div class="mt-3">
@@ -479,7 +479,7 @@ $(document).ready(function () {
       }
 
       if (hasImages) {
-        const imgs = item.ds_hinhanh_base64.split("||");
+        const imgs = item.ds_hinhanh.split("||");
         html += `<div class="row g-3 ${hasText ? "" : "mt-3"}">`;
         imgs.forEach((b64, idx) => {
           html += `
@@ -487,7 +487,7 @@ $(document).ready(function () {
             imgs.length === 1 ? "col-md-8 mx-auto" : "col-md-6"
           }">
             <div class="border rounded-3 overflow-hidden shadow-sm">
-              <img src="data:image/jpeg;base64,${b64}"
+              <img src="${b64}"
                    class="img-fluid w-100"
                    style="max-height:500px; object-fit:contain; background:#f8f9fa;">
             </div>
@@ -1245,7 +1245,7 @@ $(document).on(
                   .map(
                     (img) => `
             <div class="text-center mb-4">
-              <img src="data:image/png;base64,${img}" class="img-fluid rounded shadow" style="max-height: 500px;">
+              <img src="${img}" class="img-fluid rounded shadow" style="max-height: 500px;">
             </div>`
                   )
                   .join("")
