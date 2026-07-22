@@ -23,6 +23,7 @@ import { SubjectsModule } from '@/subjects/subjects.module';
 import { QuestionsModule } from '@/questions/questions.module';
 import { ExamsModule } from '@/exams/exams.module';
 import { ClassModulesModule } from '@/class-modules/class-modules.module';
+import { StorageModule } from '@/storage/storage.module';
 
 /**
  * Hệ thi OnTest là stack DUY NHẤT. Bộ khung demo (users/role/session/auth/files
@@ -35,6 +36,7 @@ import { ClassModulesModule } from '@/class-modules/class-modules.module';
   imports: [
     EnvConfigModule,
     PrismaModule,
+    StorageModule,
     SeedDbModule,
     EmailModule,
     ThrottlerConfigModule,
