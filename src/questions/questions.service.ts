@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
+import { SupabaseStorageService } from '@/storage/supabase-storage.service';
 import type {
   IAddFileResult,
   IAnswerRow,
@@ -46,25 +47,13 @@ const PAGE_SIZE = 10;
 export class QuestionsService {
   private readonly logger = new Logger(QuestionsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  /** Thư mục lưu ảnh câu hỏi/đáp án trên bucket Supabase. */
+  private static readonly FOLDER = 'questions';
 
-  /** Chuyển blob ảnh → data-URI base64 (null nếu rỗng). Thay finfo + base64_encode. */
-  private toBase64(blob: Uint8Array | null | undefined): string | null {
-    if (!blob || blob.length === 0) return null;
-    const buf = Buffer.from(blob);
-    let mime = 'image/jpeg';
-    if (
-      buf.length >= 8 &&
-      buf.toString('hex', 0, 8) === '89504e470d0a1a0a'
-    ) {
-      mime = 'image/png';
-    } else if (buf.length >= 4 && buf.toString('hex', 0, 4) === '47494638') {
-      mime = 'image/gif';
-    } else if (buf.length >= 2 && buf.toString('hex', 0, 2) === 'ffd8') {
-      mime = 'image/jpeg';
-    }
-    return `data:${mime};base64,${buf.toString('base64')}`;
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: SupabaseStorageService,
+  ) {}
 
   /** Điều kiện lọc danh sách câu hỏi theo môn/chương/độ khó/nội dung. */
   private buildWhere(
@@ -277,7 +266,7 @@ export class QuestionsService {
     const q = await this.prisma.cauHoi.findUnique({ where: { macauhoi: id } });
     if (!q) return { error: 'not_found' };
 
-    const base64 = this.toBase64(q.hinhanh);
+    const base64 = q.hinhanh ?? null; // nay la public URL Supabase (khong con base64)
     const detail: IQuestionDetail = {
       macauhoi: q.macauhoi,
       noidung: q.noidung,
@@ -334,8 +323,8 @@ export class QuestionsService {
             noidung_con: sub.noidung,
             noidungtl: ans.noidungtl,
             ladapan: ans.ladapan,
-            question_image_base64: this.toBase64(sub.hinhanh),
-            option_image_base64: this.toBase64(ans.hinhanh),
+            question_image_base64: sub.hinhanh ?? null,
+            option_image_base64: ans.hinhanh ?? null,
           });
         }
       }
@@ -352,7 +341,7 @@ export class QuestionsService {
       noidungtl: ans.noidungtl,
       ladapan: ans.ladapan,
       macauhoi: ans.macauhoi,
-      option_image_base64: this.toBase64(ans.hinhanh),
+      option_image_base64: ans.hinhanh ?? null,
     }));
   }
 
@@ -380,7 +369,7 @@ export class QuestionsService {
       macauhoi: r.macauhoi,
       noidungtl: r.noidungtl,
       ladapan: String(r.ladapan),
-      hinhanhtl: this.toBase64(r.hinhanh),
+      hinhanhtl: r.hinhanh ?? null,
     }));
   }
 
@@ -416,63 +405,54 @@ export class QuestionsService {
     return v === 1 || v === '1' || v === true || v === 'true';
   }
 
-  /** Sao chép sang Uint8Array nền ArrayBuffer (kiểu Bytes mà Prisma 7 yêu cầu). */
-  private toBytes(src: ArrayLike<number>): Uint8Array<ArrayBuffer> {
-    const out = new Uint8Array(src.length);
-    out.set(src);
-    return out;
-  }
-
-  /** Giải mã base64 (có/không tiền tố data-URI) → bytes; rỗng → null. */
-  private decodeBase64Image(
-    val: string | null | undefined,
-  ): Uint8Array<ArrayBuffer> | null {
-    if (!val) return null;
-    const m = /^data:image\/[^;]+;base64,(.*)$/s.exec(val);
-    const b64 = m ? m[1] : val;
-    try {
-      const buf = Buffer.from(b64, 'base64');
-      return buf.length ? this.toBytes(buf) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  /** Hàng đợi FIFO bytes ảnh upload theo tên field (bỏ placeholder rỗng). */
-  private fileQueue(
+  /**
+   * Upload sẵn TẤT CẢ ảnh của 1 field lên Supabase → hàng đợi PUBLIC URL (FIFO).
+   * Gọi TRƯỚC $transaction để không có I/O mạng trong giao dịch DB.
+   */
+  private async uploadQueue(
     files: Express.Multer.File[],
     field: string,
-  ): Uint8Array<ArrayBuffer>[] {
-    return files
-      .filter((f) => f.fieldname === field && f.buffer?.length)
-      .map((f) => this.toBytes(f.buffer));
+  ): Promise<string[]> {
+    const matched = files.filter(
+      (f) => f.fieldname === field && f.buffer?.length,
+    );
+    const urls: string[] = [];
+    for (const f of matched) {
+      const url = await this.storage.uploadImage(
+        f.buffer,
+        QuestionsService.FOLDER,
+      );
+      if (url) urls.push(url);
+    }
+    return urls;
   }
 
   /**
-   * Chọn ảnh cho 1 option/câu hỏi con theo thứ tự ưu tiên: xoá → ảnh cũ (base64)
-   * → ảnh mới kế tiếp trong hàng đợi upload.
+   * Chọn URL ảnh cho 1 option/câu hỏi con: xoá → giữ URL ảnh cũ (client gửi lại
+   * đường dẫn đã lưu) → URL ảnh mới kế tiếp trong hàng đợi đã upload.
    *
-   * KHÁC bản PHP (ưu tiên file trước base64 dựa trên mảng `$_FILES` có giữ ô
-   * rỗng theo vị trí): multipart Node không giữ được vị trí ô rỗng, nên ưu tiên
-   * base64 (ảnh cũ giữ lại) rồi mới lấy file mới — cho kết quả đúng ở các ca phổ
-   * biến (thêm mới = chỉ file; sửa = ảnh cũ base64, đổi ảnh = file mới đã xoá base64).
+   * KHÁC bản PHP (dựa trên `$_FILES` giữ ô rỗng theo vị trí): multipart Node
+   * không giữ ô rỗng, nên ưu tiên ảnh cũ (URL trong `item.image`) rồi mới lấy
+   * file mới — đúng ở các ca phổ biến (thêm = chỉ file; sửa = giữ URL cũ, đổi ảnh
+   * = xoá URL cũ + gửi file mới). Sync (không upload) vì đã upload trước.
    */
-  private pickImage(
-    queue: Uint8Array<ArrayBuffer>[],
+  private pickImageUrl(
+    queue: string[],
     item: IIncomingOption,
-  ): Uint8Array<ArrayBuffer> | null {
+  ): string | null {
     if (this.truthy(item.delete_image)) return null;
-    const kept = this.decodeBase64Image(item.image);
-    if (kept) return kept;
+    const kept = typeof item.image === 'string' ? item.image.trim() : '';
+    if (kept && kept !== 'null') return kept;
     return queue.length ? queue.shift()! : null;
   }
 
-  /** Ảnh câu hỏi chính: file đầu tiên field `hinhanh` (null nếu không có). */
-  private mainImage(
+  /** Ảnh câu hỏi chính: upload file đầu tiên field `hinhanh` → URL (null nếu không có). */
+  private async mainImageUrl(
     files: Express.Multer.File[],
-  ): Uint8Array<ArrayBuffer> | null {
+  ): Promise<string | null> {
     const f = files.find((x) => x.fieldname === 'hinhanh' && x.buffer?.length);
-    return f ? this.toBytes(f.buffer) : null;
+    if (!f) return null;
+    return this.storage.uploadImage(f.buffer, QuestionsService.FOLDER);
   }
 
   /** Parse JSON `cautraloi`; lỗi cú pháp → null (báo lỗi cho client). */
@@ -512,8 +492,8 @@ export class QuestionsService {
       return { status: 'error', message: 'Dữ liệu đáp án không hợp lệ' };
     }
 
-    const mainImg = this.mainImage(files);
-    const optQueue = this.fileQueue(files, 'option_hinhanh[]');
+    const mainImg = await this.mainImageUrl(files);
+    const optQueue = await this.uploadQueue(files, 'option_hinhanh[]');
 
     try {
       if (loai === 'mcq' || loai === 'essay') {
@@ -535,7 +515,7 @@ export class QuestionsService {
           for (const ans of answers) {
             const content = this.encodeHTML((ans.content ?? '').trim());
             const check = loai === 'mcq' && this.truthy(ans.check) ? 1 : 0;
-            const optImage = this.pickImage(optQueue, ans);
+            const optImage = this.pickImageUrl(optQueue, ans);
             if (content === '' && optImage === null) continue;
             await tx.cauTraLoi.create({
               data: {
@@ -588,7 +568,7 @@ export class QuestionsService {
             for (const opt of sub.options ?? []) {
               const optContent = this.encodeHTML((opt.content ?? '').trim());
               const check = this.truthy(opt.check) ? 1 : 0;
-              const optImage = this.pickImage(optQueue, opt);
+              const optImage = this.pickImageUrl(optQueue, opt);
               if (optContent === '' && optImage === null) continue;
               await tx.cauTraLoi.create({
                 data: {
@@ -650,8 +630,8 @@ export class QuestionsService {
       return { status: 'error', message: 'Câu hỏi không tồn tại' };
     }
 
-    const mainImg = deleteQuestionImage ? null : this.mainImage(files);
-    const optQueue = this.fileQueue(files, 'option_hinhanh[]');
+    const mainImg = deleteQuestionImage ? null : await this.mainImageUrl(files);
+    const optQueue = await this.uploadQueue(files, 'option_hinhanh[]');
 
     try {
       if (loai === 'reading') {
@@ -696,7 +676,7 @@ export class QuestionsService {
           for (const subQ of answers) {
             const subContent = this.encodeHTML((subQ.content ?? '').trim());
             if (subContent === '') continue;
-            const subImage = this.pickImage(optQueue, subQ);
+            const subImage = this.pickImageUrl(optQueue, subQ);
             const created = await tx.cauHoi.create({
               data: {
                 noidung: subContent,
@@ -714,7 +694,7 @@ export class QuestionsService {
             for (const opt of subQ.options ?? []) {
               const optContent = this.encodeHTML((opt.content ?? '').trim());
               if (optContent === '') continue;
-              const optImage = this.pickImage(optQueue, opt);
+              const optImage = this.pickImageUrl(optQueue, opt);
               const check = this.truthy(opt.check) ? 1 : 0;
               await tx.cauTraLoi.create({
                 data: {
@@ -752,12 +732,12 @@ export class QuestionsService {
         const validAnswers: {
           content: string;
           check: number;
-          image: Uint8Array<ArrayBuffer> | null;
+          image: string | null;
         }[] = [];
         for (const ans of answers) {
           const content = this.encodeHTML((ans.content ?? '').trim());
           const deleteImage = this.truthy(ans.delete_image);
-          const optImage = this.pickImage(optQueue, ans);
+          const optImage = this.pickImageUrl(optQueue, ans);
           if (content === '' && optImage === null && !deleteImage) continue;
           validAnswers.push({
             content,

@@ -12,6 +12,7 @@ import {
   VERSION_NEUTRAL,
 } from '@nestjs/common';
 import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { MULTER_LIMITS } from '@/common/config/upload.config';
 import type { Request } from 'express';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
@@ -180,7 +181,7 @@ export class QuestionsController {
   /** POST /question/addQues — thêm câu hỏi (multipart: text + ảnh). */
   @Permissions('cauhoi', 'create')
   @SkipTransform()
-  @UseInterceptors(AnyFilesInterceptor())
+  @UseInterceptors(AnyFilesInterceptor({ limits: MULTER_LIMITS }))
   @Post('addQues')
   addQues(
     @Body() dto: WriteQuestionDto,
@@ -194,7 +195,7 @@ export class QuestionsController {
   /** POST /question/editQuesion — sửa câu hỏi (multipart: text + ảnh). */
   @Permissions('cauhoi', 'update')
   @SkipTransform()
-  @UseInterceptors(AnyFilesInterceptor())
+  @UseInterceptors(AnyFilesInterceptor({ limits: MULTER_LIMITS }))
   @Post('editQuesion')
   editQuesion(
     @Body() dto: WriteQuestionDto,
@@ -208,7 +209,7 @@ export class QuestionsController {
   /** POST /question/xulydoanvan — parse .docx đọc hiểu → mảng preview. */
   @Permissions('cauhoi', 'create')
   @SkipTransform()
-  @UseInterceptors(FileInterceptor('fileToUpload'))
+  @UseInterceptors(FileInterceptor('fileToUpload', { limits: MULTER_LIMITS }))
   @Post('xulydoanvan')
   parseReading(@UploadedFile() file: Express.Multer.File) {
     return this.questions.parseReadingFile(this.requireDocx(file));
@@ -217,7 +218,7 @@ export class QuestionsController {
   /** POST /question/xulytracnghiem — parse .docx trắc nghiệm → mảng preview. */
   @Permissions('cauhoi', 'create')
   @SkipTransform()
-  @UseInterceptors(FileInterceptor('fileToUpload'))
+  @UseInterceptors(FileInterceptor('fileToUpload', { limits: MULTER_LIMITS }))
   @Post('xulytracnghiem')
   parseMcq(@UploadedFile() file: Express.Multer.File) {
     return this.questions.parseMcqFile(this.requireDocx(file));
@@ -226,7 +227,7 @@ export class QuestionsController {
   /** POST /question/xulytuluan — parse .docx tự luận → mảng preview. */
   @Permissions('cauhoi', 'create')
   @SkipTransform()
-  @UseInterceptors(FileInterceptor('fileToUpload'))
+  @UseInterceptors(FileInterceptor('fileToUpload', { limits: MULTER_LIMITS }))
   @Post('xulytuluan')
   parseEssay(@UploadedFile() file: Express.Multer.File) {
     return this.questions.parseEssayFile(this.requireDocx(file));
