@@ -234,7 +234,7 @@ export interface IResultDetailRow {
   noidung_tra_loi: string | null;
   thoigianlam_tra_loi: Date | null;
   diem_cham_tuluan: number | null;
-  ds_hinhanh_base64: string | null;
+  ds_hinhanh: string | null; // danh sách public URL ảnh tự luận, nối bằng "||"
   cautraloi: IResultAnswerOption[];
 }
 
@@ -319,7 +319,7 @@ export interface IEssayAnswerDetail {
   noidung_tra_loi: string;
   thoigianlam: Date | null;
   diem_cham: number | null;
-  hinhanh: string[]; // base64 thuần (JS tự thêm data:image/png;base64,)
+  hinhanh: string[]; // public URL Supabase (JS dùng trực tiếp làm src)
 }
 
 /** Kết quả lưu điểm tự luận — thay KetQuaModel::luuDiemTuLuan. */

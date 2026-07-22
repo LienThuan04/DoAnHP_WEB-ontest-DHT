@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
+import { SupabaseStorageService } from '@/storage/supabase-storage.service';
 import type {
   IAddDetailResult,
   ICreatedTestRow,
@@ -51,7 +52,13 @@ const PAGE_SIZE = 10;
 export class ExamsService {
   private readonly logger = new Logger(ExamsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  /** Thư mục lưu ảnh bài làm tự luận trên bucket Supabase. */
+  private static readonly ESSAY_FOLDER = 'essays';
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: SupabaseStorageService,
+  ) {}
 
   /** Điều kiện lọc theo trạng thái thời gian (filter "0"|"1"|"2"). */
   private buildStateCond(filter: unknown): Prisma.Sql {
@@ -272,22 +279,6 @@ export class ExamsService {
     return c > 0;
   }
 
-  /** Chuyển blob ảnh → data-URI base64 (null nếu rỗng). Nhận diện MIME magic-bytes. */
-  private toBase64(blob: Uint8Array | null | undefined): string | null {
-    if (!blob || blob.length === 0) return null;
-    const buf = Buffer.from(blob);
-    let mime = 'image/jpeg';
-    if (buf.length >= 2 && buf[0] === 0x89 && buf[1] === 0x50) mime = 'image/png';
-    else if (
-      buf.length >= 3 &&
-      buf[0] === 0x47 &&
-      buf[1] === 0x49 &&
-      buf[2] === 0x46
-    )
-      mime = 'image/gif';
-    return `data:${mime};base64,${buf.toString('base64')}`;
-  }
-
   /**
    * POST /test/getQuestionOfTestManual — câu hỏi hiện có của đề thủ công (theo
    * thứ tự). Thay DeThiModel::getQuestionOfTestManual. Trộn đáp án/câu hỏi nếu
@@ -340,14 +331,11 @@ export class ExamsService {
           where: { macauhoi: row.macauhoi },
           select: { macautl: true, noidungtl: true, hinhanh: true },
         });
-        // Thay getAllWithoutAnswer: base64 thuần (giữ y PHP, không tiền tố data:).
+        // Thay getAllWithoutAnswer: hinhanh nay la public URL Supabase (dung truc tiep lam src).
         item.cautraloi = ans.map((a) => ({
           macautl: a.macautl,
           noidungtl: a.noidungtl,
-          hinhanhtl:
-            a.hinhanh && a.hinhanh.length
-              ? Buffer.from(a.hinhanh).toString('base64')
-              : '',
+          hinhanhtl: a.hinhanh ?? '',
         }));
         if (trondapan === 1) this.shuffle(item.cautraloi);
       }
@@ -407,7 +395,7 @@ export class ExamsService {
     const offset = (page - 1) * limit;
     const filters = this.buildQuestionFilter(args);
     const rows = await this.prisma.$queryRaw<
-      (Omit<IQuestionForTestRow, 'hinhanh'> & { hinhanh: Uint8Array | null })[]
+      (Omit<IQuestionForTestRow, 'hinhanh'> & { hinhanh: string | null })[]
     >(Prisma.sql`
       SELECT cauhoi.macauhoi, cauhoi.noidung, cauhoi.noidung AS noidungplaintext,
              cauhoi.dokho, cauhoi.loai, cauhoi.madv, cauhoi.machuong,
@@ -424,7 +412,8 @@ export class ExamsService {
       ORDER BY cauhoi.macauhoi ASC
       LIMIT ${limit} OFFSET ${offset}
     `);
-    return rows.map((r) => ({ ...r, hinhanh: this.toBase64(r.hinhanh) }));
+    // hinhanh nay la public URL Supabase (truoc la blob -> data-URI).
+    return rows.map((r) => ({ ...r, hinhanh: r.hinhanh ?? null }));
   }
 
   /** POST /test/getTotalPages (custom getQuestionsForTest) — tổng số trang câu hỏi. */
@@ -1160,7 +1149,7 @@ export class ExamsService {
         noidung: string;
         dokho: number;
         loai: string;
-        hinhanh: Uint8Array | null;
+        hinhanh: string | null;
         context: string | null;
         tieude_context: string | null;
         thutu_goc: number | null;
@@ -1201,10 +1190,7 @@ export class ExamsService {
         noidung: row.noidung,
         dokho: row.dokho,
         loai: row.loai,
-        hinhanh:
-          row.hinhanh && row.hinhanh.length
-            ? Buffer.from(row.hinhanh).toString('base64')
-            : null,
+        hinhanh: row.hinhanh ?? null, // public URL Supabase (truc tiep lam src)
         context: row.context,
         tieude_context: row.tieude_context,
         thutu: Number(row.thutu_goc) || 0,
@@ -1232,10 +1218,7 @@ export class ExamsService {
     return ans.map((a) => ({
       macautl: a.macautl,
       noidungtl: a.noidungtl,
-      hinhanhtl:
-        a.hinhanh && a.hinhanh.length
-          ? Buffer.from(a.hinhanh).toString('base64')
-          : '',
+      hinhanhtl: a.hinhanh ?? '', // public URL Supabase (truc tiep lam src)
     }));
   }
 
@@ -1356,6 +1339,9 @@ export class ExamsService {
         qs.forEach((q) => typeMap.set(q.macauhoi, q.loai));
       }
 
+      // Upload ảnh tự luận lên Supabase TRƯỚC transaction (tránh I/O mạng trong tx).
+      const essayEntries = await this.collectEssayAnswers(body);
+
       const diemthi = await this.prisma.$transaction(async (tx) => {
         let socaudungMcq = 0;
         let socaudungReading = 0;
@@ -1414,8 +1400,8 @@ export class ExamsService {
             : 0;
         const diem = diemTracNghiem + diemDoChieu;
 
-        // Tự luận.
-        await this.saveEssayAnswers(tx, makq, body);
+        // Tự luận (ảnh đã upload → URL ở essayEntries).
+        await this.saveEssayAnswers(tx, makq, essayEntries);
 
         // Đề có câu tự luận → chờ chấm.
         const essayCount = await tx.$queryRaw<{ cnt: number }[]>(Prisma.sql`
@@ -1450,15 +1436,15 @@ export class ExamsService {
   }
 
   /**
-   * Lưu bài làm tự luận từ body multipart — thay KetQuaModel::xuLyTuLuan.
-   * Gom theo index `essay_{i}_*`: chitietketqua (dapanchon NULL) + traloi_tuluan
-   * (upsert theo makq+macauhoi) + ảnh base64 → hinhanh_traloi_tuluan.
+   * Gom bài làm tự luận từ body multipart theo index `essay_{i}_*` + UPLOAD ảnh
+   * base64 lên Supabase → URL. Chạy TRƯỚC transaction (có I/O mạng). Thay phần
+   * đọc body + lưu ảnh của KetQuaModel::xuLyTuLuan.
    */
-  private async saveEssayAnswers(
-    tx: Prisma.TransactionClient,
-    makq: number,
+  private async collectEssayAnswers(
     body: Record<string, unknown>,
-  ): Promise<void> {
+  ): Promise<
+    { macauhoi: number; noidung: string; thutu: number; imageUrls: string[] }[]
+  > {
     const essays = new Map<
       string,
       { macauhoi: number; noidung: string; thutu: number; images: string[] }
@@ -1477,7 +1463,48 @@ export class ExamsService {
       else if (key.includes('_image_') && v) e.images.push(v);
     }
 
+    const result: {
+      macauhoi: number;
+      noidung: string;
+      thutu: number;
+      imageUrls: string[];
+    }[] = [];
     for (const e of essays.values()) {
+      if (e.macauhoi <= 0) continue;
+      const imageUrls: string[] = [];
+      for (const b64 of e.images) {
+        const url = await this.storage.uploadBase64(
+          b64,
+          ExamsService.ESSAY_FOLDER,
+        );
+        if (url) imageUrls.push(url);
+      }
+      result.push({
+        macauhoi: e.macauhoi,
+        noidung: e.noidung,
+        thutu: e.thutu,
+        imageUrls,
+      });
+    }
+    return result;
+  }
+
+  /**
+   * Ghi bài làm tự luận vào DB (trong transaction): chitietketqua (dapanchon NULL)
+   * + traloi_tuluan (upsert theo makq+macauhoi) + hinhanh_traloi_tuluan (URL đã
+   * upload sẵn). Không có I/O mạng ở đây.
+   */
+  private async saveEssayAnswers(
+    tx: Prisma.TransactionClient,
+    makq: number,
+    entries: {
+      macauhoi: number;
+      noidung: string;
+      thutu: number;
+      imageUrls: string[];
+    }[],
+  ): Promise<void> {
+    for (const e of entries) {
       if (e.macauhoi <= 0) continue;
 
       await tx.chiTietKetQua.upsert({
@@ -1505,11 +1532,9 @@ export class ExamsService {
             })
           ).id;
 
-      for (const b64 of e.images) {
-        const bin = Buffer.from(b64, 'base64');
-        if (!bin.length) continue;
+      for (const url of e.imageUrls) {
         await tx.hinhAnhTraLoiTuLuan.create({
-          data: { traloi_id: traloiId, hinhanh: new Uint8Array(bin) },
+          data: { traloi_id: traloiId, hinhanh: url },
         });
       }
     }
@@ -1530,10 +1555,7 @@ export class ExamsService {
              tt.id AS traloi_id, tt.noidung AS noidung_tra_loi,
              tt.thoigianlam AS thoigianlam_tra_loi,
              ctt.diem AS diem_cham_tuluan,
-             string_agg(
-               translate(encode(hinh.hinhanh, 'base64'), E'\\n\\r', ''), '||'
-               ORDER BY hinh.id
-             ) AS ds_hinhanh_base64
+             string_agg(hinh.hinhanh, '||' ORDER BY hinh.id) AS ds_hinhanh
       FROM chitietdethi ctd
       JOIN cauhoi ch ON ctd.macauhoi = ch.macauhoi
       LEFT JOIN chitietketqua ct ON ct.macauhoi = ch.macauhoi AND ct.makq = ${makq}
@@ -1567,7 +1589,7 @@ export class ExamsService {
           macauhoi: a.macauhoi,
           noidungtl: a.noidungtl,
           ladapan: a.ladapan,
-          hinhanh: this.toBase64(a.hinhanh),
+          hinhanh: a.hinhanh ?? null, // public URL Supabase
         })),
       });
     }
@@ -1943,9 +1965,7 @@ export class ExamsService {
       });
       const target = byCau.get(row.macauhoi)!;
       for (const im of imgs) {
-        if (im.hinhanh && im.hinhanh.length > 0) {
-          target.hinhanh.push(Buffer.from(im.hinhanh).toString('base64'));
-        }
+        if (im.hinhanh) target.hinhanh.push(im.hinhanh); // public URL Supabase
       }
     }
 

@@ -13,6 +13,7 @@ import {
   VERSION_NEUTRAL,
 } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import { MULTER_LIMITS } from '@/common/config/upload.config';
 import type { Request, Response } from 'express';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
@@ -376,7 +377,7 @@ export class ExamsController {
    */
   @Permissions('tgthi', 'join')
   @SkipTransform()
-  @UseInterceptors(AnyFilesInterceptor())
+  @UseInterceptors(AnyFilesInterceptor({ limits: MULTER_LIMITS }))
   @Post('submit')
   submit(@Req() req: Request) {
     const user = req.user as IExamJwtPayload;
