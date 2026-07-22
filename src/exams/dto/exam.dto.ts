@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
   ValidateNested,
@@ -173,6 +174,64 @@ export class ResultDetailDto {
   @Type(() => Number)
   @IsInt()
   makq!: number;
+}
+
+/** $_POST[made,manhom] cho getStatictical (test_detail.js — tab Thống kê). */
+export class StaticticalDto {
+  @Type(() => Number)
+  @IsInt()
+  made!: number;
+
+  @Type(() => Number)
+  @IsInt()
+  manhom!: number;
+}
+
+/**
+ * $_POST/$_REQUEST cho getListEssaySubmissionsAction. JS gửi made + q (từ khoá)
+ * + status ('all'|'graded'|'ungraded'). `search` là alias cũ của q (PHP nhận cả 2).
+ */
+export class ListEssaySubmissionsDto {
+  @Type(() => Number)
+  @IsInt()
+  made!: number;
+
+  @IsOptional()
+  @IsString()
+  q?: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+}
+
+/** $_POST['makq'] cho getEssayDetailAction (mở form chấm). */
+export class EssayDetailDto {
+  @Type(() => Number)
+  @IsInt()
+  makq!: number;
+}
+
+/**
+ * Body của saveEssayScoreAction — makq + diem (tổng) + cau (object macauhoi→điểm).
+ * urlencoded nên diem/cau tới dạng chuỗi; ép số trong controller/service.
+ */
+export class SaveEssayScoreDto {
+  @Type(() => Number)
+  @IsInt()
+  makq!: number;
+
+  @IsOptional()
+  @IsString()
+  diem?: string;
+
+  @IsOptional()
+  @IsObject()
+  cau?: Record<string, string>;
 }
 
 /**
