@@ -154,7 +154,7 @@ model DoanVan {
 
 /// Câu hỏi — bảng `cauhoi`. loai: 'mcq' | 'essay' | 'reading'.
 /// dapan_dung chỉ dùng cho mcq (A-D). madv trỏ tới đoạn văn khi loai='reading'.
-/// hinhanh lưu blob ảnh (mediumblob → Bytes).
+/// hinhanh lưu **public URL** ảnh trên Supabase Storage (trước là blob Bytes).
 model CauHoi {
   macauhoi   Int     @id @default(autoincrement())
   noidung    String
@@ -166,7 +166,7 @@ model CauHoi {
   trangthai  Int?    @default(1)
   loai       String  @default("mcq")
   madv       Int?
-  hinhanh    Bytes?
+  hinhanh    String?
 
   cauTraLoi CauTraLoi[]
 
@@ -179,7 +179,7 @@ model CauTraLoi {
   macauhoi  Int
   noidungtl String
   ladapan   Int     @db.SmallInt
-  hinhanh   Bytes?
+  hinhanh   String?
 
   cauHoi CauHoi @relation(fields: [macauhoi], references: [macauhoi], onDelete: Cascade)
 
@@ -335,11 +335,12 @@ model TraLoiTuLuan {
   @@map("traloi_tuluan")
 }
 
-/// Ảnh đính kèm bài làm tự luận — bảng `hinhanh_traloi_tuluan`. hinhanh: blob.
+/// Ảnh đính kèm bài làm tự luận — bảng `hinhanh_traloi_tuluan`.
+/// hinhanh: **public URL** trên Supabase Storage (trước là blob Bytes).
 model HinhAnhTraLoiTuLuan {
   id        Int      @id @default(autoincrement())
   traloi_id Int
-  hinhanh   Bytes?
+  hinhanh   String?
   thoigian  DateTime @default(now())
 
   traLoiTuLuan TraLoiTuLuan @relation(fields: [traloi_id], references: [id], onDelete: Cascade)
