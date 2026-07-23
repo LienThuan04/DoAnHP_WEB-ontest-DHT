@@ -187,6 +187,13 @@ export class StaticticalDto {
   manhom!: number;
 }
 
+/** $_POST cho getTestsGroupWithUserResult — chỉ mã nhóm (SV lấy từ JWT). */
+export class GroupTestsDto {
+  @Type(() => Number)
+  @IsInt()
+  manhom!: number;
+}
+
 /**
  * $_POST/$_REQUEST cho getListEssaySubmissionsAction. JS gửi made + q (từ khoá)
  * + status ('all'|'graded'|'ungraded'). `search` là alias cũ của q (PHP nhận cả 2).

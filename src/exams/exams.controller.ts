@@ -25,6 +25,7 @@ import {
   EssayDetailDto,
   ExamIdDto,
   ExamPaginationBodyDto,
+  GroupTestsDto,
   ListEssaySubmissionsDto,
   ResultDetailDto,
   SaveEssayScoreDto,
@@ -384,6 +385,21 @@ export class ExamsController {
     const body = req.body as Record<string, unknown>;
     const made = Number(body.made);
     return this.exams.submit(made, user.id, body);
+  }
+
+  /**
+   * POST /test/getTestsGroupWithUserResult — đề của 1 nhóm + điểm của SV
+   * (offcanvas trang nhóm SV). made/user lấy từ JWT; chỉ cần quyền tham gia thi.
+   */
+  @Permissions('tgthi', 'join')
+  @SkipTransform()
+  @Post('getTestsGroupWithUserResult')
+  getTestsGroupWithUserResult(
+    @Body() dto: GroupTestsDto,
+    @Req() req: Request,
+  ) {
+    const user = req.user as IExamJwtPayload;
+    return this.exams.getTestsGroupWithUserResult(dto.manhom, user.id);
   }
 
   /** POST /test/getResultDetail — chi tiết bài làm để SV xem lại. */

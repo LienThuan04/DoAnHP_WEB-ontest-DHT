@@ -2055,4 +2055,32 @@ export class ExamsService {
       diem_tuluan: diemTongRounded,
     };
   }
+
+  /**
+   * POST /test/getTestsGroupWithUserResult — đề đã giao cho 1 nhóm kèm điểm của
+   * SV đang đăng nhập (offcanvas trang nhóm SV client_group). Thay
+   * DeThiModel::getTestsGroupWithUserResult. Chỉ đề trangthai=1; T2 gắn điểm thi
+   * của SV theo nhóm; ORDER BY made DESC.
+   */
+  getTestsGroupWithUserResult(
+    manhom: number,
+    userId: string,
+  ): Promise<Record<string, unknown>[]> {
+    return this.prisma.$queryRaw<Record<string, unknown>[]>(Prisma.sql`
+      SELECT T1.*, T2.diemthi
+      FROM (
+        SELECT DT.made, DT.tende, DT.thoigianbatdau, DT.thoigianketthuc
+        FROM dethi DT, giaodethi GDT
+        WHERE DT.made = GDT.made AND DT.trangthai = 1 AND GDT.manhom = ${manhom}
+      ) T1
+      LEFT JOIN (
+        SELECT KQ.made, KQ.diemthi
+        FROM ketqua KQ, giaodethi GDT
+        WHERE KQ.made = GDT.made
+          AND KQ.manguoidung = ${userId}
+          AND GDT.manhom = ${manhom}
+      ) T2 ON T1.made = T2.made
+      ORDER BY T1.made DESC
+    `);
+  }
 }
