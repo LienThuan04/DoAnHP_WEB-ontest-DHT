@@ -48,13 +48,18 @@ Giữ **nguyên nghiệp vụ + giao diện** của hệ thi cũ; chỉ đổi c
 Hạ tầng + Phase 1/2/3 **XONG**. Phase 4 (đề thi & làm bài, module lớn nhất) **gần
 xong**: slice 1–5 xong (danh sách/tạo-sửa/chọn câu/làm bài SV/chi tiết-kết quả +
 chấm tự luận); còn export PDF/Excel thật (đang stub) + `test_schedule`. **Phase 5
-đang làm:** quản lý nhóm học phần GV (`module.php`) + chi tiết nhóm/thành viên
+XONG:** quản lý nhóm học phần GV (`module.php`) + chi tiết nhóm/thành viên
 (`class_detail.php`, path `/module`) + **phân công GV↔môn (`assignment.php`, path
-`/assignment`, module `src/assignments/`)** đều **XONG** (2026-07-22, xem
-`../docs/11` §4b). `assignment` MỞ KHOÁ dữ liệu thật (dropdown môn lọc qua
-`phancong`). Còn phía SV (`client.php`). Phase 6/7 **chưa làm**.
+`/assignment`)** + **phía SV (`client.php`, path `/client`, module `src/client/`)** —
+xem `../docs/11` §4b slice 4. `assignment` MỞ KHOÁ dữ liệu thật (dropdown môn lọc qua
+`phancong`). Phase 6/7 **chưa làm**.
 
-→ Việc kế tiếp gợi ý: phía SV (`client.php`/`client_group.php` — SV xem/tham gia
-nhóm), rồi Phase 6 (thông báo/thống kê/dashboard).
+→ Việc kế tiếp gợi ý: **Phase 6** — `teacher_announcement.php` (thông báo, mở khoá
+tab thông báo offcanvas đang 404 vô hại) → `statistic.php`/`dashboard.php`.
+
+⚠️ **Lỗi DB đang tồn (user bảo tạm khỏi fix 2026-07-23):** boot `ETIMEDOUT` do
+`src/prisma/prisma.service.ts` dùng adapter `pg` với URL Accelerate `prisma+postgres://`.
+Sửa khi cần: URL `prisma+postgres://` → `datasourceUrl` (bỏ adapter pg). Verify tạm
+bằng `pnpm run build` + boot map route (seed sẽ lỗi tới khi sửa DB). Chi tiết docs/11 cuối.
 
 **Sau mỗi phiên: cập nhật `docs/03-tien-do.md`** để phiên/agent sau không mất mạch.
