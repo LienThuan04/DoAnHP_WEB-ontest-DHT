@@ -72,6 +72,12 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'assignment/pagination', 'assignment/checkDuplicate',
           'assignment/addAssignment', 'assignment/checkDuplicateForUpdate',
           'assignment/update', 'assignment/delete',
+          // Phía sinh viên (client.php) — nhóm học phần SV + lịch kiểm tra.
+          'client/group', 'client/test', 'client/joinGroup',
+          'client/loadDataGroups', 'client/getFriendList', 'client/hide',
+          'client/delete', 'client/getTotalPages', 'client/pagination',
+          // Đề của 1 nhóm (offcanvas trang nhóm SV) — nằm ở controller test.
+          'test/getTestsGroupWithUserResult',
         ],
       });
       app.enableVersioning({
