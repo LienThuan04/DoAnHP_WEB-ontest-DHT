@@ -78,6 +78,19 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'client/delete', 'client/getTotalPages', 'client/pagination',
           // Đề của 1 nhóm (offcanvas trang nhóm SV) — nằm ở controller test.
           'test/getTestsGroupWithUserResult',
+          // Thông báo (teacher_announcement.php) — trang SSR + AJAX ở path gốc.
+          'teacher_announcement', 'teacher_announcement/add',
+          'teacher_announcement/update/:matb',
+          'teacher_announcement/sendAnnouncement',
+          'teacher_announcement/updateAnnounce',
+          'teacher_announcement/deleteAnnounce',
+          'teacher_announcement/getDetail', 'teacher_announcement/getAnnounce',
+          'teacher_announcement/getListAnnounce',
+          'teacher_announcement/getNotifications',
+          'teacher_announcement/markAsRead',
+          'teacher_announcement/getUnreadCount',
+          'teacher_announcement/getTotalPages',
+          'teacher_announcement/pagination',
         ],
       });
       app.enableVersioning({

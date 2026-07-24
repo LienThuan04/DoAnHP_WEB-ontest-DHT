@@ -25,6 +25,7 @@ import { ExamsModule } from '@/exams/exams.module';
 import { ClassModulesModule } from '@/class-modules/class-modules.module';
 import { AssignmentsModule } from '@/assignments/assignments.module';
 import { ClientModule } from '@/client/client.module';
+import { AnnouncementsModule } from '@/announcements/announcements.module';
 import { StorageModule } from '@/storage/storage.module';
 
 /**
@@ -44,7 +45,7 @@ import { StorageModule } from '@/storage/storage.module';
     ThrottlerConfigModule,
     ExamAuthModule, PagesModule, RolesModule, AccountModule, UsersModule,
     AcademicYearsModule, SubjectsModule, QuestionsModule, ExamsModule,
-    ClassModulesModule, AssignmentsModule, ClientModule,
+    ClassModulesModule, AssignmentsModule, ClientModule, AnnouncementsModule,
   ],
   controllers: [AppController],
   providers: [
