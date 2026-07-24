@@ -52,14 +52,16 @@ XONG:** quản lý nhóm học phần GV (`module.php`) + chi tiết nhóm/thàn
 (`class_detail.php`, path `/module`) + **phân công GV↔môn (`assignment.php`, path
 `/assignment`)** + **phía SV (`client.php`, path `/client`, module `src/client/`)** —
 xem `../docs/11` §4b slice 4. `assignment` MỞ KHOÁ dữ liệu thật (dropdown môn lọc qua
-`phancong`). Phase 6/7 **chưa làm**.
+`phancong`). **Phase 6 slice 1 XONG (2026-07-24):** thông báo — module
+`src/announcements/` (path `/teacher_announcement`) + chuông thông báo ở header
+(`permission.js` + `header.ejs`), mở khoá tab thông báo offcanvas trước đây 404.
+Phase 6 còn thống kê/dashboard; Phase 7 chưa làm.
 
-→ Việc kế tiếp gợi ý: **Phase 6** — `teacher_announcement.php` (thông báo, mở khoá
-tab thông báo offcanvas đang 404 vô hại) → `statistic.php`/`dashboard.php`.
+→ Việc kế tiếp gợi ý: **Phase 6 slice 2** — `statistic.php` (+ `ThongKeModel.php`)
+rồi `dashboard.php`.
 
-⚠️ **Lỗi DB đang tồn (user bảo tạm khỏi fix 2026-07-23):** boot `ETIMEDOUT` do
-`src/prisma/prisma.service.ts` dùng adapter `pg` với URL Accelerate `prisma+postgres://`.
-Sửa khi cần: URL `prisma+postgres://` → `datasourceUrl` (bỏ adapter pg). Verify tạm
-bằng `pnpm run build` + boot map route (seed sẽ lỗi tới khi sửa DB). Chi tiết docs/11 cuối.
+✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
+dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
+cho `postgres://` trực tiếp. App boot tới `Nest application successfully started`.
 
 **Sau mỗi phiên: cập nhật `docs/03-tien-do.md`** để phiên/agent sau không mất mạch.

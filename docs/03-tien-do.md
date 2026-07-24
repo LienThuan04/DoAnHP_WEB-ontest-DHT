@@ -1,6 +1,6 @@
 # 03 — Tiến độ (LIVING DOC — cập nhật mỗi phiên)
 
-> Cập nhật gần nhất: **2026-07-22**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
+> Cập nhật gần nhất: **2026-07-24**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
 > nhớ sửa file này (đánh dấu đã làm gì, còn gì) để phiên/agent sau không mất mạch.
 
 ## Bảng phase
@@ -12,8 +12,8 @@
 | 2 | `roles` (NhomQuyen), `users` (NguoiDung), `academic-years` (NamHoc+HocKy), `subjects` (MonHoc+Chuong) | ✅ XONG (trừ `view_subject` — hoãn, phụ thuộc phancong/nhom) |
 | 3 | `questions`: ngân hàng câu hỏi mcq/essay/reading + đáp án + đoạn văn + ảnh + import Word (mammoth) + trang SSR/listing | ✅ XONG (Excel hoãn — nút gốc `disabled`) |
 | 4 | `exams`: đề thi & làm bài & chấm (LỚN NHẤT) | 🟡 gần xong — xem dưới |
-| 5 | Nhóm/lớp & phân công (model `Nhom`/`ChiTietNhom`/`PhanCong` ĐÃ có) | ⏳ chưa (UI) |
-| 6 | Thông báo/thống kê/dashboard (model `ThongBao` ĐÃ có) | ⏳ chưa |
+| 5 | Nhóm/lớp & phân công (model `Nhom`/`ChiTietNhom`/`PhanCong` ĐÃ có) | ✅ XONG (`/module`, `/assignment`, `/client`) |
+| 6 | Thông báo/thống kê/dashboard (model `ThongBao` ĐÃ có) | 🟡 thông báo XONG (`/teacher_announcement`); thống kê/dashboard chưa |
 | 7 | Hoàn thiện (trang lỗi, seed mẫu, e2e, export thật) | ⏳ chưa |
 
 > Model `PhanCong`, `Nhom`, `ChiTietNhom`, `ThongBao`… đã **kéo lên trước** vào
@@ -48,8 +48,50 @@ KetQua, ChiTietKetQua, TraLoiTuLuan, HinhAnhTraLoiTuLuan, ChamTuLuan) +
 - **exportPdf** (PHP dùng dompdf) & **exportExcel** (PhpSpreadsheet) → hiện **stub**
   trả thông báo "đang phát triển" (501 / JSON không có `file`). TODO: puppeteer/pdfkit
   + exceljs.
-- **test_schedule.php** — lịch thi cho SV (trang riêng, chưa làm).
+- ~~`test_schedule.php`~~ — ĐÃ làm ở Phase 5 (`GET /client/test`, module `src/client/`).
 - `getExamineeByGroup` — chưa dùng ở `test_detail.js` (bỏ qua tới khi có nơi gọi).
+
+## Phase 5 (nhóm/lớp & phân công) — XONG
+
+| Module | Path | Nội dung | ✔ |
+|--------|------|----------|---|
+| `class-modules` | `/module` | Quản lý nhóm học phần GV (`module.php`) + chi tiết nhóm/thành viên (`class_detail.php`) | ✅ |
+| `assignments` | `/assignment` | Phân công GV↔môn (`assignment.php`) — **MỞ KHOÁ dữ liệu thật** cho dropdown môn ở trang câu hỏi/tạo đề | ✅ |
+| `client` | `/client` | Phía SV: nhóm học phần (`client_group.php`) + lịch thi (`test_schedule.php`) | ✅ |
+
+Chi tiết từng slice: `../../docs/11-tien-do-hien-tai.md` §4b.
+CÒN LẠI: export Excel danh sách SV thật (đang stub) + import SV bằng Excel;
+`view_subject.php` (SV xem môn) nếu cần.
+
+## Phase 6 slice 1 — Thông báo (`src/announcements/`, path `/teacher_announcement`) — XONG (2026-07-24)
+
+Thay `teacher_announcement.php` + `AnnouncementModel.php`. Đủ 13 method của PHP gốc
++ 2 route phân trang.
+
+| Nhóm | Route |
+|------|-------|
+| SSR | `GET /teacher_announcement`, `/add`, `/update/:matb` |
+| CRUD | `POST /teacher_announcement/{sendAnnouncement,updateAnnounce,deleteAnnounce,getDetail}` |
+| Đọc | `POST /teacher_announcement/{getAnnounce,getListAnnounce,getNotifications,markAsRead,getUnreadCount}` |
+| Phân trang | `POST /teacher_announcement/{pagination,getTotalPages}` (`pagination.js`, `model=AnnouncementModel`) |
+
+- View `teacher_announcement.ejs` + `add_announce.ejs` (dùng chung cho tạo/sửa theo
+  `Action`; có `<base href="/">` vì path sâu). JS `announcement.js`/`update_announce.js`
+  bê nguyên, chỉ đổi `./x` → `/x`.
+- **Chuông thông báo trên header**: bổ sung phần notification vào `public/js/permission.js`
+  + dropdown trong `views/partials/header.ejs` (chỉ hiện với SV — `manhomquyen === 2`).
+- **Mở khoá** tab "Thông báo" ở offcanvas `class_detail`/`client_group` (trước đây 404).
+- Thông báo tự động khi tạo đề (`is_auto = 1`) **KHÔNG** hiện ở danh sách quản lý của
+  GV, chỉ hiện ở chuông/offcanvas nhóm.
+- **KHÁC PHP:** bọc `$transaction` khi tạo/sửa (PHP không bọc → có thể để lại thông báo
+  "cụt"); kiểm **người tạo == user** trước khi sửa/xoá (PHP không kiểm); `nguoitao` lấy
+  từ JWT chứ không tin `args.id`.
+- **QUIRK giữ nguyên:** `getAnnounce` chỉ trả thông báo khi nhóm ĐÃ có thành viên;
+  `updateAnnounce` không dọn `trangthaithongbao` của nhóm bị bỏ; `getAll` gán mã học kỳ
+  vào khoá `tenhocky`.
+- ⚠️ **Quyền:** `thongbao`(view/create/delete/update) chỉ seed cho **nhóm quyền 3
+  (admin)** — đúng y dump gốc `tracnghiemonline.sql`, GV (nhóm 1) KHÔNG có. Muốn GV
+  dùng trang này phải cấp quyền qua UI nhóm quyền hoặc thêm vào `exam-sample.ts`.
 
 ## Lưu file ảnh — Supabase Storage (2026-07-22)
 
@@ -71,8 +113,9 @@ Nhiều trang lọc qua `phancong`/`giaodethi`/`chitietnhom` → **RỖNG nếu 
 
 ## Việc kế tiếp (gợi ý)
 
-1. **Phase 5** — UI nhóm/lớp (`module.php` GV + `client.php` SV) + phân công
-   (`assignment.php`). Mở khoá dữ liệu thật cho các trang đang phụ thuộc.
-2. Phase 6 — thông báo (`teacher_announcement.php`) + thống kê (`statistic.php`) +
-   dashboard.
-3. Quay lại: export PDF/Excel thật, `test_schedule`, `view_subject` (Phase 2 còn nợ).
+1. **Phase 6 slice 2** — thống kê (`statistic.php` + `ThongKeModel.php`) và
+   dashboard (`dashboard.php`) — phần cuối của Phase 6.
+2. Phase 7 — hoàn thiện: trang lỗi, seed dữ liệu mẫu (monhoc/phancong/nhom/cauhoi
+   để chạy thật), e2e.
+3. Quay lại các món đang stub: export PDF/Excel thật, import/export Excel danh sách
+   SV, `view_subject` (Phase 2 còn nợ).
