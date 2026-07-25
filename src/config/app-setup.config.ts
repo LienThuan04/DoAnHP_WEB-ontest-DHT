@@ -91,6 +91,10 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'teacher_announcement/getUnreadCount',
           'teacher_announcement/getTotalPages',
           'teacher_announcement/pagination',
+          // Thống kê (statistic.php) — trang SSR + AJAX ở path gốc.
+          'statistic', 'statistic/getStatictical',
+          'statistic/getAggregatedStatistical', 'statistic/getFilters',
+          'statistic/getGroupsBySubject',
         ],
       });
       app.enableVersioning({

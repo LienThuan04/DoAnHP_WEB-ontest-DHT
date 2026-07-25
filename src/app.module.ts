@@ -26,6 +26,7 @@ import { ClassModulesModule } from '@/class-modules/class-modules.module';
 import { AssignmentsModule } from '@/assignments/assignments.module';
 import { ClientModule } from '@/client/client.module';
 import { AnnouncementsModule } from '@/announcements/announcements.module';
+import { StatisticModule } from '@/statistic/statistic.module';
 import { StorageModule } from '@/storage/storage.module';
 
 /**
@@ -46,6 +47,7 @@ import { StorageModule } from '@/storage/storage.module';
     ExamAuthModule, PagesModule, RolesModule, AccountModule, UsersModule,
     AcademicYearsModule, SubjectsModule, QuestionsModule, ExamsModule,
     ClassModulesModule, AssignmentsModule, ClientModule, AnnouncementsModule,
+    StatisticModule,
   ],
   controllers: [AppController],
   providers: [
