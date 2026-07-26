@@ -13,7 +13,7 @@
 | 3 | `questions`: ngân hàng câu hỏi mcq/essay/reading + đáp án + đoạn văn + ảnh + import Word (mammoth) + trang SSR/listing | ✅ XONG (Excel hoãn — nút gốc `disabled`) |
 | 4 | `exams`: đề thi & làm bài & chấm (LỚN NHẤT) | 🟡 gần xong — xem dưới |
 | 5 | Nhóm/lớp & phân công (model `Nhom`/`ChiTietNhom`/`PhanCong` ĐÃ có) | ✅ XONG (`/module`, `/assignment`, `/client`) |
-| 6 | Thông báo/thống kê/dashboard (model `ThongBao` ĐÃ có) | 🟡 thông báo XONG (`/teacher_announcement`); thống kê/dashboard chưa |
+| 6 | Thông báo/thống kê/dashboard (model `ThongBao` ĐÃ có) | 🟡 thông báo + thống kê XONG (`/teacher_announcement`, `/statistic`); dashboard email onboarding chưa |
 | 7 | Hoàn thiện (trang lỗi, seed mẫu, e2e, export thật) | ⏳ chưa |
 
 > Model `PhanCong`, `Nhom`, `ChiTietNhom`, `ThongBao`… đã **kéo lên trước** vào
@@ -93,6 +93,41 @@ Thay `teacher_announcement.php` + `AnnouncementModel.php`. Đủ 13 method của
   (admin)** — đúng y dump gốc `tracnghiemonline.sql`, GV (nhóm 1) KHÔNG có. Muốn GV
   dùng trang này phải cấp quyền qua UI nhóm quyền hoặc thêm vào `exam-sample.ts`.
 
+## Phase 6 slice 2 — Thống kê (`src/statistic/`, path `/statistic`) — XONG (2026-07-26)
+
+Thay `statistic.php` + `ThongKeModel.php`. Trang GV xem thống kê điểm theo **1 đề**
+hoặc **tổng hợp** theo học kỳ/năm học/môn/nhóm (8 thẻ + biểu đồ cột `chart.js`).
+
+| Nhóm | Route |
+|------|-------|
+| SSR | `GET /statistic` (query `made` → chi tiết 1 đề; không có → tổng hợp; `mahocky`/`namhoc` để nạp sẵn dropdown) |
+| Thống kê 1 đề | `POST /statistic/getStatictical` |
+| Thống kê tổng hợp | `POST /statistic/getAggregatedStatistical` |
+| Bộ lọc | `POST /statistic/{getFilters,getGroupsBySubject}` |
+
+- View `statistic.ejs` (2 nhánh `ShowAggregate`) + partial `statistic_cards.ejs` (8 thẻ
+  dùng chung). JS `statistic.js` bê nguyên, đổi `./statistic/` → `/statistic/`.
+  Plugin: `sweetalert2` + `chart.js` (local, bê từ DHT). Nạp `permission.js`.
+- Navbar mục "Thống kê" đổi từ `#` → `/statistic` (active theo `page`).
+- **KHÁC PHP:** (1) gộp 13 truy vấn của `getStatisticalData` thành 2 (fetch các dòng
+  cùng phép JOIN rồi tính trên JS) — cùng kết quả; (2) thêm `#chitietdethi[data-id]`
+  vào nhánh chi tiết vì view PHP gốc thiếu hook mà `statistic.js` cần (không có →
+  `getStatictical` không bao giờ chạy, trang chi tiết chết); (3) `nguoitao` lấy từ JWT.
+- **QUIRK giữ nguyên:** `getStatisticalData` JOIN `chitietnhom` chỉ theo `manguoidung`
+  → SV thuộc nhiều nhóm bị đếm nhiều lần khi lọc "Tất cả nhóm"; phân khoảng điểm dùng
+  `LEAST(diemthi,10) >= i AND < i+1` nên điểm đúng 10 KHÔNG rơi vào khoảng nào (không
+  lên biểu đồ).
+- ⚠️ **Quyền:** `thongke`(view…) chỉ seed cho **nhóm quyền 3 (admin)** — đúng dump gốc,
+  GV (nhóm 1) KHÔNG vào được (giống trang thông báo).
+- PHỤ THUỘC DỮ LIỆU: cần `dethi`/`giaodethi`/`nhom`/`ketqua` mới có số liệu; thiếu →
+  dropdown rỗng, thẻ = 0 (đúng hành vi PHP).
+
+### Phase 6 CÒN LẠI — Dashboard email onboarding
+`dashboard.php` còn 3 route AJAX chưa port: `checkEmail`/`checkEmailExist`/`updateEmail`
+(`NguoiDungModel`) + modal `#modal-onboarding` nhắc SV nhập email khi email trống.
+Dashboard SSR (Phase 1) đã thiết kế LẠI (slick carousel) không có modal này → nếu port
+cần thêm modal + `dashboard.js` + 3 route. **Ưu tiên thấp** (không chặn nghiệp vụ thi).
+
 ## Lưu file ảnh — Supabase Storage (2026-07-22)
 
 Ảnh KHÔNG còn lưu blob trong DB; lưu ở **Supabase Storage** (bucket public), DB chỉ
@@ -113,9 +148,9 @@ Nhiều trang lọc qua `phancong`/`giaodethi`/`chitietnhom` → **RỖNG nếu 
 
 ## Việc kế tiếp (gợi ý)
 
-1. **Phase 6 slice 2** — thống kê (`statistic.php` + `ThongKeModel.php`) và
-   dashboard (`dashboard.php`) — phần cuối của Phase 6.
+1. **Dashboard email onboarding** (phần cuối Phase 6) — port `checkEmail`/
+   `checkEmailExist`/`updateEmail` + modal nhắc nhập email. Ưu tiên thấp.
 2. Phase 7 — hoàn thiện: trang lỗi, seed dữ liệu mẫu (monhoc/phancong/nhom/cauhoi
-   để chạy thật), e2e.
+   để chạy thật), e2e; export PDF/Excel thật (đang stub).
 3. Quay lại các món đang stub: export PDF/Excel thật, import/export Excel danh sách
    SV, `view_subject` (Phase 2 còn nợ).

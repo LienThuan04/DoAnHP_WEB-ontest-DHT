@@ -55,10 +55,13 @@ xem `../docs/11` §4b slice 4. `assignment` MỞ KHOÁ dữ liệu thật (dropd
 `phancong`). **Phase 6 slice 1 XONG (2026-07-24):** thông báo — module
 `src/announcements/` (path `/teacher_announcement`) + chuông thông báo ở header
 (`permission.js` + `header.ejs`), mở khoá tab thông báo offcanvas trước đây 404.
-Phase 6 còn thống kê/dashboard; Phase 7 chưa làm.
+**Phase 6 slice 2 XONG (2026-07-26):** thống kê — module `src/statistic/` (path
+`/statistic`) thay `statistic.php` + `ThongKeModel.php` (thống kê 1 đề + tổng hợp,
+8 thẻ + biểu đồ `chart.js`). Phase 6 chỉ còn dashboard email onboarding (ưu tiên
+thấp); Phase 7 chưa làm.
 
-→ Việc kế tiếp gợi ý: **Phase 6 slice 2** — `statistic.php` (+ `ThongKeModel.php`)
-rồi `dashboard.php`.
+→ Việc kế tiếp gợi ý: **dashboard email onboarding** (`checkEmail`/`checkEmailExist`/
+`updateEmail` + modal) rồi Phase 7 (trang lỗi, seed mẫu, export thật).
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
