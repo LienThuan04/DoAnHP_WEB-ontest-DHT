@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <%- include('../partials/head') %>
+  <link rel="stylesheet" href="/public/js/plugins/sweetalert2/sweetalert2.min.css" />
+</head>
+<body>
+  <div id="page-container" class="sidebar-o sidebar-light enable-page-overlay side-scroll page-header-fixed main-content-narrow remember-theme">
+    <%- include('../partials/navbar') %>
+    <%- include('../partials/header') %>
+
+    <!-- Main Container -->
+    <main id="main-container">
+      <!-- Port từ DHT_OneTest/mvc/views/pages/statistic.php -->
+      <div class="row g-0 flex-md-grow-1">
+        <div class="content content-full">
+          <div class="block block-rounded shadow-sm">
+            <% if (typeof ShowAggregate !== 'undefined' && ShowAggregate) { %>
+              <div class="row mb-4 align-items-center">
+                <!-- Bộ lọc học kỳ -->
+                <div class="col-md-3 mb-2 mb-md-0">
+                  <div class="dropdown">
+                    <button class="btn btn-outline-info w-100 text-start d-flex align-items-center justify-content-between" type="button" id="dropdown-filter-semester" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="fa fa-calendar me-2"></i> <span>Chọn học kỳ</span> <i class="fa fa-chevron-down ms-auto"></i>
+                    </button>
+                    <ul class="dropdown-menu w-100 shadow-sm" aria-labelledby="dropdown-filter-semester">
+                      <% Semesters.forEach(function(semester) { %>
+                        <li><a class="dropdown-item filter-semester" href="javascript:void(0)" data-id="<%= semester.mahocky %>"><%= semester.tenhocky %></a></li>
+                      <% }); %>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Bộ lọc năm học -->
+                <div class="col-md-3 mb-2 mb-md-0">
+                  <div class="dropdown">
+                    <button class="btn btn-outline-warning w-100 text-start d-flex align-items-center justify-content-between" type="button" id="dropdown-filter-year" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="fa fa-graduation-cap me-2"></i> <span>Chọn năm học</span> <i class="fa fa-chevron-down ms-auto"></i>
+                    </button>
+                    <ul class="dropdown-menu w-100 shadow-sm" aria-labelledby="dropdown-filter-year">
+                      <% AcademicYears.forEach(function(year) { %>
+                        <li><a class="dropdown-item filter-year" href="javascript:void(0)" data-id="<%= year.namhoc %>"><%= year.tennamhoc %></a></li>
+                      <% }); %>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Bộ lọc môn học -->
+                <div class="col-md-3 mb-2 mb-md-0">
+                  <div class="dropdown">
+                    <button class="btn btn-outline-primary w-100 text-start d-flex align-items-center justify-content-between" type="button" id="dropdown-filter-subject" data-bs-toggle="dropdown" aria-expanded="false" disabled>
+                      <i class="fa fa-book me-2"></i> <span>Chọn môn học</span> <i class="fa fa-chevron-down ms-auto"></i>
+                    </button>
+                    <ul class="dropdown-menu w-100 shadow-sm" aria-labelledby="dropdown-filter-subject" id="subject-menu">
+                      <!-- Môn học sẽ được load động qua AJAX -->
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Bộ lọc nhóm -->
+                <div class="col-md-3 mb-2 mb-md-0">
+                  <div class="dropdown">
+                    <button class="btn btn-outline-success w-100 text-start d-flex align-items-center justify-content-between" type="button" id="dropdown-filter-group" data-bs-toggle="dropdown" aria-expanded="false" disabled>
+                      <i class="fa fa-layer-group me-2"></i> <span>Chọn nhóm</span> <i class="fa fa-chevron-down ms-auto"></i>
+                    </button>
+                    <ul class="dropdown-menu w-100 shadow-sm" aria-labelledby="dropdown-filter-group" id="group-menu">
+                      <!-- Nhóm sẽ được load động qua AJAX -->
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 8 thẻ thống kê -->
+              <%- include('../partials/statistic_cards') %>
+
+              <!-- Biểu đồ -->
+              <div class="chart-container mt-4" style="position: relative; height: 40vh; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <canvas id="myChart" class="bg-white rounded"></canvas>
+              </div>
+
+            <% } else { %>
+              <!-- Thống kê chi tiết 1 đề. KHÁC PHP: thêm #chitietdethi[data-id] để
+                   statistic.js gọi getStatictical (view PHP gốc thiếu hook này). -->
+              <div id="chitietdethi" data-id="<%= Test.made %>">
+                <h3 class="mb-3"><%= Test.tenmonhoc %> - <%= Test.tende %></h3>
+                <!-- Tabs Navigation -->
+                <ul class="nav nav-tabs nav-tabs-alt nav-justified align-items-center bg-light" role="tablist">
+                  <li class="nav-item">
+                    <button class="nav-link text-primary fw-bold" id="bang-diem-tab" data-bs-toggle="tab" data-bs-target="#bang-diem" role="tab" aria-controls="bang-diem" aria-selected="false">
+                      <i class="fa fa-table me-2"></i>Bảng điểm
+                    </button>
+                  </li>
+                  <li class="nav-item">
+                    <button class="nav-link active text-secondary fw-bold" id="thong-ke-tab" data-bs-toggle="tab" data-bs-target="#thong-ke" role="tab" aria-controls="thong-ke" aria-selected="true">
+                      <i class="fa fa-chart-bar me-2"></i>Thống kê
+                    </button>
+                  </li>
+                </ul>
+                <!-- Tab Content -->
+                <div class="block-content tab-content p-3">
+                  <!-- Thống kê -->
+                  <div class="tab-pane fade show active" id="thong-ke" role="tabpanel" aria-labelledby="thong-ke-tab">
+                    <div class="mb-3">
+                      <div class="dropdown">
+                        <button class="btn btn-alt-secondary dropdown-toggle btn-filtered-by-static" id="dropdown-filter-static" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                          Tất cả nhóm
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdown-filter-static">
+                          <li><a class="dropdown-item filtered-by-static active" href="javascript:void(0)" data-id="0">Tất cả nhóm</a></li>
+                          <% Nhom.forEach(function(nhom) { %>
+                            <li><a class="dropdown-item filtered-by-static" href="javascript:void(0)" data-id="<%= nhom.manhom %>"><%= nhom.tennhom %></a></li>
+                          <% }); %>
+                        </ul>
+                      </div>
+                    </div>
+                    <%- include('../partials/statistic_cards') %>
+                    <div class="chart-container mt-4" style="position: relative; height: 40vh; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <canvas id="myChart" class="bg-white rounded"></canvas>
+                    </div>
+                  </div>
+                  <!-- Bảng điểm -->
+                  <div class="tab-pane fade" id="bang-diem" role="tabpanel" aria-labelledby="bang-diem-tab">
+                    <p>Bảng điểm sẽ hiển thị chi tiết kết quả thi của từng sinh viên.</p>
+                  </div>
+                </div>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+  </div>
+
+  <%- include('../partials/script') %>
+
+  <!-- Plugin trang thống kê (bê từ DHT_OneTest): sweetalert2 + chart.js -->
+  <script src="/public/js/plugins/sweetalert2/sweetalert2.all.min.js"></script>
+  <script src="/public/js/plugins/chart.js/chart.min.js"></script>
+
+  <script src="/public/js/permission.js"></script>
+  <script src="/public/js/pages/statistic.js"></script>
+</body>
+</html>

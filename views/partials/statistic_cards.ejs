@@ -1,0 +1,92 @@
+<!-- 8 thẻ thống kê điểm (dùng chung cho thống kê tổng hợp và thống kê 1 đề).
+     Port từ statistic.php — statistic.js cập nhật số liệu theo id. -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6 col-xl-3">
+    <div class="block block-rounded block-fx-shadow bg-success text-white">
+      <div class="block-content block-content-full d-flex align-items-center justify-content-between p-3">
+        <div class="me-3">
+          <p class="fs-lg fw-semibold mb-0" id="da_nop">0</p>
+          <p class="text-white-75 mb-0">Thí sinh đã nộp</p>
+        </div>
+        <div class="item item-circle bg-white bg-opacity-10"><i class="fa fa-user-check text-white"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="block block-rounded block-fx-shadow bg-warning text-white">
+      <div class="block-content block-content-full d-flex align-items-center justify-content-between p-3">
+        <div class="me-3">
+          <p class="fs-lg fw-semibold mb-0" id="chua_nop">0</p>
+          <p class="text-white-75 mb-0">Thí sinh chưa nộp</p>
+        </div>
+        <div class="item item-circle bg-white bg-opacity-10"><i class="fa fa-user-pen text-white"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="block block-rounded block-fx-shadow bg-danger text-white">
+      <div class="block-content block-content-full d-flex align-items-center justify-content-between p-3">
+        <div class="me-3">
+          <p class="fs-lg fw-semibold mb-0" id="khong_thi">0</p>
+          <p class="text-white-75 mb-0">Thí sinh không thi</p>
+        </div>
+        <div class="item item-circle bg-white bg-opacity-10"><i class="fa fa-user-xmark text-white"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="block block-rounded block-fx-shadow bg-info text-white">
+      <div class="block-content block-content-full d-flex align-items-center justify-content-between p-3">
+        <div class="me-3">
+          <p class="fs-lg fw-semibold mb-0" id="diem_trung_binh">0</p>
+          <p class="text-white-75 mb-0">Điểm trung bình</p>
+        </div>
+        <div class="item item-circle bg-white bg-opacity-10"><i class="fa fa-gauge text-white"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="block block-rounded block-fx-shadow bg-secondary text-white">
+      <div class="block-content block-content-full d-flex align-items-center justify-content-between p-3">
+        <div class="me-3">
+          <p class="fs-lg fw-semibold mb-0" id="diem_duoi_1">0</p>
+          <p class="text-white-75 mb-0">Số thí sinh điểm &le; 1</p>
+        </div>
+        <div class="item item-circle bg-white bg-opacity-10"><i class="fa fa-face-sad-cry text-white"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="block block-rounded block-fx-shadow bg-warning text-white">
+      <div class="block-content block-content-full d-flex align-items-center justify-content-between p-3">
+        <div class="me-3">
+          <p class="fs-lg fw-semibold mb-0" id="diem_duoi_5">0</p>
+          <p class="text-white-75 mb-0">Số thí sinh điểm &le; 5</p>
+        </div>
+        <div class="item item-circle bg-white bg-opacity-10"><i class="fa fa-thumbs-down text-white"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="block block-rounded block-fx-shadow bg-success text-white">
+      <div class="block-content block-content-full d-flex align-items-center justify-content-between p-3">
+        <div class="me-3">
+          <p class="fs-lg fw-semibold mb-0" id="diem_lon_5">0</p>
+          <p class="text-white-75 mb-0">Số thí sinh điểm &ge; 5</p>
+        </div>
+        <div class="item item-circle bg-white bg-opacity-10"><i class="fa fa-award text-white"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="block block-rounded block-fx-shadow bg-primary text-white">
+      <div class="block-content block-content-full d-flex align-items-center justify-content-between p-3">
+        <div class="me-3">
+          <p class="fs-lg fw-semibold mb-0" id="diem_cao_nhat">0</p>
+          <p class="text-white-75 mb-0">Điểm cao nhất</p>
+        </div>
+        <div class="item item-circle bg-white bg-opacity-10"><i class="fa fa-users text-white"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
