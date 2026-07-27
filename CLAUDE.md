@@ -57,11 +57,13 @@ xem `../docs/11` §4b slice 4. `assignment` MỞ KHOÁ dữ liệu thật (dropd
 (`permission.js` + `header.ejs`), mở khoá tab thông báo offcanvas trước đây 404.
 **Phase 6 slice 2 XONG (2026-07-26):** thống kê — module `src/statistic/` (path
 `/statistic`) thay `statistic.php` + `ThongKeModel.php` (thống kê 1 đề + tổng hợp,
-8 thẻ + biểu đồ `chart.js`). Phase 6 chỉ còn dashboard email onboarding (ưu tiên
-thấp); Phase 7 chưa làm.
+8 thẻ + biểu đồ `chart.js`). **Phase 6 slice 3 XONG (2026-07-27) → PHASE 6 HOÀN TẤT:**
+dashboard email onboarding — `src/pages/pages.service.ts` + 3 route
+`POST /dashboard/{checkEmail,checkEmailExist,updateEmail}` + modal `#modal-onboarding`
+trong `dashboard.ejs` + `public/js/pages/dashboard.js`. Phase 7 chưa làm.
 
-→ Việc kế tiếp gợi ý: **dashboard email onboarding** (`checkEmail`/`checkEmailExist`/
-`updateEmail` + modal) rồi Phase 7 (trang lỗi, seed mẫu, export thật).
+→ Việc kế tiếp gợi ý: **Phase 7** (trang lỗi, seed dữ liệu mẫu, e2e, export PDF/Excel
+thật thay stub).
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`

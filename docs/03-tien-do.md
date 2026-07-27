@@ -122,11 +122,32 @@ hoặc **tổng hợp** theo học kỳ/năm học/môn/nhóm (8 thẻ + biểu 
 - PHỤ THUỘC DỮ LIỆU: cần `dethi`/`giaodethi`/`nhom`/`ketqua` mới có số liệu; thiếu →
   dropdown rỗng, thẻ = 0 (đúng hành vi PHP).
 
-### Phase 6 CÒN LẠI — Dashboard email onboarding
-`dashboard.php` còn 3 route AJAX chưa port: `checkEmail`/`checkEmailExist`/`updateEmail`
-(`NguoiDungModel`) + modal `#modal-onboarding` nhắc SV nhập email khi email trống.
-Dashboard SSR (Phase 1) đã thiết kế LẠI (slick carousel) không có modal này → nếu port
-cần thêm modal + `dashboard.js` + 3 route. **Ưu tiên thấp** (không chặn nghiệp vụ thi).
+### Phase 6 slice 3 — Dashboard email onboarding ✅ XONG (2026-07-27)
+Port nốt 3 route AJAX của `dashboard.php` + modal nhắc nhập email → **Phase 6 HOÀN TẤT**.
+
+- **`src/pages/pages.service.ts` (MỚI)** thay 3 method email của `NguoiDungModel`:
+  `getEmail` (trả CHUỖI, rỗng = chưa có email), `checkEmailExist` (boolean),
+  `updateEmail` (boolean).
+- **`src/pages/pages.controller.ts`**: thêm `POST /dashboard/checkEmail`,
+  `/dashboard/checkEmailExist`, `/dashboard/updateEmail` — `@SkipTransform()`, KHÔNG
+  gate quyền riêng (như PHP chỉ `checkAuthentication`) vì user chỉ đọc/sửa email của
+  CHÍNH mình; `id` lấy từ **JWT**, không tin body. DTO `DashboardEmailDto` (`@IsEmail`
+  + trim). 3 route đã thêm vào `exclude` global prefix.
+- **View `views/pages/dashboard.ejs`**: thêm modal `#modal-onboarding` (bê từ
+  `dashboard.php`) + nạp `bootstrap-notify` và `/public/js/pages/dashboard.js`.
+  Ảnh nền `public/media/photos/photo23.jpg` KHÔNG tồn tại (cả ở bản PHP) → thay bằng
+  `/public/media/various/bg_dashboard.jpg` sẵn có.
+- **`public/js/pages/dashboard.js`**: bê nguyên, chỉ đổi `./dashboard/` → `/dashboard/`.
+- ⚠️ **KHÁC PHP (quan trọng):** Postgres bắt `nguoidung.email` NOT NULL + UNIQUE nên GV
+  thêm SV bằng MSSV sẽ sinh email placeholder `<mssv>@sinhvien.local`
+  (`class-modules.service.ts`) — email không bao giờ rỗng → modal sẽ không bao giờ hiện.
+  `getEmail` vì thế coi hậu tố `@sinhvien.local` là **chưa có email** (trả `''`) để giữ
+  đúng ý đồ onboarding.
+- Chi tiết nhỏ: `updateEmail` bắt `P2002`/`P2025` → trả `false` (JS báo "Cập nhật email
+  không thành công") thay vì ném 500 khi email trùng do race với `checkEmailExist`.
+  Slider trang dashboard được gắn sẵn class `js-slider-enabled` để helper `jq-slick`
+  (dashboard.js gọi sau `checkEmail`) không init slick lần hai.
+- Build sạch; boot map đủ 3 route `POST /dashboard/*`.
 
 ## Lưu file ảnh — Supabase Storage (2026-07-22)
 
@@ -148,9 +169,8 @@ Nhiều trang lọc qua `phancong`/`giaodethi`/`chitietnhom` → **RỖNG nếu 
 
 ## Việc kế tiếp (gợi ý)
 
-1. **Dashboard email onboarding** (phần cuối Phase 6) — port `checkEmail`/
-   `checkEmailExist`/`updateEmail` + modal nhắc nhập email. Ưu tiên thấp.
-2. Phase 7 — hoàn thiện: trang lỗi, seed dữ liệu mẫu (monhoc/phancong/nhom/cauhoi
+1. **Phase 7** — hoàn thiện (Phase 6 đã XONG cả 3 slice: thông báo / thống kê /
+   dashboard onboarding): trang lỗi, seed dữ liệu mẫu (monhoc/phancong/nhom/cauhoi
    để chạy thật), e2e; export PDF/Excel thật (đang stub).
-3. Quay lại các món đang stub: export PDF/Excel thật, import/export Excel danh sách
+2. Quay lại các món đang stub: export PDF/Excel thật, import/export Excel danh sách
    SV, `view_subject` (Phase 2 còn nợ).
