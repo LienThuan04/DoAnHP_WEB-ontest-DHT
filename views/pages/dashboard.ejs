@@ -22,7 +22,10 @@
     <main id="main-container">
       <div class="content py-4">
         <h2 id="slider-title" style="text-align:center; margin-bottom:20px;">Hệ thống tạo và quản lý bài thi cá nhân hóa</h2>
-        <div class="js-slider">
+        <!-- js-slider-enabled: đánh dấu ĐÃ khởi tạo thủ công (script cuối trang) để
+             helper `jq-slick` của Dashmix — dashboard.js gọi sau khi checkEmail —
+             bỏ qua, tránh init slick hai lần. -->
+        <div class="js-slider js-slider-enabled">
           <div><img class="img-fluid fixed-slider-img" src="https://png.pngtree.com/png-clipart/20240412/original/pngtree-online-test-with-laptop-and-stopwatch-vector-illustration-png-image_14794593.png" alt="Top phần mềm thi online" /></div>
           <div><img class="img-fluid fixed-slider-img" src="https://file.unica.vn/storage/fc2ee9cfd8f54fd092257c83fa8d328ec9fbcefa/cong-cu-tao-de-thi-online-1.jpeg" alt="Tạo đề thi online" /></div>
           <div><img class="img-fluid fixed-slider-img" src="https://phubinh.vn/uploads/news/2022_10/phan-mem-thi-trac-nghiem-online.jpg" alt="Công cụ tạo bài thi" /></div>
@@ -34,6 +37,48 @@
     <%- include('../partials/footer') %>
   </div>
   <!-- END Page Container -->
+
+  <!-- Modal onboarding: nhắc cập nhật email khi tài khoản chưa có email
+       (bê từ dashboard.php; ảnh nền photo23.jpg không có trong bộ media nên
+       dùng bg_dashboard.jpg sẵn có). -->
+  <div class="modal fade" id="modal-onboarding" tabindex="-1" role="dialog" aria-labelledby="modal-onboarding" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content rounded overflow-hidden bg-image bg-image-bottom border-0"
+        style="background-image: url('/public/media/various/bg_dashboard.jpg');">
+        <div class="row">
+          <div class="col-md-5">
+            <div class="p-3 text-end text-md-start">
+              <a class="fw-semibold text-white" href="#" data-bs-dismiss="modal" aria-label="Close">
+                Chuyển tiếp
+              </a>
+            </div>
+          </div>
+          <div class="col-md-7 mx-auto">
+            <div class="bg-body-extra-light shadow-lg rounded-4 p-4">
+              <div class="slick-dotted-inner text-center" data-dots="true" data-arrows="false" data-infinite="false">
+                <div class="p-5">
+                  <i class="fa fa-user-check fa-3x text-primary my-4"></i>
+                  <h3 class="fs-2 fw-bold mb-2">Chào mừng bạn đến với <span class="text-success">DHT OnTest</span></h3>
+                  <p class="fs-5 text-muted mb-4">Vui lòng cập nhật địa chỉ email của bạn để tiếp tục</p>
+
+                  <form class="mb-4">
+                    <div class="mb-3">
+                      <input type="email" class="form-control form-control-lg form-control-alt text-center" id="email"
+                        placeholder="Nhập địa chỉ email của bạn" required>
+                    </div>
+                  </form>
+
+                  <button type="button" class="btn btn-primary btn-lg px-4" id="btn-email">
+                    Cập nhật <i class="fa fa-check opacity-75 ms-2"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <%- include('../partials/script') %>
   <script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
@@ -55,5 +100,9 @@
       $('.js-slider').on('beforeChange', (e, slick, cur, next) => updateTitle(next));
     });
   </script>
+
+  <!-- Onboarding email (dashboard.php + dashboard.js): notify của Dashmix + script trang -->
+  <script src="/public/js/plugins/bootstrap-notify/bootstrap-notify.min.js"></script>
+  <script src="/public/js/pages/dashboard.js"></script>
 </body>
 </html>
