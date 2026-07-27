@@ -10,6 +10,9 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
       app.setGlobalPrefix(globalPrefix, {
         exclude: [
           '/', 'auth/signin', 'auth/login', 'auth/logout', 'dashboard',
+          // Onboarding email ở trang tổng quan (dashboard.php) — AJAX path gốc.
+          'dashboard/checkEmail', 'dashboard/checkEmailExist',
+          'dashboard/updateEmail',
           // Phân quyền (roles.php) — trang + AJAX ở path gốc, không mang /api.
           'roles', 'roles/getAllSl', 'roles/getAll', 'roles/getDetail',
           'roles/getUsers', 'roles/add', 'roles/edit', 'roles/delete',
