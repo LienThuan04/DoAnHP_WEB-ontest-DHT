@@ -1,14 +1,22 @@
+import ExcelJS from 'exceljs';
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/prisma/prisma.service';
 import { generatePasswordHash } from '@/lib/bcrypt/bcrypt';
+import { cellText } from '@/common/utils/excel.util';
 import { CreateUserDto } from '@/users/dto/create-user.dto';
 import { UpdateUserDto } from '@/users/dto/update-user.dto';
 import type {
+  IActionStatus,
+  IExcelImportResult,
+  IImportUserRow,
   IPaginationArgs,
   IUserRow,
 } from '@/users/interfaces/users.types';
+
+/** Kiểm email — tương đương FILTER_VALIDATE_EMAIL của PHP ở mức thực dụng. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Nghiệp vụ quản lý người dùng hệ thi — thay NguoiDungModel (phần user.php).
@@ -199,5 +207,184 @@ export class UsersService {
       this.logger.error('Đổi trạng thái thất bại', err as Error);
       return false;
     }
+  }
+
+  // ================== NHẬP SINH VIÊN TỪ FILE EXCEL (Phase 7) ==================
+
+  /**
+   * POST /user/addExcel — đọc file danh sách SV (.xls/.xlsx) và trả về JSON để
+   * client xem trước rồi gửi sang addFileExcelGroup. Thay `User::addExcel`
+   * (PHPExcel) bằng exceljs.
+   *
+   * Bố cục file giữ y bản PHP (mẫu danh sách lớp của trường): bỏ 2 dòng đầu,
+   * dữ liệu từ **dòng 3**; cột **B** = MSSV, **C** = họ đệm, **D** = tên,
+   * **H** = email. Dòng thiếu mssv/họ tên/email hoặc email sai định dạng bị BỎ QUA.
+   *
+   * KHÁC PHP: exceljs KHÔNG đọc được định dạng .xls cũ (BIFF) → chỉ nhận .xlsx
+   * và báo lỗi rõ ràng thay vì đọc ra dữ liệu rác.
+   */
+  async parseStudentExcel(
+    file: Express.Multer.File | undefined,
+  ): Promise<IExcelImportResult> {
+    if (!file || !file.buffer?.length) {
+      return { status: 'error', message: 'Chưa chọn file để tải lên' };
+    }
+    const ext = (file.originalname.split('.').pop() ?? '').toLowerCase();
+    if (ext !== 'xlsx') {
+      return {
+        status: 'error',
+        message:
+          ext === 'xls'
+            ? 'Chỉ hỗ trợ file Excel .xlsx — hãy mở file .xls và "Lưu thành" .xlsx'
+            : 'Chỉ hỗ trợ file Excel (.xlsx)',
+      };
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    try {
+      await workbook.xlsx.load(file.buffer as unknown as ArrayBuffer);
+    } catch (err) {
+      this.logger.error('Đọc file Excel thất bại', err as Error);
+      return {
+        status: 'error',
+        message: 'Không thể đọc file: ' + (err as Error).message,
+      };
+    }
+
+    const sheet = workbook.worksheets[0];
+    if (!sheet) {
+      return { status: 'error', message: 'File Excel không có sheet nào' };
+    }
+
+    const data: IImportUserRow[] = [];
+    for (let i = 3; i <= sheet.rowCount; i++) {
+      const row = sheet.getRow(i);
+      const mssv = cellText(row.getCell(2).value);
+      const hoDem = cellText(row.getCell(3).value);
+      const ten = cellText(row.getCell(4).value);
+      const email = cellText(row.getCell(8).value);
+      const fullname = `${hoDem} ${ten}`.trim();
+
+      if (!mssv || !email || !fullname) continue;
+      if (!EMAIL_RE.test(email)) continue;
+
+      data.push({ fullname, email, mssv, nhomquyen: 2, trangthai: 1 });
+    }
+
+    if (data.length === 0) {
+      return { status: 'error', message: 'Không có dữ liệu hợp lệ trong file' };
+    }
+    return { status: 'success', data };
+  }
+
+  /**
+   * POST /user/addFileExcelGroup — tạo tài khoản SV từ danh sách đã đọc rồi thêm
+   * hết vào 1 nhóm. Thay `User::addFileExcelGroup` + `NguoiDungModel::addFileGroup`.
+   *
+   * Giữ nguyên phân loại kết quả của PHP: `success` (đã thêm vào nhóm),
+   * `exists` (đã có sẵn trong nhóm), `errors` (dữ liệu thiếu / email trùng).
+   * SV đã có tài khoản thì chỉ thêm vào nhóm, KHÔNG đụng tới mật khẩu cũ.
+   *
+   * KHÁC PHP: (1) băm mật khẩu 1 lần cho cả lô thay vì mỗi vòng lặp; (2) cập nhật
+   * sỉ số nhóm 1 lần ở cuối thay vì sau mỗi lần join; (3) email trùng bắt bằng
+   * P2002 của Prisma nên không phụ thuộc truy vấn kiểm tra trước đó.
+   */
+  async addStudentsFromFile(
+    listUser: IImportUserRow[],
+    password: string,
+    manhom: number,
+  ): Promise<IActionStatus> {
+    if (listUser.length === 0 || !password || !manhom) {
+      return {
+        status: 'error',
+        message: 'Dữ liệu, mật khẩu hoặc nhóm không hợp lệ',
+      };
+    }
+
+    const salt = parseInt(
+      this.config.get<string>('BCRYPT_SALT_ROUNDS') || '10',
+      10,
+    );
+    const hashed = await generatePasswordHash(password, salt);
+
+    const success: string[] = [];
+    const exists: string[] = [];
+    const errors: string[] = [];
+
+    for (const user of listUser) {
+      const mssv = (user.mssv ?? '').trim();
+      const email = (user.email ?? '').trim();
+      const fullname = (user.fullname ?? '').trim();
+      if (!mssv || !email || !fullname) {
+        errors.push(`Dữ liệu không hợp lệ cho MSSV: ${mssv}`);
+        continue;
+      }
+
+      const account = await this.prisma.nguoiDung.findUnique({
+        where: { id: mssv },
+        select: { id: true },
+      });
+
+      if (!account) {
+        try {
+          await this.prisma.nguoiDung.create({
+            data: {
+              id: mssv,
+              email,
+              hoten: fullname,
+              matkhau: hashed,
+              trangthai: Number(user.trangthai ?? 1),
+              manhomquyen: Number(user.nhomquyen ?? 2),
+            },
+          });
+        } catch (err) {
+          const code = (err as Prisma.PrismaClientKnownRequestError).code;
+          errors.push(
+            code === 'P2002'
+              ? `Email ${email} đã tồn tại cho MSSV ${mssv}`
+              : `Lỗi thêm MSSV ${mssv}`,
+          );
+          continue;
+        }
+      }
+
+      const inGroup = await this.prisma.chiTietNhom.findFirst({
+        where: { manhom, manguoidung: mssv },
+        select: { manguoidung: true },
+      });
+      if (inGroup) {
+        exists.push(mssv);
+        continue;
+      }
+      try {
+        await this.prisma.chiTietNhom.create({
+          data: { manhom, manguoidung: mssv, hienthi: 1 },
+        });
+        success.push(mssv);
+      } catch {
+        errors.push(`Không thể thêm MSSV ${mssv} vào nhóm`);
+      }
+    }
+
+    if (success.length > 0) {
+      const siso = await this.prisma.chiTietNhom.count({ where: { manhom } });
+      await this.prisma.nhom.update({ where: { manhom }, data: { siso } });
+    }
+
+    let message = '';
+    if (success.length > 0) {
+      message += `Đã thêm ${success.length} sinh viên thành công. `;
+    }
+    if (exists.length > 0) {
+      message += `Sinh viên đã có trong nhóm: ${exists.join(', ')}. `;
+    }
+    if (errors.length > 0) {
+      message += `Lỗi: ${errors.join(', ')}`;
+      return { status: 'error', message: message.trim() };
+    }
+    return {
+      status: 'success',
+      message: message.trim() || 'Thêm người dùng thành công!',
+    };
   }
 }
