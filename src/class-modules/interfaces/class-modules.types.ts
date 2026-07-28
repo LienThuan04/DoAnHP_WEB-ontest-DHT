@@ -47,6 +47,16 @@ export interface IGroupStudentRow {
   ngaysinh: string | null;
 }
 
+/** 1 dòng trong file Excel danh sách SV (exportExcelStudentS). */
+export interface IExportStudentRow {
+  id: string;
+  hoten: string;
+  email: string;
+  ngaythamgia: Date | null;
+  ngaysinh: Date | null;
+  gioitinh: boolean | null;
+}
+
 /** Tham số phân trang danh sách SV của 1 nhóm (pagination.js, model=NhomModel). */
 export interface IGroupPaginationArgs {
   controller?: string;
