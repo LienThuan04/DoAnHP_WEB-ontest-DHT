@@ -5,21 +5,29 @@ import {
   Post,
   Render,
   Req,
+  UploadedFile,
+  UseInterceptors,
   VERSION_NEUTRAL,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
+import { MULTER_LIMITS } from '@/common/config/upload.config';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
 import { UsersService } from '@/users/users.service';
 import { CreateUserDto } from '@/users/dto/create-user.dto';
 import { UpdateUserDto } from '@/users/dto/update-user.dto';
 import {
+  AddFileExcelGroupDto,
   CheckUserDto,
   PaginationBodyDto,
   SetStatusDto,
   UserIdDto,
 } from '@/users/dto/user-query.dto';
-import type { IPaginationArgs } from '@/users/interfaces/users.types';
+import type {
+  IImportUserRow,
+  IPaginationArgs,
+} from '@/users/interfaces/users.types';
 import type { IExamJwtPayload } from '@/exam-auth/interfaces/exam-auth.types';
 
 /**
@@ -112,5 +120,35 @@ export class UsersController {
   async setStatus(@Body() dto: SetStatusDto) {
     const ok = await this.usersService.setStatus(dto.id, dto.status);
     return { success: ok };
+  }
+
+  /**
+   * POST /user/addExcel — đọc file danh sách SV (.xlsx) và trả JSON xem trước.
+   * Gọi từ tab "Nhập từ file" của trang chi tiết nhóm (class_detail.js).
+   * Chỉ cần đăng nhập như user.php gốc (GV không có quyền `nguoidung` vẫn dùng
+   * được nút này ở nhóm của mình); route KHÔNG ghi gì vào CSDL.
+   */
+  @SkipTransform()
+  @Post('addExcel')
+  @UseInterceptors(FileInterceptor('fileToUpload', { limits: MULTER_LIMITS }))
+  addExcel(@UploadedFile() file: Express.Multer.File) {
+    return this.usersService.parseStudentExcel(file);
+  }
+
+  /**
+   * POST /user/addFileExcelGroup — tạo tài khoản SV từ danh sách đã đọc rồi thêm
+   * vào nhóm. Chỉ cần đăng nhập như user.php gốc (checkAuthentication).
+   */
+  @SkipTransform()
+  @Post('addFileExcelGroup')
+  addFileExcelGroup(@Body() dto: AddFileExcelGroupDto) {
+    let list: IImportUserRow[] = [];
+    try {
+      const parsed: unknown = JSON.parse(dto.listuser);
+      if (Array.isArray(parsed)) list = parsed as IImportUserRow[];
+    } catch {
+      return { status: 'error', message: 'Danh sách sinh viên không hợp lệ' };
+    }
+    return this.usersService.addStudentsFromFile(list, dto.password, dto.group);
   }
 }
