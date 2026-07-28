@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title><%= Title %></title>
+<%
+  /*
+   * Port từ DHT_OneTest `Test::exportPdf` (dompdf). KHÁC PHP: thay vì render PDF
+   * ở server bằng dompdf, trang này là HTML thuần tự gọi window.print() khi mở —
+   * người dùng chọn "Lưu dạng PDF" trong hộp thoại in. Giữ nguyên bố cục/CSS gốc,
+   * chỉ thêm @page + @media print để bản in sạch (bỏ bóng đổ, không cắt ngang khối).
+   */
+%>
+<style>
+  @page { size: A4 portrait; margin: 12mm; }
+  body { font-family: "Times New Roman", serif; padding: 30px 50px; line-height: 1.6; color: #000; }
+  .header { text-align: center; margin-bottom: 30px; }
+  .header h1 { font-size: 28px; font-weight: bold; color: #1a5fb4; margin-bottom: 5px; }
+  .header p { font-size: 16px; color: #555; margin: 0; }
+  table.info-table { width: 100%; border-collapse: separate; border-spacing: 0 15px; margin-bottom: 30px; }
+  table.info-table td { vertical-align: top; padding: 15px 20px; border: 1px solid #d0e0ff; border-radius: 8px; background-color: #f8fbff; width: 50%; }
+  .section-title { font-size: 18px; font-weight: bold; color: #1a5fb4; text-align: center; margin-bottom: 15px; border-bottom: 2px solid #1a5fb4; padding-bottom: 6px; }
+  .info-row { margin-bottom: 10px; display: flex; }
+  .label { font-weight: bold; width: 130px; flex-shrink: 0; color: #333; }
+  .value { flex: 1; }
+  .highlight { font-size: 18px; color: #d32f2f; font-weight: bold; }
+
+  /* Nhóm Reading */
+  .reading-card { margin-bottom: 40px; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); background: #fff; }
+  .reading-header { background: #e3f2fd; padding: 15px 20px; border-bottom: 1px solid #bbdefb; text-align: center; }
+  .reading-title { font-size: 18px; font-weight: bold; color: #1a5fb4; margin: 0; }
+  .reading-passage { padding: 20px; background: #f8fdff; font-size: 15px; line-height: 1.8; }
+  .reading-passage img { max-width: 100%; height: auto; margin: 10px 0; border-radius: 6px; }
+
+  /* Câu hỏi chung */
+  .question-block { padding: 20px; border-bottom: 1px dashed #ddd; }
+  .question-block:last-child { border-bottom: none; }
+  .question-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; text-align: center; }
+
+  /* Grid phương án */
+  .answers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 15px; }
+  .answer-item { position: relative; border: 2px solid #eee; border-radius: 10px; padding: 8px; background: #fff; min-height: 60px; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; font-size: 14px; }
+  .answer-item img { width: 100%; max-height: 120px; object-fit: contain; margin: 10px 0; border-radius: 6px; }
+  .answer-label { font-size: 14px; font-weight: bold; color: #1a5fb4; margin-right: 8px; }
+
+  /* Đúng / Sai */
+  .correct-item { border-color: #4caf50 !important; background: #fff !important; }
+  .wrong-item { border-color: #f44336 !important; background: #fff !important; }
+  .icon-check { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); font-size: 20px; color: #4caf50; font-weight: bold; }
+  .icon-cross { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); font-size: 20px; color: #f44336; font-weight: bold; }
+
+  /* Tự luận */
+  .essay-block { margin-top: 20px; padding: 15px; background: #e8f4f8; border-left: 5px solid #1a5fb4; border-radius: 8px; }
+  .essay-title { font-weight: bold; color: #1a5fb4; margin-bottom: 10px; text-align: center; }
+  .essay-content { background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 15px; }
+  .essay-images { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; justify-content: center; }
+  .essay-images img { width: 200px; height: auto; object-fit: contain; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+  .essay-score { margin-top: 15px; padding: 10px; background: #fff; border: 1px solid #4caf50; border-radius: 6px; text-align: center; font-size: 18px; font-weight: bold; color: #1a5fb4; }
+  .essay-score.ungraded { background: #fff3cd; border-color: #ffc107; color: #856404; }
+  .text-muted { color: #6c757d; text-align: center; }
+
+  .first-page-header { font-size: 17px; font-weight: bold; color: #d32f2f; background: white; padding: 12px 20px; border-left: 4px solid #ff5252; border-bottom: 4px solid #ff5252; border-bottom-left-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+
+  img { max-width: 100%; max-height: 400px; height: auto; width: auto; display: block; margin: 10px auto; object-fit: contain; }
+
+  /* Nút in (không xuất hiện trên bản in). */
+  .print-bar { text-align: center; margin-bottom: 20px; }
+  .print-bar button { font-family: inherit; font-size: 15px; padding: 8px 20px; border: 1px solid #1a5fb4; border-radius: 6px; background: #1a5fb4; color: #fff; cursor: pointer; }
+
+  @media print {
+    body { padding: 0; }
+    .print-bar { display: none !important; }
+    .reading-card, .question-block, .essay-block { box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+    .answer-item { break-inside: avoid; page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <button type="button" onclick="window.print()">In / Lưu PDF</button>
+</div>
+
+<div class="first-page-header"><%= Title %></div>
+
+<div class="header">
+  <h1>DHT ONTEST</h1>
+  <p>WEBSITE TẠO VÀ QUẢN LÝ BÀI THI CÁ NHÂN HÓA</p>
+</div>
+
+<table class="info-table">
+  <tr>
+    <td>
+      <div class="section-title">THÔNG TIN SINH VIÊN</div>
+      <div class="info-row"><span class="label">Họ &amp; tên: </span><span class="value"><%= info.hoten %></span></div>
+      <div class="info-row"><span class="label">MSSV: </span><span class="value"><%= info.manguoidung %></span></div>
+      <div class="info-row"><span class="label">Số câu đúng: </span><span class="value"><%= info.socaudung || 0 %> / <%= info.tongsocauhoi || 0 %></span></div>
+      <div class="info-row"><span class="label">Điểm thi: </span><span class="value highlight"><%= diem %> điểm</span></div>
+    </td>
+    <td>
+      <div class="section-title">THÔNG TIN ĐỀ THI</div>
+      <div class="info-row"><span class="label">Tên đề thi: </span><span class="value"><%= info.tende %></span></div>
+      <div class="info-row"><span class="label">Môn thi: </span><span class="value"><%= info.tenmonhoc %></span></div>
+      <div class="info-row"><span class="label">Thời gian thi: </span><span class="value"><%= thoigianthi %></span></div>
+      <div class="info-row"><span class="label">Thời gian làm bài: </span><span class="value"><%= thoigianlambai %></span></div>
+    </td>
+  </tr>
+</table>
+
+<div style="text-align:center; font-weight:bold; font-size:18px; margin:30px 0 20px;">CHI TIẾT CÂU TRẢ LỜI</div>
+
+<% blocks.forEach(function (block) { %>
+  <% if (block.type === 'essay') { %>
+    <% var q = block.questions[0]; %>
+    <div class="question-block">
+      <div class="question-title">Câu <%= q.stt %>: <%- q.noidung || '' %></div>
+      <div class="essay-block">
+        <div class="essay-title">Bài làm của sinh viên:</div>
+        <% if (q.noidung_tra_loi) { %>
+          <div class="essay-content"><%- q.noidung_tra_loi %></div>
+        <% } %>
+        <% if (q.hinhanh_list.length) { %>
+          <div class="essay-images">
+            <% q.hinhanh_list.forEach(function (url) { %>
+              <img src="<%= url %>" alt="Ảnh bài làm" />
+            <% }); %>
+          </div>
+        <% } %>
+        <% if (!q.noidung_tra_loi && !q.hinhanh_list.length) { %>
+          <div class="text-muted"><em>Chưa nộp bài</em></div>
+        <% } %>
+        <% if (q.diem_cham_tuluan !== null && q.diem_cham_tuluan !== undefined) { %>
+          <div class="essay-score">Điểm chấm: <%= Number(q.diem_cham_tuluan).toFixed(2) %> điểm</div>
+        <% } else { %>
+          <div class="essay-score ungraded">Chưa chấm điểm</div>
+        <% } %>
+      </div>
+    </div>
+  <% } else { %>
+    <div class="reading-card">
+      <div class="reading-header">
+        <h5 class="reading-title"><%- block.tieude %></h5>
+      </div>
+      <% if (block.type === 'reading') { %>
+        <div class="reading-passage"><%- block.context || '' %></div>
+      <% } %>
+      <% block.questions.forEach(function (q) { %>
+        <div class="question-block">
+          <div class="question-title">Câu <%= q.stt %>: <%- q.noidung || '' %></div>
+          <div class="answers-grid">
+            <% q.cautraloi.forEach(function (ctl, i) { %>
+              <%
+                var isCorrect = String(ctl.ladapan) === '1';
+                var isChosen = q.dapanchon != null && Number(ctl.macautl) === Number(q.dapanchon);
+                var cls = '';
+                var icon = '';
+                if (isChosen && isCorrect) { cls = 'correct-item'; icon = 'check'; }
+                else if (isChosen && !isCorrect) { cls = 'wrong-item'; icon = 'cross'; }
+                else if (!isChosen && isCorrect && q.dapanchon) { cls = 'correct-item'; icon = 'check'; }
+              %>
+              <div class="answer-item <%= cls %>">
+                <span class="answer-label"><%= String.fromCharCode(65 + i) %>.</span>
+                <% if (ctl.noidungtl) { %><%- ctl.noidungtl %><% } else { %><em>Trống</em><% } %>
+                <% if (ctl.hinhanh) { %><img src="<%= ctl.hinhanh %>" alt="Ảnh đáp án" /><% } %>
+                <% if (icon === 'check') { %><span class="icon-check">✓</span><% } %>
+                <% if (icon === 'cross') { %><span class="icon-cross">✗</span><% } %>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  <% } %>
+<% }); %>
+
+<script>
+  // Mở hộp thoại in ngay khi trang (kèm ảnh) tải xong → người dùng "Lưu dạng PDF".
+  window.addEventListener('load', function () {
+    setTimeout(function () { window.print(); }, 300);
+  });
+</script>
+</body>
+</html>
