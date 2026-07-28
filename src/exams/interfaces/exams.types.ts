@@ -290,6 +290,65 @@ export interface IExamResultRow {
   thoigianketthuc: Date | null;
 }
 
+/**
+ * 1 dòng bảng điểm dùng để xuất Excel (getTestAll/getTestScoreGroup).
+ * Điểm tổng KHÔNG lấy từ SQL mà cộng lại khi ghi ô, như bản PHP.
+ */
+export interface IExamScoreRow {
+  manguoidung: string;
+  hoten: string | null;
+  diemtracnghiem: number | null;
+  diemtuluan: number | null;
+  diemdochieu: number | null;
+  thoigianvaothi: Date | null;
+  thoigianlambai: number | null;
+  socaudung: number | null;
+  solanchuyentab: number | null;
+}
+
+/** Thông tin phiếu kết quả để in PDF — thay KetQuaModel::getInfoPrintPdf. */
+export interface IPrintPdfInfo {
+  made: number;
+  tende: string | null;
+  thoigianthi: number | null;
+  tenmonhoc: string;
+  manguoidung: string;
+  hoten: string;
+  socaudung: number | null;
+  tongsocauhoi: number;
+  diemthi: number | null;
+  thoigianvaothi: Date | null;
+  thoigianketthuc: Date | null;
+  thoigianlambai_giay: number | null;
+}
+
+/** 1 câu hỏi đã đánh số thứ tự trong phiếu kết quả in (export_pdf.ejs). */
+export interface IPrintQuestion extends IResultDetailRow {
+  /** Số thứ tự "Câu N" — đếm liên tục qua mọi loại câu như bản PHP. */
+  stt: number;
+  /** Danh sách URL ảnh bài tự luận (tách từ `ds_hinhanh` nối bằng "||"). */
+  hinhanh_list: string[];
+}
+
+/**
+ * 1 khối nội dung trong phiếu in: nhóm đọc hiểu (nhiều câu chung đoạn văn),
+ * 1 câu trắc nghiệm độc lập, hoặc 1 câu tự luận — thay việc mở/đóng thẻ div
+ * thủ công trong vòng lặp của `Test::exportPdf`.
+ */
+export interface IPrintBlock {
+  type: 'reading' | 'mcq' | 'essay';
+  tieude: string | null;
+  context: string | null;
+  questions: IPrintQuestion[];
+}
+
+/** 1 ô điểm trong ma trận SV × đề (getMarkOfAllTest). */
+export interface IMarkMatrixRow {
+  made: number;
+  manguoidung: string;
+  diemthi: number | null;
+}
+
 /** Kết quả thống kê điểm (tab Thống kê) — thay KetQuaModel::getStatictical. */
 export interface IStaticticalResult {
   diem_trung_binh: number;
