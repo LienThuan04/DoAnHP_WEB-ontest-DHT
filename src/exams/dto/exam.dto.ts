@@ -187,6 +187,34 @@ export class StaticticalDto {
   manhom!: number;
 }
 
+/**
+ * $_POST[made,manhom,ds[]] cho exportExcel (test_detail.js #export_excel).
+ * `manhom` = nhóm đang lọc (0 = tất cả); `ds` = danh sách mã nhóm được giao đề,
+ * chỉ dùng khi manhom = 0. jQuery bỏ hẳn key khi mảng rỗng → cho phép vắng.
+ */
+export class ExportExcelDto {
+  @Type(() => Number)
+  @IsInt()
+  made!: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  manhom?: number;
+
+  @IsOptional()
+  @Transform(toIntArray)
+  @IsArray()
+  ds?: number[];
+}
+
+/** $_POST['manhom'] cho getMarkOfAllTest (class_detail.js #exportScores). */
+export class MarkOfAllTestDto {
+  @Type(() => Number)
+  @IsInt()
+  manhom!: number;
+}
+
 /** $_POST cho getTestsGroupWithUserResult — chỉ mã nhóm (SV lấy từ JWT). */
 export class GroupTestsDto {
   @Type(() => Number)
