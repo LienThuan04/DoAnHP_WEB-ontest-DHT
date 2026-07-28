@@ -4,7 +4,16 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { generatePasswordHash } from '@/lib/bcrypt/bcrypt';
+import {
+  centerCells,
+  createWorkbook,
+  setColumnWidths,
+  workbookToDataUri,
+  writeHeaderRow,
+} from '@/common/utils/excel.util';
+import type { IExcelDownload } from '@/common/utils/excel.util';
 import type {
+  IExportStudentRow,
   IGroupDetail,
   IGroupItem,
   IGroupPaginationArgs,
@@ -580,4 +589,59 @@ export class ClassModulesService {
       message: `Đã thêm ${candidates.length} sinh viên mới vào nhóm`,
     };
   }
+
+  /**
+   * POST /module/exportExcelStudentS — xuất danh sách SV của nhóm ra .xlsx.
+   * Thay `Module::exportExcelStudentS` (PHPExcel) bằng exceljs; giữ nguyên
+   * 6 cột + màu header xanh lá `33FF33` + độ rộng cột của bản PHP.
+   *
+   * KHÁC PHP: (1) MIME data-URI dùng đúng `...spreadsheetml.sheet` thay
+   * `application/vnd.ms-excel` — PHP ghi file Excel2007 (.xlsx) nhưng gắn nhầm
+   * MIME của .xls (JS gốc vẫn đặt tên tải xuống `.xls`, trình duyệt mở được vì
+   * data-URI không kiểm tra chéo); (2) ngày định dạng `dd/MM/yyyy` từ DateTime
+   * Postgres thay chuỗi thô MySQL.
+   */
+  async exportStudentsExcel(manhom: number): Promise<IExcelDownload> {
+    const rows = await this.prisma.$queryRaw<IExportStudentRow[]>(Prisma.sql`
+      SELECT ND.id, ND.hoten, ND.email, ND.ngaythamgia, ND.ngaysinh, ND.gioitinh
+      FROM chitietnhom CTN
+      JOIN nguoidung ND ON CTN.manguoidung = ND.id
+      WHERE CTN.manhom = ${manhom}
+    `);
+
+    const { workbook, sheet } = createWorkbook('Danh sách kết quả');
+    setColumnWidths(sheet, [15, 30, 30, 20, 20, 20]);
+    writeHeaderRow(
+      sheet,
+      1,
+      ['MSSV', 'Họ và tên', 'Email', 'Ngày tham gia', 'Ngày Sinh', 'Giới tính'],
+      { fill: '33FF33' },
+    );
+
+    let numRow = 2;
+    for (const row of rows) {
+      const line = sheet.getRow(numRow);
+      line.getCell(1).value = row.id;
+      line.getCell(2).value = row.hoten;
+      line.getCell(3).value = row.email;
+      line.getCell(4).value = formatDate(row.ngaythamgia);
+      line.getCell(5).value = formatDate(row.ngaysinh);
+      // PHP so sánh 0/1; Postgres trả boolean → null vẫn ra "Null" như bản gốc.
+      line.getCell(6).value =
+        row.gioitinh === false ? 'Nữ' : row.gioitinh === true ? 'Nam' : 'Null';
+      centerCells(sheet, numRow, 1, 6);
+      numRow++;
+    }
+
+    return workbookToDataUri(workbook, 'Danh sách sinh viên.xlsx');
+  }
+}
+
+/** Định dạng ngày `dd/MM/yyyy`; rỗng nếu null (thay chuỗi thô MySQL của PHP). */
+function formatDate(value: Date | string | null): string {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
