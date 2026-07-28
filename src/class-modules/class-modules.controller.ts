@@ -272,16 +272,13 @@ export class ClassModulesController {
   }
 
   /**
-   * POST /module/exportExcelStudentS — STUB xuất danh sách SV (Excel).
-   * PHP dùng PHPExcel; hoãn như các export khác (dùng exceljs khi cần). Trả JSON
-   * không có `file` để không tải nhầm; UI hiện chưa báo lỗi cho ca này.
+   * POST /module/exportExcelStudentS — xuất danh sách SV của nhóm ra Excel.
+   * Thay PHPExcel bằng exceljs; trả `{status,file,filename}` với `file` là
+   * data-URI base64 đúng như bản PHP (JS gốc tạo thẻ <a download> rồi click).
    */
   @SkipTransform()
   @Post('exportExcelStudentS')
-  exportExcelStudentS() {
-    return {
-      status: false,
-      message: 'Xuất Excel danh sách sinh viên đang được phát triển.',
-    };
+  exportExcelStudentS(@Body() dto: ManhomDto) {
+    return this.classModules.exportStudentsExcel(dto.manhom);
   }
 }
