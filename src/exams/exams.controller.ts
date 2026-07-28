@@ -5,6 +5,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  ParseIntPipe,
   Post,
   Render,
   Req,
@@ -18,6 +19,7 @@ import type { Request, Response } from 'express';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
 import { ExamsService } from '@/exams/exams.service';
+import { ExamsExportService } from '@/exams/exams-export.service';
 import {
   AddDetailDto,
   CreateTestDto,
@@ -25,8 +27,10 @@ import {
   EssayDetailDto,
   ExamIdDto,
   ExamPaginationBodyDto,
+  ExportExcelDto,
   GroupTestsDto,
   ListEssaySubmissionsDto,
+  MarkOfAllTestDto,
   ResultDetailDto,
   SaveEssayScoreDto,
   StaticticalDto,
@@ -45,12 +49,15 @@ import type { IExamJwtPayload } from '@/exam-auth/interfaces/exam-auth.types';
  *
  * Đã port: danh sách GV (slice 1), tạo/sửa đề (slice 2), chọn câu hỏi cho đề
  * thủ công (slice 3), luồng làm bài SV (slice 4), chi tiết/kết quả đề + chấm
- * tự luận (slice 5). HOÃN: exportPdf (dompdf) & exportExcel (PhpSpreadsheet) —
- * hiện là stub trả thông báo "đang phát triển".
+ * tự luận (slice 5), xuất Excel/PDF (Phase 7 — `ExamsExportService` thay
+ * PHPExcel; PDF là trang HTML tự gọi `window.print()` thay dompdf).
  */
 @Controller({ path: 'test', version: VERSION_NEUTRAL })
 export class ExamsController {
-  constructor(private readonly exams: ExamsService) {}
+  constructor(
+    private readonly exams: ExamsService,
+    private readonly examsExport: ExamsExportService,
+  ) {}
 
   private parseArgs(raw: string): IExamPaginationArgs {
     try {
@@ -452,29 +459,65 @@ export class ExamsController {
   }
 
   /**
-   * GET /test/exportPdf/:makq — HOÃN (PHP dùng dompdf). Trả trang thông báo thay
-   * vì 404 (test_detail.js mở tab mới). TODO: port khi cần (dùng puppeteer/pdfkit).
+   * GET /test/exportPdf/:makq — phiếu chi tiết kết quả 1 bài làm.
+   *
+   * KHÁC PHP: bản gốc render PDF bằng dompdf rồi trả `application/pdf`; ở đây
+   * trả trang HTML dùng đúng bố cục/CSS đó và tự gọi `window.print()` khi mở tab
+   * (test_detail.js đã `window.open`) → người dùng chọn "Lưu dạng PDF". Tránh phụ
+   * thuộc Chromium/puppeteer trên server mà kết quả in ra tương đương.
    */
   @Permissions('dethi', 'view')
   @SkipTransform()
   @Get('exportPdf/:makq')
-  exportPdf(@Res() res: Response) {
-    res
-      .status(501)
-      .type('html')
-      .send(
-        '<!doctype html><meta charset="utf-8"><div style="font-family:sans-serif;padding:2rem;text-align:center"><h2>Xuất PDF đang được phát triển</h2><p>Tính năng in bài làm (PDF) sẽ được bổ sung ở giai đoạn sau.</p></div>',
-      );
+  @Render('pages/export_pdf')
+  async exportPdf(@Param('makq', ParseIntPipe) makq: number) {
+    const info = await this.examsExport.getInfoPrintPdf(makq);
+    if (!info) throw new NotFoundException('Không tìm thấy kết quả thi.');
+    const rows = await this.exams.getResultDetail(makq);
+
+    // Thời gian làm bài: dùng số giây thực tế; chưa nộp → hiện thời gian quy định.
+    const giay = Number(info.thoigianlambai_giay ?? 0);
+    const thoigianlambai =
+      giay > 0 && info.thoigianketthuc
+        ? `${Math.floor(giay / 60)} phút ${giay % 60} giây`
+        : `${info.thoigianthi ?? 0} phút (thời gian quy định)`;
+
+    // Tên file gợi ý = tiêu đề trang (trình duyệt lấy <title> làm tên PDF).
+    const mssv = (info.manguoidung || 'SinhVien').replace(/[^\w]+/gu, '_');
+    return {
+      Title: `Chi_tiet_ket_qua_${mssv}_MD${makq}`,
+      info,
+      blocks: this.examsExport.buildPrintBlocks(rows),
+      diem: Number(info.diemthi ?? 0).toFixed(2),
+      thoigianthi: `${info.thoigianthi ?? 0} phút`,
+      thoigianlambai,
+    };
   }
 
   /**
-   * POST /test/exportExcel — HOÃN (PHP dùng PhpSpreadsheet). Trả JSON không có
-   * `file` → test_detail.js hiện thông báo lỗi thân thiện. TODO: port bằng exceljs.
+   * POST /test/exportExcel — xuất bảng điểm 1 đề ra .xlsx (thay PHPExcel).
+   * Trả `{status,file,filename}` với `file` là data-URI base64 như bản PHP.
    */
   @Permissions('dethi', 'view')
   @SkipTransform()
   @Post('exportExcel')
-  exportExcel() {
-    return { success: false, error: 'Xuất Excel đang được phát triển' };
+  exportExcel(@Body() dto: ExportExcelDto) {
+    return this.examsExport.exportExamScores(
+      dto.made,
+      Number(dto.manhom) || 0,
+      dto.ds ?? [],
+    );
+  }
+
+  /**
+   * POST /test/getMarkOfAllTest — xuất bảng điểm TẤT CẢ đề của 1 nhóm ra .xlsx.
+   * Route MỚI: PHP có `KetQuaModel::getMarkOfAllTest` nhưng thiếu action nên nút
+   * "Xuất bảng điểm" ở class_detail.js gọi vào URL không tồn tại.
+   */
+  @Permissions('dethi', 'view')
+  @SkipTransform()
+  @Post('getMarkOfAllTest')
+  getMarkOfAllTest(@Body() dto: MarkOfAllTestDto) {
+    return this.examsExport.exportMarkOfAllTest(dto.manhom);
   }
 }
