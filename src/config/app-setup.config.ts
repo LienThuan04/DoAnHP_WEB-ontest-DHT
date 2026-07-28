@@ -22,6 +22,8 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'user', 'user/getTotalPages', 'user/pagination', 'user/checkUser',
           'user/getDetail', 'user/add', 'user/update', 'user/deleteData',
           'user/setStatus',
+          // Nhập sinh viên từ file Excel (tab "Nhập từ file" ở chi tiết nhóm).
+          'user/addExcel', 'user/addFileExcelGroup',
           // Năm học & Học kỳ (namhoc.php) — trang + AJAX ở path gốc.
           'namhoc', 'namhoc/getNamHoc', 'namhoc/getHocKy', 'namhoc/addNamHoc',
           'namhoc/updateNamHoc', 'namhoc/deleteNamHoc',
@@ -59,6 +61,8 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'test/detail/:made', 'test/getStatictical',
           'test/getListEssaySubmissionsAction', 'test/getEssayDetailAction',
           'test/saveEssayScoreAction', 'test/exportPdf/:makq', 'test/exportExcel',
+          // Xuất bảng điểm tất cả đề của 1 nhóm (nút ở class_detail).
+          'test/getMarkOfAllTest',
           // Nhóm học phần (module.php) — trang SSR + AJAX quản lý nhóm của GV.
           'module', 'module/loadData', 'module/getNamHoc', 'module/getHocKy',
           'module/checkDuplicate', 'module/add', 'module/update',
