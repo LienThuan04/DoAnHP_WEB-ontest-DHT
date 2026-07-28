@@ -26,6 +26,25 @@ export class UserIdDto {
   id!: string;
 }
 
+/**
+ * Thay $_POST của User::addFileExcelGroup(). class_detail.js gửi
+ * `listuser` = JSON.stringify(danh sách đọc từ addExcel), `group` = mã nhóm,
+ * `password` = mật khẩu mặc định cho tài khoản mới.
+ */
+export class AddFileExcelGroupDto {
+  @IsNotEmpty({ message: 'Thiếu danh sách sinh viên' })
+  @IsString()
+  listuser!: string;
+
+  @Type(() => Number)
+  @IsInt()
+  group!: number;
+
+  @IsNotEmpty({ message: 'Thiếu mật khẩu mặc định' })
+  @IsString()
+  password!: string;
+}
+
 /** Thay $_POST['id'] + $_POST['status'] của User::setStatus(). */
 export class SetStatusDto {
   @IsNotEmpty({ message: 'Thiếu mã người dùng' })
