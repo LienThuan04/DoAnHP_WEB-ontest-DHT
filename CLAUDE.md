@@ -45,9 +45,9 @@ Giữ **nguyên nghiệp vụ + giao diện** của hệ thi cũ; chỉ đổi c
 
 ## Trạng thái hiện tại (tóm tắt — chi tiết ở `docs/03`)
 
-Hạ tầng + Phase 1/2/3 **XONG**. Phase 4 (đề thi & làm bài, module lớn nhất) **gần
-xong**: slice 1–5 xong (danh sách/tạo-sửa/chọn câu/làm bài SV/chi tiết-kết quả +
-chấm tự luận); còn export PDF/Excel thật (đang stub) + `test_schedule`. **Phase 5
+Hạ tầng + Phase 1/2/3 **XONG**. Phase 4 (đề thi & làm bài, module lớn nhất) **XONG**:
+slice 1–5 (danh sách/tạo-sửa/chọn câu/làm bài SV/chi tiết-kết quả + chấm tự luận);
+export PDF/Excel đã làm ở Phase 7. **Phase 5
 XONG:** quản lý nhóm học phần GV (`module.php`) + chi tiết nhóm/thành viên
 (`class_detail.php`, path `/module`) + **phân công GV↔môn (`assignment.php`, path
 `/assignment`)** + **phía SV (`client.php`, path `/client`, module `src/client/`)** —
@@ -60,10 +60,16 @@ xem `../docs/11` §4b slice 4. `assignment` MỞ KHOÁ dữ liệu thật (dropd
 8 thẻ + biểu đồ `chart.js`). **Phase 6 slice 3 XONG (2026-07-27) → PHASE 6 HOÀN TẤT:**
 dashboard email onboarding — `src/pages/pages.service.ts` + 3 route
 `POST /dashboard/{checkEmail,checkEmailExist,updateEmail}` + modal `#modal-onboarding`
-trong `dashboard.ejs` + `public/js/pages/dashboard.js`. Phase 7 chưa làm.
+trong `dashboard.ejs` + `public/js/pages/dashboard.js`.
+**Phase 7 slice 1 XONG (2026-07-29):** xuất/nhập Excel + in PDF — gói `exceljs`,
+helper `src/common/utils/excel.util.ts`, service mới `src/exams/exams-export.service.ts`.
+6 route: `module/exportExcelStudentS`, `test/exportExcel`, `test/getMarkOfAllTest`
+(MỚI — PHP thiếu action), `test/exportPdf/:makq` (trang HTML tự `window.print()` thay
+dompdf), `user/addExcel` + `user/addFileExcelGroup` (chỉ đọc `.xlsx`; file mẫu
+`public/filemau/danhsachsv_mau.xlsx`). Chi tiết + danh sách "KHÁC PHP": `docs/03`.
 
-→ Việc kế tiếp gợi ý: **Phase 7** (trang lỗi, seed dữ liệu mẫu, e2e, export PDF/Excel
-thật thay stub).
+→ Việc kế tiếp gợi ý: **Phase 7 slice 2 = seed dữ liệu mẫu** (monhoc/phancong/nhom/
+cauhoi/dethi) — nút thắt để test thật; rồi trang lỗi + e2e.
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
