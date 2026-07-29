@@ -1,6 +1,6 @@
 # 03 — Tiến độ (LIVING DOC — cập nhật mỗi phiên)
 
-> Cập nhật gần nhất: **2026-07-24**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
+> Cập nhật gần nhất: **2026-07-29**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
 > nhớ sửa file này (đánh dấu đã làm gì, còn gì) để phiên/agent sau không mất mạch.
 
 ## Bảng phase
@@ -11,10 +11,10 @@
 | 1 | Auth/RBAC: `exam-auth`, `pages` (landing/dashboard), `account` | ✅ XONG |
 | 2 | `roles` (NhomQuyen), `users` (NguoiDung), `academic-years` (NamHoc+HocKy), `subjects` (MonHoc+Chuong) | ✅ XONG (trừ `view_subject` — hoãn, phụ thuộc phancong/nhom) |
 | 3 | `questions`: ngân hàng câu hỏi mcq/essay/reading + đáp án + đoạn văn + ảnh + import Word (mammoth) + trang SSR/listing | ✅ XONG (Excel hoãn — nút gốc `disabled`) |
-| 4 | `exams`: đề thi & làm bài & chấm (LỚN NHẤT) | 🟡 gần xong — xem dưới |
+| 4 | `exams`: đề thi & làm bài & chấm (LỚN NHẤT) | ✅ XONG (export PDF/Excel đã làm ở Phase 7) |
 | 5 | Nhóm/lớp & phân công (model `Nhom`/`ChiTietNhom`/`PhanCong` ĐÃ có) | ✅ XONG (`/module`, `/assignment`, `/client`) |
-| 6 | Thông báo/thống kê/dashboard (model `ThongBao` ĐÃ có) | 🟡 thông báo + thống kê XONG (`/teacher_announcement`, `/statistic`); dashboard email onboarding chưa |
-| 7 | Hoàn thiện (trang lỗi, seed mẫu, e2e, export thật) | ⏳ chưa |
+| 6 | Thông báo/thống kê/dashboard (model `ThongBao` ĐÃ có) | ✅ XONG (`/teacher_announcement`, `/statistic`, dashboard email onboarding) |
+| 7 | Hoàn thiện (export thật, seed mẫu, trang lỗi, e2e) | 🟡 slice 1 (xuất/nhập Excel + in PDF) XONG; còn seed mẫu, trang lỗi, e2e |
 
 > Model `PhanCong`, `Nhom`, `ChiTietNhom`, `ThongBao`… đã **kéo lên trước** vào
 > schema vì Phase 4 cần (giao đề/kiểm tra SV/sinh thông báo). UI của chúng là Phase 5/6.
@@ -45,9 +45,7 @@ KetQua, ChiTietKetQua, TraLoiTuLuan, HinhAnhTraLoiTuLuan, ChamTuLuan) +
   chờ GV chấm tay. Chỉ chấm khi `diemthi IS NULL`. Bọc `$transaction`.
 
 ### Phase 4 CÒN LẠI
-- **exportPdf** (PHP dùng dompdf) & **exportExcel** (PhpSpreadsheet) → hiện **stub**
-  trả thông báo "đang phát triển" (501 / JSON không có `file`). TODO: puppeteer/pdfkit
-  + exceljs.
+- ~~**exportPdf** / **exportExcel**~~ — ĐÃ làm ở **Phase 7 slice 1** (xem mục Phase 7).
 - ~~`test_schedule.php`~~ — ĐÃ làm ở Phase 5 (`GET /client/test`, module `src/client/`).
 - `getExamineeByGroup` — chưa dùng ở `test_detail.js` (bỏ qua tới khi có nơi gọi).
 
@@ -60,8 +58,8 @@ KetQua, ChiTietKetQua, TraLoiTuLuan, HinhAnhTraLoiTuLuan, ChamTuLuan) +
 | `client` | `/client` | Phía SV: nhóm học phần (`client_group.php`) + lịch thi (`test_schedule.php`) | ✅ |
 
 Chi tiết từng slice: `../../docs/11-tien-do-hien-tai.md` §4b.
-CÒN LẠI: export Excel danh sách SV thật (đang stub) + import SV bằng Excel;
-`view_subject.php` (SV xem môn) nếu cần.
+CÒN LẠI: ~~export Excel danh sách SV + import SV bằng Excel~~ — ĐÃ làm ở **Phase 7
+slice 1**; còn `view_subject.php` (SV xem môn) nếu cần.
 
 ## Phase 6 slice 1 — Thông báo (`src/announcements/`, path `/teacher_announcement`) — XONG (2026-07-24)
 
@@ -149,6 +147,60 @@ Port nốt 3 route AJAX của `dashboard.php` + modal nhắc nhập email → **
   (dashboard.js gọi sau `checkEmail`) không init slick lần hai.
 - Build sạch; boot map đủ 3 route `POST /dashboard/*`.
 
+## Phase 7 slice 1 — Xuất/nhập Excel + in PDF — XONG (2026-07-29)
+
+Gỡ hết stub export/import. Gói mới: **`exceljs`** (`pnpm add exceljs`). Helper dùng
+chung: **`src/common/utils/excel.util.ts`** (`createWorkbook`, `setColumnWidths`,
+`writeHeaderRow`, `centerCells`, `applyThinBorders`, `workbookToDataUri`, `cellText`).
+
+| Route | Thay gì của PHP | Nơi cài đặt |
+|-------|-----------------|-------------|
+| `POST /module/exportExcelStudentS` | `Module::exportExcelStudentS` (PHPExcel) | `class-modules.service.ts` → `exportStudentsExcel` |
+| `POST /test/exportExcel` | `Test::exportExcel` + `getTestAll`/`getTestScoreGroup` | `exams-export.service.ts` → `exportExamScores` |
+| `POST /test/getMarkOfAllTest` | **route MỚI** (PHP chỉ có model, thiếu action) | `exams-export.service.ts` → `exportMarkOfAllTest` |
+| `GET /test/exportPdf/:makq` | `Test::exportPdf` (dompdf) | controller + view `views/pages/export_pdf.ejs` |
+| `POST /user/addExcel` | `User::addExcel` (PHPExcel) | `users.service.ts` → `parseStudentExcel` |
+| `POST /user/addFileExcelGroup` | `User::addFileExcelGroup` + `NguoiDungModel::addFileGroup` | `users.service.ts` → `addStudentsFromFile` |
+
+Service mới **`src/exams/exams-export.service.ts`** (tách khỏi `exams.service.ts`
+đã ~2000 dòng), đăng ký trong `ExamsModule`. 3 route mới thêm vào `exclude` global
+prefix: `test/getMarkOfAllTest`, `user/addExcel`, `user/addFileExcelGroup`.
+
+**Shape trả về giữ y PHP:** `{status:true, file:"data:<mime>;base64,...", filename}`
+— JS gốc tạo thẻ `<a download>` rồi click, KHÔNG đổi được.
+
+### KHÁC PHP (đã ghi chú trong code)
+- **PDF không render ở server.** Thay dompdf bằng **trang HTML tự gọi `window.print()`**
+  (view `export_pdf.ejs` bê nguyên CSS của dompdf + `@page`/`@media print`) → người
+  dùng chọn "Lưu dạng PDF". Tránh phải cài Chromium/puppeteer trên server.
+  `test_detail.js` vốn đã `window.open` nên không phải sửa JS.
+- **`getMarkOfAllTest`**: dựng ma trận SV × đề bằng **1 truy vấn** + ghép theo cặp
+  `(manguoidung, made)`. PHP lặp `getMarkOfOneTest` cho từng đề rồi ghép theo **chỉ số
+  mảng** → lệch dòng khi một SV thiếu bản ghi ở đề nào đó.
+- **`getTenLopDisplay`** tra theo `manhom` (`WHERE manhom IN (...)`). PHP tra
+  `tennhom IN (...)` trong khi `ds` mà `test_detail.js` gửi lên là mảng **mã nhóm**
+  → luôn không khớp, tiêu đề luôn rơi về "Tất cả các lớp".
+- **Chỉ đọc `.xlsx`** khi nhập SV — exceljs không đọc định dạng `.xls` cũ (BIFF).
+  Báo lỗi rõ ràng thay vì đọc ra dữ liệu rác. `class_detail.ejs` đã đổi
+  `accept=".xlsx"` + file mẫu mới **`public/filemau/danhsachsv_mau.xlsx`** (sinh bằng
+  exceljs, đúng bố cục: dữ liệu từ **dòng 3**, cột **B**=MSSV, **C**=họ đệm,
+  **D**=tên, **H**=email — y như PHP đọc `j=1,2,3,7` 0-based).
+- **`addFileGroup`**: băm mật khẩu **1 lần cho cả lô** + cập nhật sỉ số **1 lần ở cuối**
+  (PHP băm/cập nhật mỗi vòng lặp). Email trùng bắt bằng `P2002` của Prisma.
+- MIME data-URI của danh sách SV dùng đúng `...spreadsheetml.sheet` (PHP ghi file
+  Excel2007 nhưng gắn nhầm MIME `application/vnd.ms-excel`).
+
+### Quyền
+`test/exportExcel`, `test/getMarkOfAllTest`, `test/exportPdf/:makq` gate
+`@Permissions('dethi','view')`. `user/addExcel` + `user/addFileExcelGroup` **chỉ cần
+đăng nhập** (đúng `user.php` gốc — GV không có quyền `nguoidung` vẫn nhập SV vào nhóm
+của mình được). `module/exportExcelStudentS` giữ nguyên mức cũ.
+
+### Kiểm chứng
+Build sạch; boot map đủ 6 route. Bộ đọc Excel đã chạy thử với chính file mẫu
+(3 dòng → 3 bản ghi đúng) + 2 ca lỗi (`.xls`, thiếu file). **CHƯA test với DB thật**
+(cần nhóm có SV + đề có kết quả).
+
 ## Lưu file ảnh — Supabase Storage (2026-07-22)
 
 Ảnh KHÔNG còn lưu blob trong DB; lưu ở **Supabase Storage** (bucket public), DB chỉ
@@ -169,8 +221,9 @@ Nhiều trang lọc qua `phancong`/`giaodethi`/`chitietnhom` → **RỖNG nếu 
 
 ## Việc kế tiếp (gợi ý)
 
-1. **Phase 7** — hoàn thiện (Phase 6 đã XONG cả 3 slice: thông báo / thống kê /
-   dashboard onboarding): trang lỗi, seed dữ liệu mẫu (monhoc/phancong/nhom/cauhoi
-   để chạy thật), e2e; export PDF/Excel thật (đang stub).
-2. Quay lại các món đang stub: export PDF/Excel thật, import/export Excel danh sách
-   SV, `view_subject` (Phase 2 còn nợ).
+1. **Phase 7 slice 2** — **seed dữ liệu mẫu** (monhoc/phancong/nhom/cauhoi/dethi) để
+   chạy & test thật. Đây là nút thắt: hầu hết trang đang rỗng vì thiếu dữ liệu, và
+   các export vừa làm cũng chưa test được với DB thật.
+2. **Phase 7 slice 3** — trang lỗi (404/403/500) + e2e.
+3. Còn nợ lẻ: `view_subject.php` (SV xem môn — Phase 2), `getExamineeByGroup`
+   (chưa có nơi gọi), hỗ trợ đọc `.xls` cũ khi nhập SV (nếu người dùng cần).
