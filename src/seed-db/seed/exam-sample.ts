@@ -102,9 +102,27 @@ export const examPermissions = [
   { manhomquyen: 3, chucnang: 'thongke', hanhdong: 'view' },
 ];
 
-/** Người dùng demo — bảng nguoidung. password sẽ được hash bằng bcrypt khi seed. */
+/**
+ * Người dùng demo — bảng nguoidung. password sẽ được hash bằng bcrypt khi seed.
+ *
+ * Danh sách này phải đủ cho dữ liệu mẫu nghiệp vụ ở `exam-demo.data.ts` (nhóm học
+ * phần, bài làm mẫu đều trỏ tới các id bên dưới). Id để cố định (KHÔNG tự tăng) nên
+ * dù CLEAR_DB=true xoá rồi seed lại thì dữ liệu mẫu vẫn khớp người dùng.
+ */
 export const examUsers = [
   { id: 'admin', email: 'admin@ontest.vn', hoten: 'Quản trị viên', manhomquyen: 3 },
-  { id: 'gv001', email: 'gv001@ontest.vn', hoten: 'Giáo viên Demo', manhomquyen: 1 },
-  { id: 'sv001', email: 'sv001@ontest.vn', hoten: 'Sinh viên Demo', manhomquyen: 2 },
+  // Giảng viên
+  { id: 'gv001', email: 'gv001@ontest.vn', hoten: 'Trần Minh Khoa', manhomquyen: 1 },
+  { id: 'gv002', email: 'gv002@ontest.vn', hoten: 'Phạm Thị Lan', manhomquyen: 1 },
+  // Sinh viên
+  { id: 'sv001', email: 'sv001@ontest.vn', hoten: 'Nguyễn Văn An', manhomquyen: 2 },
+  { id: 'sv002', email: 'sv002@ontest.vn', hoten: 'Lê Thị Bình', manhomquyen: 2 },
+  { id: 'sv003', email: 'sv003@ontest.vn', hoten: 'Trần Quốc Cường', manhomquyen: 2 },
+  { id: 'sv004', email: 'sv004@ontest.vn', hoten: 'Phạm Thùy Dung', manhomquyen: 2 },
+  { id: 'sv005', email: 'sv005@ontest.vn', hoten: 'Hoàng Minh Đức', manhomquyen: 2 },
+  { id: 'sv006', email: 'sv006@ontest.vn', hoten: 'Vũ Thị Giang', manhomquyen: 2 },
+  { id: 'sv007', email: 'sv007@ontest.vn', hoten: 'Đỗ Hoàng Hải', manhomquyen: 2 },
+  { id: 'sv008', email: 'sv008@ontest.vn', hoten: 'Bùi Thu Hương', manhomquyen: 2 },
+  { id: 'sv009', email: 'sv009@ontest.vn', hoten: 'Ngô Gia Khánh', manhomquyen: 2 },
+  { id: 'sv010', email: 'sv010@ontest.vn', hoten: 'Đặng Thảo Linh', manhomquyen: 2 },
 ];
