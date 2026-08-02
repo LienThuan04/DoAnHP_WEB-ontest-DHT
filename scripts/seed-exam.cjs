@@ -1,10 +1,10 @@
 // Script một lần: seed dữ liệu hệ thi OnTest vào DB.
-// Dùng cùng adapter (PrismaPg) như PrismaService. Chạy: node scripts/seed-exam.cjs
+// Kết nối DB giống PrismaService (Accelerate hoặc postgres:// trực tiếp — xem
+// `prisma-client.cjs`). Chạy: node scripts/seed-exam.cjs
 // Lưu ý: logic này trùng với SeedDbService.seedExam() (chạy tự động khi SEED_DB=true).
 require('dotenv/config');
-const { PrismaClient } = require('@prisma/client');
-const { PrismaPg } = require('@prisma/adapter-pg');
 const bcrypt = require('bcrypt');
+const { createPrisma } = require('./prisma-client.cjs');
 const {
   examRoles,
   examResources,
@@ -13,11 +13,7 @@ const {
 } = require('../dist/src/seed-db/seed/exam-sample.js');
 
 (async () => {
-  const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  });
-  const prisma = new PrismaClient({ adapter });
+  const prisma = createPrisma();
   const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
   const defaultPassword = process.env.DEFAULT_PASSWORD || '123456';
 
