@@ -9,6 +9,7 @@ import {
 } from '@/seed-db/seed/exam-sample';
 import { ConfigService } from '@nestjs/config';
 import { generatePasswordHash } from '@/lib/bcrypt/bcrypt';
+import { clearExamDemo, seedExamDemo } from '@/seed-db/seed/exam-demo.seeder';
 
 @Injectable()
 export class SeedDbService implements OnModuleInit {
@@ -93,11 +94,39 @@ export class SeedDbService implements OnModuleInit {
         await this.seedExamUsers();
     }
 
-    async seed() {
+    // ─── Dữ liệu mẫu NGHIỆP VỤ (monhoc/phancong/nhom/cauhoi/dethi) — Phase 7 slice 2 ───
+
+    /**
+     * Ghi dữ liệu mẫu nghiệp vụ. Chạy SAU seedExam() vì nhóm/phân công/bài làm đều trỏ
+     * tới id người dùng cố định trong `exam-sample.ts`.
+     * `force` = true khi vừa clear xong (bỏ kiểm tra "DB đã có dữ liệu").
+     */
+    private async seedExamDemoData(force: boolean) {
+        const result = await seedExamDemo(this.prisma, {
+            force,
+            log: (message) => this.logger.log(message),
+        });
+        if (result.skipped) return;
+        this.logger.log(
+            `Seeded dữ liệu mẫu nghiệp vụ: ${result.monhoc} môn học, ${result.chuong} chương, ` +
+            `${result.cauhoi} câu hỏi, ${result.nhom} nhóm học phần, ${result.dethi} đề thi, ` +
+            `${result.ketqua} bài làm mẫu.`,
+        );
+    }
+
+    /** Xoá dữ liệu mẫu nghiệp vụ (KHÔNG đụng 4 bảng RBAC — `clear()` lo phần đó). */
+    async clearDemoData() {
+        await clearExamDemo(this.prisma, {
+            log: (message) => this.logger.log(message),
+        });
+    }
+
+    async seed(seedDemo = false, force = false) {
         try {
             this.logger.log('Starting database seeding...');
             // Hệ thi OnTest
             await this.seedExam();
+            if (seedDemo) await this.seedExamDemoData(force);
 
             this.logger.log('Database seeding completed successfully.');
         } catch (error: any) {
@@ -124,17 +153,25 @@ export class SeedDbService implements OnModuleInit {
     async onModuleInit() {
         const shouldSeed = this.configService.get<string>('SEED_DB') === 'true';
         const shouldClear = this.configService.get<string>('CLEAR_DB') === 'false' ? false : true; // Mặc định là true nếu không có biến môi trường CLEAR_DB hoặc nếu CLEAR_DB không phải 'false'
+        // Dữ liệu mẫu nghiệp vụ là TUỲ CHỌN (mặc định TẮT) — chỉ bật khi muốn có sẵn
+        // môn học/nhóm/câu hỏi/đề thi để chạy thử. Xem `seed/exam-demo.data.ts`.
+        const shouldSeedDemo = this.configService.get<string>('SEED_DEMO_DATA') === 'true';
 
         // Log cấu hình
-        this.logger.log(`SEED_DB: ${shouldSeed}, CLEAR_DB: ${shouldClear}`);
+        this.logger.log(`SEED_DB: ${shouldSeed}, CLEAR_DB: ${shouldClear}, SEED_DEMO_DATA: ${shouldSeedDemo}`);
 
         if (shouldSeed) {
             try {
                 if (shouldClear) {
+                    // Xoá dữ liệu nghiệp vụ TRƯỚC bảng người dùng: clear() xoá nguoidung nên
+                    // nếu giữ lại nhóm/đề/bài làm thì chúng thành bản ghi mồ côi (FK dạng
+                    // scalar nên DB không chặn). Chỉ làm khi bật dữ liệu mẫu để không lỡ tay
+                    // xoá dữ liệu thật của người dùng.
+                    if (shouldSeedDemo) await this.clearDemoData();
                     await this.clear();
                     this.logger.log('Database cleared before seeding.');
                 }
-                await this.seed();
+                await this.seed(shouldSeedDemo, shouldClear);
             } catch (error: any) {
                 this.logger.error(`Seeding failed: ${error.message}`);
                 // Có thể throw error để app không start nếu seed thất bại
