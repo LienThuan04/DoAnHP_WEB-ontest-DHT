@@ -68,8 +68,17 @@ helper `src/common/utils/excel.util.ts`, service mới `src/exams/exams-export.s
 dompdf), `user/addExcel` + `user/addFileExcelGroup` (chỉ đọc `.xlsx`; file mẫu
 `public/filemau/danhsachsv_mau.xlsx`). Chi tiết + danh sách "KHÁC PHP": `docs/03`.
 
-→ Việc kế tiếp gợi ý: **Phase 7 slice 2 = seed dữ liệu mẫu** (monhoc/phancong/nhom/
-cauhoi/dethi) — nút thắt để test thật; rồi trang lỗi + e2e.
+**Phase 7 slice 2 XONG (2026-08-04):** seed dữ liệu mẫu nghiệp vụ —
+`src/seed-db/seed/exam-demo.data.ts` (dữ liệu thuần) + `exam-demo.seeder.ts`
+(`seedExamDemo`/`clearExamDemo`), nối vào `SeedDbService` qua biến **`SEED_DEMO_DATA`**
+(mặc định `false`) + script `node scripts/seed-demo.cjs [--clear|--force|--clear-only]`.
+Seed ra: 13 người dùng (mật khẩu `123456`), 4 môn + 14 chương, 9 phân công, 3 nhóm học
+phần, 38 câu hỏi (mcq/essay/reading), 3 đề thi (1 đang mở thủ công, 1 đang mở tự động,
+1 đã kết thúc kèm 4 bài làm mẫu). Đã chạy thật + smoke test HTTP các trang GV/SV.
+Chi tiết: `docs/03`.
+
+→ Việc kế tiếp gợi ý: **Phase 7 slice 3** = trang lỗi (404/403/500) + e2e; và test
+export Excel/PDF (slice 1) với dữ liệu mẫu vừa có.
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
