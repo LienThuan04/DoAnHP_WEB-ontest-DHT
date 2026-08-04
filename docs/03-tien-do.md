@@ -1,6 +1,6 @@
 # 03 — Tiến độ (LIVING DOC — cập nhật mỗi phiên)
 
-> Cập nhật gần nhất: **2026-07-29**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
+> Cập nhật gần nhất: **2026-08-04**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
 > nhớ sửa file này (đánh dấu đã làm gì, còn gì) để phiên/agent sau không mất mạch.
 
 ## Bảng phase
@@ -14,7 +14,7 @@
 | 4 | `exams`: đề thi & làm bài & chấm (LỚN NHẤT) | ✅ XONG (export PDF/Excel đã làm ở Phase 7) |
 | 5 | Nhóm/lớp & phân công (model `Nhom`/`ChiTietNhom`/`PhanCong` ĐÃ có) | ✅ XONG (`/module`, `/assignment`, `/client`) |
 | 6 | Thông báo/thống kê/dashboard (model `ThongBao` ĐÃ có) | ✅ XONG (`/teacher_announcement`, `/statistic`, dashboard email onboarding) |
-| 7 | Hoàn thiện (export thật, seed mẫu, trang lỗi, e2e) | 🟡 slice 1 (xuất/nhập Excel + in PDF) XONG; còn seed mẫu, trang lỗi, e2e |
+| 7 | Hoàn thiện (export thật, seed mẫu, trang lỗi, e2e) | 🟡 slice 1 (xuất/nhập Excel + in PDF) + slice 2 (seed dữ liệu mẫu) XONG; còn trang lỗi, e2e |
 
 > Model `PhanCong`, `Nhom`, `ChiTietNhom`, `ThongBao`… đã **kéo lên trước** vào
 > schema vì Phase 4 cần (giao đề/kiểm tra SV/sinh thông báo). UI của chúng là Phase 5/6.
@@ -201,6 +201,62 @@ Build sạch; boot map đủ 6 route. Bộ đọc Excel đã chạy thử với 
 (3 dòng → 3 bản ghi đúng) + 2 ca lỗi (`.xls`, thiếu file). **CHƯA test với DB thật**
 (cần nhóm có SV + đề có kết quả).
 
+## Phase 7 slice 2 — Seed dữ liệu mẫu nghiệp vụ — XONG (2026-08-04)
+
+Trước đây `seed-db` chỉ seed RBAC + 3 người dùng → hầu hết trang rỗng. Nay có **dữ
+liệu mẫu chạy được cả luồng**: năm học → môn học/chương → phân công → nhóm học phần +
+thành viên → ngân hàng câu hỏi (mcq/essay/reading) → đề thi (thủ công / tự động / đã
+kết thúc kèm bài làm mẫu) → thông báo tự động.
+
+| File | Vai trò |
+|------|---------|
+| `src/seed-db/seed/exam-demo.data.ts` | **Dữ liệu thuần** (không đụng DB). Khoá tự tăng tham chiếu nhau qua `key`/nhãn, KHÔNG hardcode id. |
+| `src/seed-db/seed/exam-demo.seeder.ts` | `seedExamDemo()` / `clearExamDemo()` — hàm thuần nhận `PrismaClient`, dùng được cả trong Nest lẫn script. |
+| `src/seed-db/seed-db.service.ts` | Nối dây: `SEED_DEMO_DATA=true` → seed lúc app khởi động. |
+| `scripts/seed-demo.cjs` | Chạy một lần ngoài app (`--clear`, `--force`, `--clear-only`). |
+| `scripts/prisma-client.cjs` | `createPrisma()` dùng chung cho 2 script seed. |
+
+### Biến môi trường
+`SEED_DEMO_DATA=false` (mặc định TẮT, đã thêm vào `.env`/`.env.example`). Chỉ có tác
+dụng khi `SEED_DB=true`. Nếu `CLEAR_DB=true` **và** `SEED_DEMO_DATA=true` thì dữ liệu
+nghiệp vụ được xoá **trước** `clear()` — vì `clear()` xoá `nguoidung`, giữ lại nhóm/đề/
+bài làm sẽ thành bản ghi mồ côi (FK dạng scalar nên DB không chặn). `SEED_DEMO_DATA=false`
+thì KHÔNG đụng tới dữ liệu nghiệp vụ (tránh lỡ tay xoá dữ liệu thật).
+
+### Dữ liệu có gì
+- **13 người dùng** (`exam-sample.ts` đã mở rộng: `admin`, `gv001`/`gv002`, `sv001`→`sv010`;
+  mật khẩu `123456`). Id **cố định** nên xoá/seed lại vẫn khớp dữ liệu nghiệp vụ.
+- 2 năm học × 3 học kỳ, **4 môn** (LTW001, CSDL01, MMT001, CTDL01) + **14 chương**,
+  **9 phân công**, **3 nhóm học phần** (mã mời `ltw0001`/`csdl001`/`mmt0001`, 18 thành viên).
+- **38 câu hỏi**: 32 mcq + 3 essay + 1 đoạn văn đọc hiểu (3 câu con).
+- **3 đề thi**: *Thi cuối kỳ LTW* (thủ công, 10 câu, **đang mở** → vào thi ngay được),
+  *Kiểm tra tự động CSDL* (tự động, 5 câu, đang mở), *Kiểm tra giữa kỳ LTW* (đã kết thúc,
+  4 mcq + 1 tự luận, **4 bài làm mẫu** của sv001–sv004 → xem bảng điểm/thống kê/chấm tự luận).
+
+### KHÁC code nghiệp vụ (đã ghi chú trong seeder)
+- **Không bọc `$transaction`** cả lô (Accelerate giới hạn thời gian giao dịch tương tác);
+  seed là thao tác một lần, muốn làm lại thì `clearExamDemo` rồi seed lại.
+- Đề **tự động** chọn câu `ORDER BY macauhoi` chứ không `ORDER BY RANDOM()` như
+  `addQuestionsToAutoTest` → mỗi lần seed ra cùng một đề, dễ đối chiếu.
+- Chấm bài mẫu bám đúng `ExamsService.submit` (điểm = điểm_loại/tổng_câu_loại × số câu
+  đúng, làm tròn 2 số; `diemthi` chưa gồm điểm tự luận; đề có tự luận → `trangthai_tuluan`
+  = `Chưa chấm` để thử trang chấm tay).
+- Thiếu người dùng mà dữ liệu tham chiếu → **cảnh báo** trong log, không chặn (FK scalar).
+
+### Kiểm chứng (đã chạy với DB thật)
+- `node scripts/seed-demo.cjs` và boot với `SEED_DEMO_DATA=true` đều seed đủ:
+  4 môn / 14 chương / 38 câu hỏi / 3 nhóm / 3 đề / 4 bài làm.
+- Smoke test HTTP sau khi seed (đăng nhập `gv001` & `sv001`, mật khẩu `123456`):
+  `GET /test`, `/question`, `/module`, `/test/detail/:made`, `/test/select/:made`,
+  `/test/update/:made`, `/module/detail/:manhom` → **200**;
+  `/client/group`, `/client/test`, `/test/start/:made`, `/test/taketest/:made`,
+  `/dashboard` (SV) → **200**. `POST /test/pagination`, `/question/pagination`,
+  `/client/loadDataGroups` trả đúng dữ liệu.
+- ⚠️ `gv001` (nhóm quyền 1) vẫn **403** ở `/assignment`, `/statistic`, `/subject`,
+  `/namhoc` — đúng dump gốc (các quyền đó chỉ seed cho nhóm 3 admin). Dùng `admin`.
+- ⚠️ Khoá tự tăng nên `made`/`manhom` **đổi sau mỗi lần seed lại** — đừng hardcode id
+  trong khi test.
+
 ## Lưu file ảnh — Supabase Storage (2026-07-22)
 
 Ảnh KHÔNG còn lưu blob trong DB; lưu ở **Supabase Storage** (bucket public), DB chỉ
@@ -214,16 +270,18 @@ Nhiều trang lọc qua `phancong`/`giaodethi`/`chitietnhom` → **RỖNG nếu 
 - Listing + dropdown môn của **câu hỏi** lọc qua `phancong` (GV).
 - Danh sách **đề thi**, dropdown nhóm khi tạo đề, bảng điểm test_detail cần
   `giaodethi`/`nhom`/`ketqua`.
-- **Seed (`src/seed-db/exam-sample.ts`) mới seed QUYỀN**, CHƯA seed monhoc/cauhoi/
-  phancong/nhom/dethi → phải làm **Phase 5** (UI nhóm/phân công) hoặc insert tay.
+- ~~Seed mới seed QUYỀN, chưa có monhoc/cauhoi/phancong/nhom/dethi~~ → **ĐÃ CÓ** dữ
+  liệu mẫu (Phase 7 slice 2): bật `SEED_DEMO_DATA=true` hoặc chạy
+  `node scripts/seed-demo.cjs` (cần `pnpm run build` trước).
 - Quyền đã seed: `dethi`(view/create/delete/update), `tgthi`(join), `cauhoi`(CRUD),
   `namhoc`/`monhoc`… (nhomquyen 1/2/3).
 
 ## Việc kế tiếp (gợi ý)
 
-1. **Phase 7 slice 2** — **seed dữ liệu mẫu** (monhoc/phancong/nhom/cauhoi/dethi) để
-   chạy & test thật. Đây là nút thắt: hầu hết trang đang rỗng vì thiếu dữ liệu, và
-   các export vừa làm cũng chưa test được với DB thật.
-2. **Phase 7 slice 3** — trang lỗi (404/403/500) + e2e.
+1. **Phase 7 slice 3** — trang lỗi (404/403/500) + e2e. Đã có dữ liệu mẫu nên e2e
+   chạy được thật.
+2. Test **export Excel / in PDF** (Phase 7 slice 1) với dữ liệu mẫu — đề *Kiểm tra
+   giữa kỳ LTW* đã có 4 bài làm nên `test/exportExcel`, `test/getMarkOfAllTest`,
+   `test/exportPdf/:makq`, `module/exportExcelStudentS` đều có dữ liệu để chạy.
 3. Còn nợ lẻ: `view_subject.php` (SV xem môn — Phase 2), `getExamineeByGroup`
    (chưa có nơi gọi), hỗ trợ đọc `.xls` cũ khi nhập SV (nếu người dùng cần).
