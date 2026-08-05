@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <%- include('../../partials/head') %>
+</head>
+<body>
+  <!-- Page Container (= single_layout.php: chỉ nội dung, không navbar/sidebar) -->
+  <div id="page-container">
+    <main id="main-container">
+      <!--
+        KHÁC PHP: bản gốc DHT_OneTest chỉ có page_404/page_403 (lỗi 500 rơi ra
+        trang trắng của PHP). Trang này giữ nguyên bố cục "hero" của 2 trang kia
+        để mọi lỗi còn lại (500, 400, 429...) vẫn có giao diện thống nhất.
+      -->
+      <div class="hero bg-body-extra-light">
+        <div class="hero-inner">
+          <div class="content content-full">
+            <div class="py-4 text-center">
+              <div class="display-1 fw-bold text-danger">
+                <i class="fa fa-bug opacity-50 me-1"></i> <%= typeof code !== 'undefined' ? code : 500 %>
+              </div>
+              <h1 class="fw-bold mt-5 mb-2">Rất tiếc .. hệ thống đang gặp sự cố !</h1>
+              <h2 class="fs-4 fw-medium text-muted mb-5">Đã có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau ít phút.</h2>
+              <% if (typeof detail !== 'undefined' && detail) { %>
+              <!-- Chi tiết kỹ thuật CHỈ hiện khi MODE=development (tránh lộ thông tin nội bộ). -->
+              <div class="alert alert-warning text-start mx-auto mb-5" style="max-width: 720px;">
+                <p class="mb-0"><code><%= detail %></code></p>
+              </div>
+              <% } %>
+              <a class="btn btn-lg btn-alt-secondary" href="/">
+                <i class="fa fa-arrow-left opacity-50 me-1"></i> Trở lại trang chủ
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <%- include('../../partials/script') %>
+</body>
+</html>
