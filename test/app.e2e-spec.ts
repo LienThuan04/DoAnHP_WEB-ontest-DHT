@@ -1,25 +1,29 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from '@/app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { createTestApp } from './setup-app';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+/**
+ * Khói (smoke) cho trang gốc. `GET /` là landing SSR (thay `landing.php`),
+ * KHÔNG còn là "Hello World!" của khung Nest mặc định.
+ */
+describe('Trang gốc (e2e)', () => {
+  let app: NestExpressApplication;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+  beforeAll(async () => {
+    app = await createTestApp();
+  }, 60_000);
 
-    app = moduleFixture.createNestApplication();
-    await app.init();
+  afterAll(async () => {
+    await app?.close();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
+  it('GET / → landing HTML', async () => {
+    const res = await request(app.getHttpServer())
       .get('/')
-      .expect(200)
-      .expect('Hello World!');
+      .set('Accept', 'text/html');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/html/);
+    expect(res.text).toContain('DHT');
   });
 });
