@@ -1,6 +1,6 @@
 # 03 — Tiến độ (LIVING DOC — cập nhật mỗi phiên)
 
-> Cập nhật gần nhất: **2026-08-04**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
+> Cập nhật gần nhất: **2026-08-05**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
 > nhớ sửa file này (đánh dấu đã làm gì, còn gì) để phiên/agent sau không mất mạch.
 
 ## Bảng phase
@@ -14,7 +14,7 @@
 | 4 | `exams`: đề thi & làm bài & chấm (LỚN NHẤT) | ✅ XONG (export PDF/Excel đã làm ở Phase 7) |
 | 5 | Nhóm/lớp & phân công (model `Nhom`/`ChiTietNhom`/`PhanCong` ĐÃ có) | ✅ XONG (`/module`, `/assignment`, `/client`) |
 | 6 | Thông báo/thống kê/dashboard (model `ThongBao` ĐÃ có) | ✅ XONG (`/teacher_announcement`, `/statistic`, dashboard email onboarding) |
-| 7 | Hoàn thiện (export thật, seed mẫu, trang lỗi, e2e) | 🟡 slice 1 (xuất/nhập Excel + in PDF) + slice 2 (seed dữ liệu mẫu) XONG; còn trang lỗi, e2e |
+| 7 | Hoàn thiện (export thật, seed mẫu, trang lỗi, e2e) | ✅ XONG — slice 1 (xuất/nhập Excel + in PDF) + slice 2 (seed dữ liệu mẫu) + slice 3 (trang lỗi 404/403/500 + e2e) |
 
 > Model `PhanCong`, `Nhom`, `ChiTietNhom`, `ThongBao`… đã **kéo lên trước** vào
 > schema vì Phase 4 cần (giao đề/kiểm tra SV/sinh thông báo). UI của chúng là Phase 5/6.
@@ -257,6 +257,55 @@ thì KHÔNG đụng tới dữ liệu nghiệp vụ (tránh lỡ tay xoá dữ l
 - ⚠️ Khoá tự tăng nên `made`/`manhom` **đổi sau mỗi lần seed lại** — đừng hardcode id
   trong khi test.
 
+## Phase 7 slice 3 — Trang lỗi 404/403/500 + e2e — XONG (2026-08-05)
+
+Trước đây MỌI lỗi đều trả JSON `{statusCode,message,code,...}` — người dùng mở nhầm
+URL hay thiếu quyền thì thấy một cục JSON thay vì trang lỗi như bản PHP. Nay
+`AllExceptionsFilter` phân nhánh: **điều hướng bằng trình duyệt → HTML, AJAX/API → JSON**
+(không đổi shape cũ nên JS gốc không phải sửa gì).
+
+| File | Thay đổi |
+|------|----------|
+| `views/pages/error/page_404.ejs` | Bê nguyên `mvc/views/pages/error/page_404.php` (đổi `href="./"` → `/`). |
+| `views/pages/error/page_403.ejs` | Bê nguyên `page_403.php` (đổi `href="./dashboard"` → `/dashboard`). |
+| `views/pages/error/page_500.ejs` | **MỚI** — PHP không có; cùng bố cục "hero" cho mọi lỗi còn lại. |
+| `src/common/filters/all-exceptions.filter.ts` | Thêm nhánh render HTML + chuyển hướng 401; log 4xx = WARN gọn, 5xx = ERROR kèm stack. |
+
+### Khi nào trả HTML? (`wantsHtmlPage`)
+Phải thoả **cả 4**: method `GET` + **không** phải XHR (`X-Requested-With` jQuery tự
+gắn) + header `Accept` có `text/html` + path **không** nằm dưới `/api`. Nhờ vậy mọi
+route AJAX của JS gốc (đều là `POST`, hoặc `GET` qua jQuery) vẫn nhận JSON như cũ.
+
+| Mã | Hành vi |
+|----|---------|
+| **401** | Xoá cookie `access_token` rồi `redirect('/auth/signin')` — thay `AuthCore::checkAuthentication` (PHP cũng xoá cookie + `header("Location: login_path")`). |
+| **403** | Render `pages/error/page_403` (đúng chỗ PHP gọi `view("single_layout", page_403)`). |
+| **404** | Render `pages/error/page_404` — cả URL không tồn tại lẫn `NotFoundException` do controller ném (vd đề thi không có). |
+| còn lại | Render `pages/error/page_500` kèm mã thật (400, 429…). Chi tiết kỹ thuật **chỉ hiện khi `MODE=development`**. |
+
+- Nếu **render trang lỗi cũng lỗi** → gửi text thuần `"<mã> - <message>"`, KHÔNG ném
+  tiếp (tránh lặp vô hạn). Có kiểm `response.headersSent` trước khi ghi.
+- Filter nay inject `ConfigService` (đọc `GLOBAL_PREFIX`, `ACCESS_TOKEN_COOKIE`, `MODE`).
+- Trang lỗi dùng layout kiểu `single_layout.php` (chỉ `head` + nội dung + `script`,
+  KHÔNG navbar/sidebar) nên render được cả khi chưa đăng nhập.
+
+### e2e (`pnpm run test:e2e`)
+Bộ e2e scaffold cũ đã hỏng (kỳ vọng `"Hello World!"`, thiếu alias `@/`) → viết lại:
+
+| File | Vai trò |
+|------|---------|
+| `test/setup-app.ts` | `createTestApp()` dựng app **y như `src/main.ts`** (global prefix + exclude, ValidationPipe, cookie-parser, EJS + `views/`) và `login()` trả cookie phiên. |
+| `test/error-pages.e2e-spec.ts` | **MỚI** — 10 ca: 404 HTML, 401 → redirect + xoá cookie, trang công khai vẫn 200, AJAX vẫn JSON, `/api/*` vẫn JSON, và (khi đăng nhập `gv001`) 403 HTML, 404 đề không tồn tại, lỗi 400 ra trang lỗi chung, `/test` vẫn 200. |
+| `test/app.e2e-spec.ts` | Sửa: `GET /` là landing SSR, không phải `"Hello World!"`. |
+| `test/jest-e2e.json` | Thêm `moduleNameMapper` cho alias `@/` + `testTimeout` 30s. |
+
+- ⚠️ e2e chạy trên **CSDL thật** (`AppModule` cần Prisma kết nối mới init được).
+  `createTestApp()` **ép `SEED_DB=false`/`CLEAR_DB=false`/`SEED_DEMO_DATA=false`**
+  (đặt vào `process.env` TRƯỚC khi compile module — `@nestjs/config` không ghi đè biến
+  đã có) nên test **không bao giờ** xoá/ghi đè dữ liệu.
+- Nhóm test cần đăng nhập tự **bỏ qua kèm cảnh báo** nếu `gv001` chưa có trong DB.
+- Kết quả: **10/10 pass**, `pnpm run build` sạch.
+
 ## Lưu file ảnh — Supabase Storage (2026-07-22)
 
 Ảnh KHÔNG còn lưu blob trong DB; lưu ở **Supabase Storage** (bucket public), DB chỉ
@@ -278,10 +327,12 @@ Nhiều trang lọc qua `phancong`/`giaodethi`/`chitietnhom` → **RỖNG nếu 
 
 ## Việc kế tiếp (gợi ý)
 
-1. **Phase 7 slice 3** — trang lỗi (404/403/500) + e2e. Đã có dữ liệu mẫu nên e2e
-   chạy được thật.
-2. Test **export Excel / in PDF** (Phase 7 slice 1) với dữ liệu mẫu — đề *Kiểm tra
+**Cả 7 phase đã XONG.** Việc còn lại là kiểm chứng & nợ lẻ:
+
+1. Test **export Excel / in PDF** (Phase 7 slice 1) với dữ liệu mẫu — đề *Kiểm tra
    giữa kỳ LTW* đã có 4 bài làm nên `test/exportExcel`, `test/getMarkOfAllTest`,
    `test/exportPdf/:makq`, `module/exportExcelStudentS` đều có dữ liệu để chạy.
+2. Mở rộng e2e sang luồng nghiệp vụ (tạo đề → giao nhóm → SV làm bài → chấm) trên
+   dữ liệu mẫu; hiện e2e mới phủ trang lỗi + smoke trang gốc.
 3. Còn nợ lẻ: `view_subject.php` (SV xem môn — Phase 2), `getExamineeByGroup`
    (chưa có nơi gọi), hỗ trợ đọc `.xls` cũ khi nhập SV (nếu người dùng cần).
