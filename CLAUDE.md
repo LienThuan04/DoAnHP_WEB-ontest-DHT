@@ -77,8 +77,18 @@ phần, 38 câu hỏi (mcq/essay/reading), 3 đề thi (1 đang mở thủ công
 1 đã kết thúc kèm 4 bài làm mẫu). Đã chạy thật + smoke test HTTP các trang GV/SV.
 Chi tiết: `docs/03`.
 
-→ Việc kế tiếp gợi ý: **Phase 7 slice 3** = trang lỗi (404/403/500) + e2e; và test
-export Excel/PDF (slice 1) với dữ liệu mẫu vừa có.
+**Phase 7 slice 3 XONG (2026-08-05) → TẤT CẢ 7 PHASE HOÀN TẤT:** trang lỗi + e2e.
+`AllExceptionsFilter` phân nhánh **trình duyệt → HTML / AJAX-API → JSON (shape cũ)**:
+401 xoá cookie + redirect `/auth/signin` (thay `AuthCore::checkAuthentication`),
+403 → `views/pages/error/page_403.ejs`, 404 → `page_404.ejs` (2 trang bê từ PHP),
+còn lại → `page_500.ejs` (MỚI, PHP không có; chi tiết lỗi chỉ hiện khi
+`MODE=development`). Log 4xx = WARN gọn, 5xx = ERROR kèm stack. e2e viết lại:
+`test/setup-app.ts` (dựng app y `main.ts`, **ép `SEED_DB=false`** để test không đụng
+dữ liệu) + `test/error-pages.e2e-spec.ts` — `pnpm run test:e2e` → **10/10 pass**
+(cần `DATABASE_URL` sống). Chi tiết: `docs/03`.
+
+→ Việc kế tiếp gợi ý: test export Excel/PDF (slice 1) với dữ liệu mẫu; mở rộng e2e
+sang luồng nghiệp vụ; nợ lẻ `view_subject.php`, `getExamineeByGroup`, đọc `.xls` cũ.
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
