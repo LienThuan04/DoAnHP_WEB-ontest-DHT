@@ -2248,3 +2248,4 @@ someRoute() { ... }
 - All named throttlers run **simultaneously** — a request must pass every configured throttler
 - `@Throttle({ name: { ttl, limit } })` overrides only the listed throttler(s); un-listed throttlers still apply with their original values
 - `ttl` unit in `@nestjs/throttler` v6+ is **seconds** (not milliseconds)
+# ALL copyright and license information is in the LICENSE file in the root directory of this source tree.
