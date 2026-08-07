@@ -325,13 +325,30 @@ Nhiều trang lọc qua `phancong`/`giaodethi`/`chitietnhom` → **RỖNG nếu 
 - Quyền đã seed: `dethi`(view/create/delete/update), `tgthi`(join), `cauhoi`(CRUD),
   `namhoc`/`monhoc`… (nhomquyen 1/2/3).
 
+## ✅ Kiểm chứng export Excel / in PDF trên dữ liệu mẫu (2026-08-07)
+
+Chạy server dev + đăng nhập `gv001/123456`, gọi thật 4 route của Phase 7 slice 1 trên
+dữ liệu mẫu (nhóm `manhom=4` "Lập trình Web - Nhóm 01", đề `made=6` "Kiểm tra giữa kỳ"
+có 4 bài làm, `makq=5` của sv001). **Cả 4 route CHẠY ĐÚNG**, file .xlsx mở lại được
+bằng `exceljs`:
+
+| Route | Kết quả |
+| --- | --- |
+| `POST /module/exportExcelStudentS` `{manhom:4}` | `Danh sách sinh viên.xlsx` (7.0 KB), 6 cột × 7 dòng — đủ 6 SV, cột "Giới tính" ra `Null` (đúng chủ ý, xem chú thích trong `class-modules.service.ts`) |
+| `POST /test/exportExcel` `{made:6,manhom:4,ds:[]}` | `Ket_qua_de_6_nhom_4.xlsx` (7.5 KB), sheet `De_6_N4`, 10 cột × 8 dòng — 4 SV có điểm (8/6/4/8) + 2 SV "Chưa làm", cột thời gian/số câu đúng/lần chuyển tab đúng |
+| `POST /test/getMarkOfAllTest` `{manhom:4}` | `Bang_diem_nhom_4.xlsx` (7.2 KB), ma trận SV × 2 đề của nhóm — cột "Thi cuối kỳ" rỗng (chưa ai làm), cột "Kiểm tra giữa kỳ" có điểm |
+| `GET /test/exportPdf/5` | HTTP 200, HTML 12.8 KB, `<title>` = `Chi_tiet_ket_qua_sv001_MD5` (tên file gợi ý khi in), có `window.print()`, render đủ 5 câu (4 mcq + 1 tự luận). `makq` không tồn tại → **404** |
+
+Ghi chú: POST trả **HTTP 201** (mặc định Nest) thay vì 200 như PHP — JS gốc chỉ đọc
+`data.status` nên không ảnh hưởng.
+
 ## Việc kế tiếp (gợi ý)
 
 **Cả 7 phase đã XONG.** Việc còn lại là kiểm chứng & nợ lẻ:
 
-1. Test **export Excel / in PDF** (Phase 7 slice 1) với dữ liệu mẫu — đề *Kiểm tra
-   giữa kỳ LTW* đã có 4 bài làm nên `test/exportExcel`, `test/getMarkOfAllTest`,
-   `test/exportPdf/:makq`, `module/exportExcelStudentS` đều có dữ liệu để chạy.
+1. ~~Test **export Excel / in PDF** với dữ liệu mẫu~~ — **XONG 2026-08-07**, xem mục
+   trên. Chưa kiểm: `user/addExcel` + `user/addFileExcelGroup` (nhập SV từ .xlsx) với
+   file mẫu qua HTTP thật.
 2. Mở rộng e2e sang luồng nghiệp vụ (tạo đề → giao nhóm → SV làm bài → chấm) trên
    dữ liệu mẫu; hiện e2e mới phủ trang lỗi + smoke trang gốc.
 3. Còn nợ lẻ: `view_subject.php` (SV xem môn — Phase 2), `getExamineeByGroup`
