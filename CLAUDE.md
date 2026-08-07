@@ -87,8 +87,14 @@ còn lại → `page_500.ejs` (MỚI, PHP không có; chi tiết lỗi chỉ hi�
 dữ liệu) + `test/error-pages.e2e-spec.ts` — `pnpm run test:e2e` → **10/10 pass**
 (cần `DATABASE_URL` sống). Chi tiết: `docs/03`.
 
-→ Việc kế tiếp gợi ý: test export Excel/PDF (slice 1) với dữ liệu mẫu; mở rộng e2e
-sang luồng nghiệp vụ; nợ lẻ `view_subject.php`, `getExamineeByGroup`, đọc `.xls` cũ.
+**Kiểm chứng 2026-08-07:** đã chạy thật 4 route export trên dữ liệu mẫu (đăng nhập
+`gv001`): `module/exportExcelStudentS`, `test/exportExcel`, `test/getMarkOfAllTest`,
+`test/exportPdf/:makq` — **đều đúng**, file .xlsx mở lại được, `exportPdf` với `makq`
+lạ trả 404. Bảng chi tiết ở `docs/03`.
+
+→ Việc kế tiếp gợi ý: kiểm chứng **nhập SV từ .xlsx** (`user/addExcel`,
+`user/addFileExcelGroup`) qua HTTP thật; mở rộng e2e sang luồng nghiệp vụ; nợ lẻ
+`view_subject.php`, `getExamineeByGroup`, đọc `.xls` cũ.
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
