@@ -1,6 +1,6 @@
 # 03 — Tiến độ (LIVING DOC — cập nhật mỗi phiên)
 
-> Cập nhật gần nhất: **2026-08-05**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
+> Cập nhật gần nhất: **2026-08-08**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
 > nhớ sửa file này (đánh dấu đã làm gì, còn gì) để phiên/agent sau không mất mạch.
 
 ## Bảng phase
@@ -198,8 +198,9 @@ của mình được). `module/exportExcelStudentS` giữ nguyên mức cũ.
 
 ### Kiểm chứng
 Build sạch; boot map đủ 6 route. Bộ đọc Excel đã chạy thử với chính file mẫu
-(3 dòng → 3 bản ghi đúng) + 2 ca lỗi (`.xls`, thiếu file). **CHƯA test với DB thật**
-(cần nhóm có SV + đề có kết quả).
+(3 dòng → 3 bản ghi đúng) + 2 ca lỗi (`.xls`, thiếu file). **Đã kiểm chứng trên DB
+thật qua HTTP:** 4 route xuất — 2026-08-07; 2 route nhập SV — 2026-08-08 (xem 2 mục
+"Kiểm chứng" ở cuối tài liệu).
 
 ## Phase 7 slice 2 — Seed dữ liệu mẫu nghiệp vụ — XONG (2026-08-04)
 
@@ -305,6 +306,8 @@ Bộ e2e scaffold cũ đã hỏng (kỳ vọng `"Hello World!"`, thiếu alias `
   đã có) nên test **không bao giờ** xoá/ghi đè dữ liệu.
 - Nhóm test cần đăng nhập tự **bỏ qua kèm cảnh báo** nếu `gv001` chưa có trong DB.
 - Kết quả: **10/10 pass**, `pnpm run build` sạch.
+- Bổ sung 2026-08-08: `test/exam-flow.e2e-spec.ts` (18 ca, luồng nghiệp vụ) → tổng
+  **28/28 pass**. Xem mục "e2e luồng nghiệp vụ" ở cuối tài liệu.
 
 ## Lưu file ảnh — Supabase Storage (2026-07-22)
 
@@ -342,14 +345,72 @@ bằng `exceljs`:
 Ghi chú: POST trả **HTTP 201** (mặc định Nest) thay vì 200 như PHP — JS gốc chỉ đọc
 `data.status` nên không ảnh hưởng.
 
+## ✅ Kiểm chứng nhập SV từ .xlsx trên HTTP thật (2026-08-08)
+
+Chạy server dev (`SEED_DB=false`) rồi gọi thật `POST /user/addExcel` +
+`POST /user/addFileExcelGroup` bằng script một lần (không commit, để ở scratchpad).
+Dữ liệu test (`sv9001`–`sv9003`, nhóm `manhom=4`) đã **xoá sạch ở cuối** và `siso`
+khôi phục về 6. **17/17 ca ĐÚNG:**
+
+| Ca | Kết quả |
+| --- | --- |
+| `addExcel` với **file mẫu chính thức** `public/filemau/danhsachsv_mau.xlsx` | 3 dòng, đúng MSSV/họ tên ghép từ cột C+D/email |
+| `addExcel` thiếu file | `{status:'error', message:'Chưa chọn file để tải lên'}` |
+| `addExcel` đuôi `.xls` | báo lỗi gợi ý "Lưu thành .xlsx" (không đọc ra dữ liệu rác) |
+| `addExcel` file 5 dòng (1 thiếu MSSV, 1 email sai) | trả đúng **3** dòng hợp lệ, `nhomquyen=2`, `trangthai=1` |
+| `addFileExcelGroup` lần 1 | `success` — tạo 3 tài khoản (mật khẩu đã băm bcrypt) + 3 `chitietnhom` (`hienthi=1`); `siso` 6 → 9 = số thành viên thực tế |
+| `addFileExcelGroup` lần 2 (cùng danh sách) | `success` + "Sinh viên đã có trong nhóm: …", KHÔNG nhân bản bản ghi |
+| MSSV mới nhưng **email trùng** | `error` "Email … đã tồn tại cho MSSV sv9009" (bắt `P2002`), KHÔNG 500 và KHÔNG tạo bản ghi mồ côi |
+| `listuser` không phải JSON | `{status:'error', message:'Danh sách sinh viên không hợp lệ'}` |
+| Đăng nhập bằng **SV** | vẫn gọi được (2 route chỉ cần auth — đúng `user.php` gốc) |
+| Chưa đăng nhập | **401** |
+
+Ghi chú: POST trả **HTTP 201** (mặc định Nest) như các route AJAX khác.
+
+## ✅ e2e luồng nghiệp vụ (2026-08-08)
+
+`test/exam-flow.e2e-spec.ts` (**MỚI**, 18 ca) phủ trọn vòng đời một đề thi, đi qua
+HTTP y như trình duyệt: **GV tạo đề thủ công → chọn câu hỏi → giao nhóm → SV vào thi
+→ nộp bài → GV xem bảng điểm/thống kê**.
+
+| Bước | Route | Kiểm gì |
+|------|-------|---------|
+| Tạo đề | `POST /test/addTest` | trả `made`; `giaodethi` có nhóm; sinh `thongbao` `is_auto=1` |
+| Chọn câu | `GET /test/select/:made`, `POST /test/getTotalPages`+`/test/pagination` (`custom.function=getQuestionsForTest`) | trang render 200; chỉ trả câu **đúng môn** + đúng loại (lọc qua `phancong` của GV) |
+| Lưu câu | `POST /test/addDetail`, `POST /test/getQuestionOfTestManual` | 3 dòng `chitietdethi`, đọc lại khớp |
+| SV vào thi | `GET /test/start/:made`, `POST /test/startTest` | trang có tên đề; tạo `ketqua` (`diemthi` NULL) + **pre-insert đúng 3** `chitietketqua` |
+| SV làm bài | `POST /test/getQuestion`, `GET /test/taketest/:made`, `POST /test/chuyentab` | đủ 3 câu và **không lộ `ladapan`**; trang làm bài render (không redirect); `solanchuyentab` +1, cờ tự nộp = 0 |
+| Nộp bài | `POST /test/submit` (multipart) | đúng hết → **10 điểm**, `socaudung=3`, `trangthai='Đã nộp'`, `trangthai_tuluan='Đã chấm'` (đề không có tự luận); **nộp lại lần 2 bị từ chối** |
+| Xem lại | `POST /test/getResultDetail` | 3 câu |
+| GV xem kết quả | `GET /test/detail/:made`, `POST /test/pagination` (`model=KetQuaModel`), `POST /test/getStatictical` | bảng điểm có SV với điểm 10; thống kê `da_nop_bai=1`, `diem_cao_nhat=10`, khoảng điểm cuối = 1 |
+| Ràng buộc | `POST /test/delete` | **không xoá được** đề đã có người thi |
+
+**An toàn dữ liệu:** bộ test chỉ **TẠO** một đề riêng (tên gắn dấu thời gian
+`[E2E] Đề kiểm thử <ts>`), không sửa dữ liệu sẵn có, và `afterAll` xoá đúng những gì
+đã tạo (thông báo → `ketqua` → `dethi`; phần còn lại theo FK cascade). **KHÔNG** dùng
+`POST /test/delete` để dọn vì route đó xoá TOÀN BỘ thông báo của nhóm (quirk bê từ
+PHP) → sẽ đụng dữ liệu mẫu. Dò dữ liệu tiên quyết (nhóm của `gv001` có SV + môn có ≥3
+câu mcq), lấy đáp án đúng làm "đáp án chuẩn" và dọn dẹp đều qua `PrismaService` lấy từ
+`app.get(...)`; mọi **bước nghiệp vụ** vẫn đi qua HTTP. Thiếu dữ liệu mẫu → **bỏ qua
+kèm cảnh báo** thay vì đỏ oan.
+
+Kết quả: `npx jest --config ./test/jest-e2e.json` → **28/28 pass** (3 bộ: app, trang
+lỗi, luồng nghiệp vụ); đã đối chiếu CSDL sau khi chạy — số bản ghi trở về y như trước
+(3 đề / 4 kết quả / 13 người dùng / 3 nhóm).
+
+⚠️ `pnpm run test:e2e -- --testPathPattern X` KHÔNG còn dùng được (Jest mới đổi tên
+thành `--testPathPatterns`, và chỉ nhận ở dòng lệnh) → chạy 1 bộ bằng
+`npx jest --config ./test/jest-e2e.json --testPathPatterns exam-flow`.
+
 ## Việc kế tiếp (gợi ý)
 
 **Cả 7 phase đã XONG.** Việc còn lại là kiểm chứng & nợ lẻ:
 
-1. ~~Test **export Excel / in PDF** với dữ liệu mẫu~~ — **XONG 2026-08-07**, xem mục
-   trên. Chưa kiểm: `user/addExcel` + `user/addFileExcelGroup` (nhập SV từ .xlsx) với
-   file mẫu qua HTTP thật.
-2. Mở rộng e2e sang luồng nghiệp vụ (tạo đề → giao nhóm → SV làm bài → chấm) trên
-   dữ liệu mẫu; hiện e2e mới phủ trang lỗi + smoke trang gốc.
+1. ~~Test **export Excel / in PDF** với dữ liệu mẫu~~ — **XONG 2026-08-07**.
+   ~~Kiểm `user/addExcel` + `user/addFileExcelGroup`~~ — **XONG 2026-08-08**.
+2. ~~Mở rộng e2e sang luồng nghiệp vụ~~ — **XONG 2026-08-08**
+   (`test/exam-flow.e2e-spec.ts`). Có thể mở rộng tiếp: đề **tự động** (`loaide=1`),
+   **chấm tự luận** (`getEssayDetailAction`/`saveEssayScoreAction`), luồng nhóm/thông
+   báo phía SV (`/client/*`).
 3. Còn nợ lẻ: `view_subject.php` (SV xem môn — Phase 2), `getExamineeByGroup`
    (chưa có nơi gọi), hỗ trợ đọc `.xls` cũ khi nhập SV (nếu người dùng cần).
