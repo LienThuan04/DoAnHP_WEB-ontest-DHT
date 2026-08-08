@@ -92,9 +92,20 @@ dữ liệu) + `test/error-pages.e2e-spec.ts` — `pnpm run test:e2e` → **10/1
 `test/exportPdf/:makq` — **đều đúng**, file .xlsx mở lại được, `exportPdf` với `makq`
 lạ trả 404. Bảng chi tiết ở `docs/03`.
 
-→ Việc kế tiếp gợi ý: kiểm chứng **nhập SV từ .xlsx** (`user/addExcel`,
-`user/addFileExcelGroup`) qua HTTP thật; mở rộng e2e sang luồng nghiệp vụ; nợ lẻ
-`view_subject.php`, `getExamineeByGroup`, đọc `.xls` cũ.
+**Kiểm chứng 2026-08-08:** (1) **nhập SV từ .xlsx** — `user/addExcel` +
+`user/addFileExcelGroup` chạy thật qua HTTP, **17/17 ca đúng** (file mẫu, thiếu file,
+đuôi `.xls`, dòng hỏng bị bỏ, tạo tài khoản + `chitietnhom` + cập `siso`, lần 2 báo
+"đã có trong nhóm", email trùng bắt `P2002`, chỉ cần auth, chưa đăng nhập → 401);
+dữ liệu test đã xoá sạch. (2) **e2e luồng nghiệp vụ** — file MỚI
+`test/exam-flow.e2e-spec.ts` (18 ca): GV tạo đề thủ công → chọn câu → giao nhóm → SV
+vào thi/nộp bài (đúng hết = 10 điểm) → GV xem bảng điểm/thống kê; test chỉ TẠO một đề
+riêng và `afterAll` xoá đúng phần đã tạo (KHÔNG dùng `/test/delete` để dọn — route đó
+xoá cả thông báo của nhóm). Tổng e2e **28/28 pass**, CSDL trở về nguyên trạng.
+⚠️ Chạy 1 bộ: `npx jest --config ./test/jest-e2e.json --testPathPatterns exam-flow`
+(cờ `--testPathPattern` cũ đã bị Jest đổi tên). Chi tiết: `docs/03`.
+
+→ Việc kế tiếp gợi ý: mở rộng e2e sang đề **tự động** (`loaide=1`), **chấm tự luận**,
+luồng `/client/*`; nợ lẻ `view_subject.php`, `getExamineeByGroup`, đọc `.xls` cũ.
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
