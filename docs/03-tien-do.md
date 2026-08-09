@@ -402,6 +402,51 @@ lỗi, luồng nghiệp vụ); đã đối chiếu CSDL sau khi chạy — số 
 thành `--testPathPatterns`, và chỉ nhận ở dòng lệnh) → chạy 1 bộ bằng
 `npx jest --config ./test/jest-e2e.json --testPathPatterns exam-flow`.
 
+## ✅ e2e đề tự động + chấm tự luận + trang SV (2026-08-10)
+
+`test/exam-auto-essay.e2e-spec.ts` (**MỚI**, 19 ca) nối tiếp `exam-flow`: **GV tạo đề
+TỰ ĐỘNG (`loaide=1`) có câu tự luận → SV làm & nộp → GV chấm tự luận → SV xem lại ở
+`/client/*`**.
+
+| Bước | Route | Kiểm gì |
+|------|-------|---------|
+| Tạo đề tự động | `POST /test/addTest` (`loaide=1`) | hệ thống **tự bốc câu** vào `chitietdethi` đúng số/đúng loại/đúng mức độ, `thutu` đã đánh số; `dethitudong` lưu đủ chương; KHÔNG cần `/test/addDetail` |
+| Ràng buộc | `POST /test/addTest` đòi 9999 câu | `success=false`, thông báo "Không đủ câu hỏi…", `$transaction` rollback → **không để lại đề rác** |
+| SV làm bài | `POST /test/startTest`, `POST /test/getQuestion` | pre-insert đủ `chitietketqua`; câu **tự luận không có lựa chọn**, câu đọc hiểu kèm `context`, không lộ `ladapan` |
+| Nộp bài | `POST /test/submit` (multipart, kèm `essay_0_*`) | chấm tự động phần mcq/đọc hiểu; `traloi_tuluan` được lưu; `chitietketqua.dapanchon` của câu tự luận = NULL; **`trangthai_tuluan='Chưa chấm'`** (khác đề chỉ mcq) |
+| GV chấm | `POST /test/getListEssaySubmissionsAction` | thấy bài; lọc `status=ungraded/graded` + tìm theo mã SV đúng |
+| GV mở bài | `POST /test/getEssayDetailAction` | đúng nội dung bài làm, `da_cham=0`, `diem_cham=null` |
+| Ràng buộc | `POST /test/saveEssayScoreAction` quá `diem_tuluan` của đề | bị từ chối ("vượt quá"), **không ghi** `ketqua` lẫn `cham_tuluan` |
+| GV lưu điểm | `POST /test/saveEssayScoreAction` | `ketqua.diem_tuluan` + `trangthai_tuluan='Đã chấm'`; `cham_tuluan` 1 dòng/câu; **chấm lại ghi đè**, không nhân đôi |
+| SV xem lại | `POST /test/getResultDetail` | thấy bài tự luận kèm `diem_cham_tuluan` |
+| Trang SV | `GET /client/group`, `GET /client/test`, `POST /client/{loadDataGroups,getFriendList,joinGroup,hide}` | render 200; danh sách nhóm/bạn cùng nhóm (trừ chính mình); mã mời sai → `0`, đã ở trong nhóm → `1` (không nhân bản `chitietnhom`); ẩn/hiện nhóm có **khôi phục nguyên trạng**, giá trị ngoài 0/1 bị từ chối |
+| Lịch kiểm tra | `POST /client/getTotalPages` + `/client/pagination` (`custom.function=getUserTestSchedule`) | đề vừa nộp nằm ở nhóm "đã thi" (`filter=3`, `dathi=1`, lộ điểm vì `xemdiem=1`, `trangthai_tuluan='Đã chấm'`) và **không còn** ở nhóm "đang mở, chưa thi" (`filter=0`) |
+| Offcanvas nhóm | `POST /test/getTestsGroupWithUserResult` | có đề vừa thi kèm điểm |
+
+**🐞 LỖI TÌM ĐƯỢC & ĐÃ SỬA — chấm điểm TỪNG CÂU không được lưu.** `test_detail.js` gửi
+`cau[<macauhoi>]=<điểm>` (jQuery serialize object). PHP giữ nguyên khoá số, còn Node
+thì `body-parser` gọi `qs` với `arrayLimit = max(100, số tham số)` → khoá số **nhỏ hơn
+100** bị coi là chỉ số mảng rồi **nén mảng** lại: `cau[33]=2.5` → `['2.5']`, mất luôn
+macauhoi. Hậu quả: request hoặc 400 (`cau must be an object`), hoặc lưu được tổng điểm
+nhưng bảng `cham_tuluan` **rỗng** — xảy ra với mọi CSDL mới seed (macauhoi < 100).
+Cách sửa (3 chỗ):
+- `src/main.ts` + `test/setup-app.ts`: tạo app với **`{ rawBody: true }`** để giữ body thô.
+- `src/exams/dto/exam.dto.ts`: thêm `parseScoreMapFromRawBody()` — đọc thẳng cặp
+  `cau[<macauhoi>]` từ `req.rawBody` bằng `URLSearchParams`; và `@Transform` cho field
+  `cau` nhận cả mảng lẫn object để ValidationPipe không chặn 400.
+- `src/exams/exams.controller.ts`: `saveEssayScore` ưu tiên map đọc từ body thô, chỉ
+  quay về `dto.cau` khi không đọc được cặp nào (vd client gửi JSON).
+
+**An toàn dữ liệu:** chỉ tạo 1 đề `[E2E] Đề tự động <ts>`; ca ẩn/hiện nhóm khôi phục
+ngay trong `finally`; `afterAll` xoá `thongbao → traloi_tuluan/cham_tuluan → ketqua →
+dethi` (phần còn lại theo cascade), KHÔNG dùng `/test/delete`. Thiếu dữ liệu mẫu →
+bỏ qua kèm cảnh báo.
+
+Kết quả: `npx jest --config ./test/jest-e2e.json` → **47/47 pass** (4 bộ: app, trang
+lỗi, luồng nghiệp vụ, đề tự động + chấm tự luận); `pnpm run build` sạch; đối chiếu CSDL
+sau khi chạy trở về y như trước (3 đề / 4 kết quả / 0 `cham_tuluan` / 13 người dùng /
+3 nhóm / 18 `chitietnhom` đều `hienthi=1`).
+
 ## Việc kế tiếp (gợi ý)
 
 **Cả 7 phase đã XONG.** Việc còn lại là kiểm chứng & nợ lẻ:
@@ -409,8 +454,9 @@ thành `--testPathPatterns`, và chỉ nhận ở dòng lệnh) → chạy 1 b�
 1. ~~Test **export Excel / in PDF** với dữ liệu mẫu~~ — **XONG 2026-08-07**.
    ~~Kiểm `user/addExcel` + `user/addFileExcelGroup`~~ — **XONG 2026-08-08**.
 2. ~~Mở rộng e2e sang luồng nghiệp vụ~~ — **XONG 2026-08-08**
-   (`test/exam-flow.e2e-spec.ts`). Có thể mở rộng tiếp: đề **tự động** (`loaide=1`),
-   **chấm tự luận** (`getEssayDetailAction`/`saveEssayScoreAction`), luồng nhóm/thông
-   báo phía SV (`/client/*`).
+   (`test/exam-flow.e2e-spec.ts`); ~~đề **tự động**, **chấm tự luận**, luồng
+   `/client/*`~~ — **XONG 2026-08-10** (`test/exam-auto-essay.e2e-spec.ts`).
+   Có thể mở rộng tiếp: thông báo (`/teacher_announcement/*`), thống kê
+   (`/statistic/*`), nhập/xuất Excel (hiện mới kiểm bằng script tay).
 3. Còn nợ lẻ: `view_subject.php` (SV xem môn — Phase 2), `getExamineeByGroup`
    (chưa có nơi gọi), hỗ trợ đọc `.xls` cũ khi nhập SV (nếu người dùng cần).
