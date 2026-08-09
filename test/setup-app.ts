@@ -26,7 +26,10 @@ export async function createTestApp(): Promise<NestExpressApplication> {
     imports: [AppModule],
   }).compile();
 
-  const app = moduleFixture.createNestApplication<NestExpressApplication>();
+  // `rawBody: true` y `main.ts` — vài route đọc body thô (chấm tự luận).
+  const app = moduleFixture.createNestApplication<NestExpressApplication>({
+    rawBody: true,
+  });
 
   setupAppConfig(app);
   validationConfig(app);
