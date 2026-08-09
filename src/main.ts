@@ -13,7 +13,11 @@ import { join } from 'path';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // rawBody: giữ lại body thô của request để đọc được các tham số kiểu PHP
+  // `ten[<khoá số>]` mà body-parser làm mất (xem parseScoreMapFromRawBody).
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
   const configService = app.get(ConfigService);
 
   // Enable shutdown hooks to allow for graceful shutdown of the application, ensuring that resources are properly released and cleanup tasks are performed when the application is terminated.
