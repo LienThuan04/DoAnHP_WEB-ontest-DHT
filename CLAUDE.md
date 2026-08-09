@@ -104,8 +104,18 @@ xoá cả thông báo của nhóm). Tổng e2e **28/28 pass**, CSDL trở về n
 ⚠️ Chạy 1 bộ: `npx jest --config ./test/jest-e2e.json --testPathPatterns exam-flow`
 (cờ `--testPathPattern` cũ đã bị Jest đổi tên). Chi tiết: `docs/03`.
 
-→ Việc kế tiếp gợi ý: mở rộng e2e sang đề **tự động** (`loaide=1`), **chấm tự luận**,
-luồng `/client/*`; nợ lẻ `view_subject.php`, `getExamineeByGroup`, đọc `.xls` cũ.
+**Kiểm chứng 2026-08-10:** e2e mở rộng — file MỚI `test/exam-auto-essay.e2e-spec.ts`
+(19 ca): GV tạo đề **tự động** (`loaide=1`) có câu tự luận → SV làm/nộp → GV **chấm tự
+luận** → SV xem lại ở `/client/*` (nhóm học phần + lịch kiểm tra). Tổng e2e
+**47/47 pass**, CSDL trở về nguyên trạng. **Tìm & sửa 1 lỗi thật:** điểm **từng câu**
+tự luận không được lưu — `test_detail.js` gửi `cau[<macauhoi>]` nhưng `body-parser`
+(qs, `arrayLimit = max(100, số tham số)`) biến khoá số nhỏ thành mảng rồi **nén** →
+mất macauhoi (400 hoặc `cham_tuluan` rỗng). Sửa: app tạo với **`{ rawBody: true }`**
+(`main.ts` + `test/setup-app.ts`) và `saveEssayScoreAction` đọc map điểm thẳng từ body
+thô qua `parseScoreMapFromRawBody()` (`src/exams/dto/exam.dto.ts`). Chi tiết: `docs/03`.
+
+→ Việc kế tiếp gợi ý: e2e cho thông báo (`/teacher_announcement/*`) + thống kê
+(`/statistic/*`); nợ lẻ `view_subject.php`, `getExamineeByGroup`, đọc `.xls` cũ.
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
