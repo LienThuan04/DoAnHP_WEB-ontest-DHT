@@ -27,6 +27,45 @@ const toStringArray = ({ value }: { value: unknown }): string[] => {
   return arr.map((v) => String(v).trim()).filter((s) => s !== '');
 };
 
+/**
+ * Nhận map `cau[<macauhoi>]=<điểm>` dù body-parser trả về object HAY mảng.
+ *
+ * PHP giữ nguyên khoá số (`$_POST['cau'][33]`), còn body-parser (qs) coi khoá số
+ * nhỏ là **chỉ số mảng** rồi NÉN mảng lại → mất macauhoi. Transform này chỉ để
+ * request không bị ValidationPipe chặn (400 "cau must be an object"); giá trị
+ * dùng thật được đọc lại từ body thô bằng `parseScoreMapFromRawBody`.
+ */
+const toScoreMap = ({ value }: { value: unknown }): unknown => {
+  if (value == null) return value;
+  if (Array.isArray(value)) {
+    return Object.fromEntries(
+      Object.entries(value).filter(([, v]) => v != null),
+    );
+  }
+  return value;
+};
+
+/**
+ * Đọc map `cau[<macauhoi>]=<điểm>` TRỰC TIẾP từ body thô (`req.rawBody`).
+ *
+ * Cần thiết vì body-parser dùng `qs` với `arrayLimit = max(100, số tham số)`:
+ * `cau[33]=2.5` biến thành mảng nén `['2.5']` → macauhoi 33 biến mất (đề mới
+ * seed thường có macauhoi < 100 nên lỗi xảy ra ngay, làm điểm từng câu không
+ * được lưu). Trả `null` khi không đọc được cặp nào (vd body gửi dạng JSON) để
+ * caller quay về dùng `dto.cau`.
+ */
+export const parseScoreMapFromRawBody = (
+  raw?: Buffer,
+): Record<string, string> | null => {
+  if (!raw?.length) return null;
+  const out: Record<string, string> = {};
+  for (const [key, value] of new URLSearchParams(raw.toString('utf8'))) {
+    const m = /^cau\[(\d+)\]$/.exec(key);
+    if (m) out[m[1]] = value;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+};
+
 /** $_POST['args'] (JSON phân trang) của pagination()/getTotalPages(). */
 export class ExamPaginationBodyDto {
   @IsString()
@@ -265,6 +304,7 @@ export class SaveEssayScoreDto {
   diem?: string;
 
   @IsOptional()
+  @Transform(toScoreMap)
   @IsObject()
   cau?: Record<string, string>;
 }
