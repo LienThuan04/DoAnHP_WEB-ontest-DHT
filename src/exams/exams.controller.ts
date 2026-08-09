@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { MULTER_LIMITS } from '@/common/config/upload.config';
+import type { RawBodyRequest } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
@@ -37,6 +38,7 @@ import {
   TestMadeDto,
   TestTimeDto,
   UpdateTestDto,
+  parseScoreMapFromRawBody,
 } from '@/exams/dto/exam.dto';
 import type { IExamPaginationArgs } from '@/exams/interfaces/exams.types';
 import type { IExamJwtPayload } from '@/exam-auth/interfaces/exam-auth.types';
@@ -449,13 +451,22 @@ export class ExamsController {
     return this.exams.getEssayDetail(dto.makq);
   }
 
-  /** POST /test/saveEssayScoreAction — lưu điểm tự luận (cần quyền chấm/sửa đề). */
+  /**
+   * POST /test/saveEssayScoreAction — lưu điểm tự luận (cần quyền chấm/sửa đề).
+   *
+   * Điểm từng câu (`cau[<macauhoi>]`) đọc từ **body thô**: body-parser gộp khoá
+   * số nhỏ thành mảng rồi nén → mất macauhoi (xem `parseScoreMapFromRawBody`).
+   */
   @Permissions('dethi', 'update')
   @SkipTransform()
   @Post('saveEssayScoreAction')
-  saveEssayScore(@Body() dto: SaveEssayScoreDto) {
+  saveEssayScore(
+    @Req() req: RawBodyRequest<Request>,
+    @Body() dto: SaveEssayScoreDto,
+  ) {
     const diem = Number(dto.diem) || 0;
-    return this.exams.saveEssayScore(dto.makq, diem, dto.cau ?? {});
+    const cau = parseScoreMapFromRawBody(req.rawBody) ?? dto.cau ?? {};
+    return this.exams.saveEssayScore(dto.makq, diem, cau);
   }
 
   /**
