@@ -114,8 +114,29 @@ mất macauhoi (400 hoặc `cham_tuluan` rỗng). Sửa: app tạo với **`{ ra
 (`main.ts` + `test/setup-app.ts`) và `saveEssayScoreAction` đọc map điểm thẳng từ body
 thô qua `parseScoreMapFromRawBody()` (`src/exams/dto/exam.dto.ts`). Chi tiết: `docs/03`.
 
-→ Việc kế tiếp gợi ý: e2e cho thông báo (`/teacher_announcement/*`) + thống kê
-(`/statistic/*`); nợ lẻ `view_subject.php`, `getExamineeByGroup`, đọc `.xls` cũ.
+**Kiểm chứng 2026-08-11:** e2e Phase 6 — file MỚI `test/announcement-statistic.e2e-spec.ts`
+(22 ca) phủ **thông báo** (`/teacher_announcement/*`: gửi/sửa/xoá, phân trang + tìm kiếm
++ lọc, danh sách gộp nhóm, chuông SV `getNotifications`/`getUnreadCount`/`markAsRead`,
+chặn GV khác sửa-xoá, SV gửi trộm → 403) và **thống kê** (`/statistic/*`: trang tổng
+hợp/chi tiết, `getStatictical`/`getAggregatedStatistical` đối chiếu số liệu **tính lại
+độc lập** bằng Prisma, `getFilters`/`getGroupsBySubject`, đề của GV khác → 404/`{error}`,
+SV → 403). Giữ nguyên 2 quirk PHP đã port: "Tất cả nhóm" **đếm trùng** theo số nhóm SV
+tham gia, và `thong_ke_diem` **bỏ sót điểm đúng 10**. ⚠️ Vì dump gốc chỉ seed quyền
+`thongbao`/`thongke` cho **nhóm quyền 3 (Admin)** mà dữ liệu lại của `gv001` (nhóm 1),
+test **cấp tạm** các dòng `chitietquyen` còn thiếu cho nhóm 1 rồi **xoá lại đúng những
+dòng đã thêm** ở `afterAll`. Tổng e2e **69/69 pass**, CSDL trở về nguyên trạng.
+Chi tiết: `docs/03`.
+
+**Kiểm chứng 2026-08-11 (2):** e2e Phase 7 slice 1 — file MỚI `test/excel-pdf.e2e-spec.ts`
+(17 ca) phủ **xuất Excel** (`module/exportExcelStudentS`, `test/exportExcel` cả 2 nhánh
+lọc nhóm / "tất cả nhóm", `test/getMarkOfAllTest`), **in PDF** (`test/exportPdf/:makq`)
+và **nhập SV từ .xlsx** (`user/addExcel` + `user/addFileExcelGroup`). File `.xlsx` trả về
+được **đọc ngược lại bằng exceljs** để kiểm nội dung từng ô, không chỉ kiểm `status=true`.
+Các ca nhập SV ghi vào một **nhóm học phần tạm** do test tạo rồi xoá, không đụng nhóm mẫu.
+Tổng e2e **86/86 pass** (6 bộ) → toàn bộ nghiệp vụ đã có e2e. Chi tiết: `docs/03`.
+
+→ Việc kế tiếp gợi ý: nợ lẻ `view_subject.php` (SV xem môn — Phase 2),
+`getExamineeByGroup` (chưa có nơi gọi), hỗ trợ đọc `.xls` cũ khi nhập SV.
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
