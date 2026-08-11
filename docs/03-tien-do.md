@@ -447,6 +447,73 @@ lỗi, luồng nghiệp vụ, đề tự động + chấm tự luận); `pnpm ru
 sau khi chạy trở về y như trước (3 đề / 4 kết quả / 0 `cham_tuluan` / 13 người dùng /
 3 nhóm / 18 `chitietnhom` đều `hienthi=1`).
 
+## ✅ e2e thông báo + thống kê (2026-08-11)
+
+`test/announcement-statistic.e2e-spec.ts` (**MỚI**, 22 ca) phủ nốt Phase 6:
+**`/teacher_announcement/*`** và **`/statistic/*`**.
+
+⚠️ **Quyền:** dump gốc chỉ seed `thongbao`/`thongke` cho **nhóm quyền 3 (Admin)**, trong
+khi dữ liệu nghiệp vụ (nhóm/đề/kết quả) lại thuộc GV `gv001` (nhóm quyền 1) → admin
+không có gì để xem, còn GV thì 403. Bộ test **cấp tạm** 5 dòng `chitietquyen` cho nhóm
+quyền 1 ở `beforeAll` và **xoá lại đúng những dòng đã thêm** ở `afterAll` (dòng có sẵn
+không đụng tới). `PermissionsGuard` truy vấn CSDL mỗi request nên không cần dựng lại app.
+
+| Nhóm ca | Route | Kiểm gì |
+|---------|-------|---------|
+| Trang SSR | `GET /teacher_announcement`, `/add`, `/update/:matb` | render 200; `update/:matb` của **người khác → 403** (khác PHP: PHP không kiểm người tạo), mã lạ → 404 |
+| Gửi thông báo | `POST /sendAnnouncement` | trả `matb`; `thongbao.is_auto=0` + `nguoitao` từ JWT; `chitietthongbao` đủ nhóm; **mỗi SV của các nhóm nhận có đúng 1 dòng `trangthaithongbao` = 'chưa xem'**; chuỗi `YYYY/M/D H:m:s` của JS gốc parse đúng |
+| Nhóm không tồn tại | `POST /sendAnnouncement` `manhom=[999999]` | tạo thông báo nhưng **không sinh dòng `chitietthongbao`/`trangthaithongbao` mồ côi** (khác PHP dựa FK) |
+| Chi tiết | `POST /getDetail` | nội dung + `tenmonhoc` + đúng mảng mã nhóm đang nhận |
+| Phân trang | `POST /pagination`, `/getTotalPages` (`model=AnnouncementModel`) | có thông báo vừa gửi, `nhom` là chuỗi `STRING_AGG` tên nhóm; **thông báo tự sinh khi tạo đề (`is_auto=1`) bị loại**; ô tìm kiếm khớp/không khớp; lọc năm+kỳ (chỉ áp dụng khi có CẢ hai) và lọc môn; không khớp → `totalPages=0` |
+| Danh sách gộp | `POST /getListAnnounce` | `nhom` là **mảng** tên nhóm; giữ **quirk `tenhocky` chứa MÃ học kỳ** chứ không phải tên |
+| Theo nhóm | `POST /getAnnounce` | thấy thông báo kèm `avatar`; nhóm lạ → `[]` |
+| Chuông SV | `POST /getNotifications`, `/getUnreadCount`, `/markAsRead` | SV thấy thông báo; số chưa xem > 0 → sau `markAsRead` = 0; **khôi phục lại đúng các dòng 'chưa xem' cũ trong `finally`** |
+| Phân quyền | SV gọi `/sendAnnouncement`; GV khác gọi `/updateAnnounce`, `/deleteAnnounce` | đều **403**, dữ liệu còn nguyên |
+| Sửa | `POST /updateAnnounce` | đổi nội dung + thay danh sách nhóm nhận; giữ **quirk: `trangthaithongbao` của nhóm bị bỏ KHÔNG bị dọn** (số dòng không đổi) |
+| Xoá | `POST /deleteAnnounce` | `thongbao` mất, `chitietthongbao` + `trangthaithongbao` sạch theo **cascade** |
+| Trang thống kê | `GET /statistic`, `?made=` | tổng hợp + chi tiết render 200; `made` lạ → 404; **đề của GV khác → 404** |
+| Thống kê 1 đề | `POST /getStatictical` | `da_nop_bai`/`chua_nop_bai`/`khong_thi`/`diem_cao_nhat`/`diem_trung_binh`/`thong_ke_diem` khớp số **tính lại độc lập** bằng Prisma (không tái dùng SQL của service), cả khi lọc 1 nhóm |
+| Quirk giữ nguyên | như trên | (1) "Tất cả nhóm" **đếm trùng** theo số nhóm SV tham gia (`da_nop_bai` ≥ số bài thật); (2) `thong_ke_diem` có 10 khoảng và **bỏ sót điểm đúng 10** → tổng cột = số bài có điểm < 10 |
+| Bảo mật | `POST /getStatictical` bằng tài khoản GV khác | trả `{error}`, **không lộ** số liệu |
+| Bộ lọc | `POST /getFilters`, `/getGroupsBySubject` | nạp đúng môn + nhóm theo học kỳ/năm học; học kỳ không có đề → mảng rỗng (không lỗi) |
+| Tổng hợp | `POST /getAggregatedStatistical` | khớp số tính độc lập (kể cả `khong_thi` đếm **DISTINCT người**); lọc theo môn/nhóm cho kết quả hẹp hơn |
+| Phân quyền | SV vào `/statistic` + `/statistic/getStatictical` | **403** |
+
+**An toàn dữ liệu:** thông báo test gắn dấu `[E2E-TB] <ts>` trong nội dung, `afterAll`
+xoá theo dấu này (phần phụ thuộc theo cascade) và trả `chitietquyen` về nguyên trạng;
+ca `markAsRead` khôi phục ngay trong `finally`; các ca thống kê **chỉ đọc**.
+
+Kết quả: `npx jest --config ./test/jest-e2e.json` → **69/69 pass** (5 bộ);
+`pnpm run build` sạch; đối chiếu CSDL sau khi chạy trở về y như trước (3 đề / 4 kết quả
+/ 3 thông báo / 19 `trangthaithongbao` đều 'chưa xem' / 13 người dùng / 3 nhóm /
+18 `chitietnhom` `hienthi=1` / `chitietquyen` `thongbao`+`thongke` chỉ còn nhóm quyền 3).
+
+## ✅ e2e xuất Excel / in PDF / nhập SV từ .xlsx (2026-08-11)
+
+`test/excel-pdf.e2e-spec.ts` (**MỚI**, 17 ca) đưa phần Phase 7 slice 1 — trước đây mới
+kiểm bằng script tay (2026-08-07 + 2026-08-08) — vào e2e. Điểm khác các bộ trước: file
+`.xlsx` trả về được **đọc ngược lại bằng exceljs** (round-trip), không chỉ kiểm
+`status=true`.
+
+| Nhóm ca | Route | Kiểm gì |
+|---------|-------|---------|
+| Danh sách SV | `POST /module/exportExcelStudentS` | `{status,file,filename}` đúng shape + MIME `spreadsheetml.sheet`; đọc lại file: header 6 cột, **đủ đúng MSSV của nhóm**, cột "Giới tính" = `Null` (đúng chủ ý); nhóm chưa có SV → chỉ dòng header |
+| Bảng điểm 1 đề | `POST /test/exportExcel` (lọc 1 nhóm) | tiêu đề gộp có tên lớp + mã đề; header 10 cột; **mọi SV của nhóm đều có dòng**; SV đã thi → `ĐIỂM TỔNG` = trắc nghiệm + tự luận + đọc hiểu và có thời gian vào thi; SV chưa thi → `Chưa làm` |
+| Bảng điểm 1 đề | `POST /test/exportExcel` (`manhom=0`, `ds=[mã nhóm]`) | nhánh `getTestAll` đủ SV; tiêu đề hiện **TÊN LỚP thật** — KHÁC PHP (PHP tra `tennhom IN (<mã nhóm>)` nên luôn ra "Tất cả các lớp"); `ds=[]` → "Không có dữ liệu" |
+| Ma trận điểm | `POST /test/getMarkOfAllTest` | header từ cột 3 = tên các đề giao cho nhóm (đúng thứ tự `made`); **từng ô khớp cặp (SV, đề)**, SV chưa thi → ô rỗng (PHP ghép theo chỉ số mảng nên lệch dòng); nhóm rỗng → "Không có dữ liệu" |
+| Phiếu in | `GET /test/exportPdf/:makq` | trả **HTML** (không phải `application/pdf`) có `window.print()`, `<title>=Chi_tiet_ket_qua_<mssv>_MD<makq>`, điểm `toFixed(2)`, **số thứ tự "Câu N" liên tục** đủ số câu và không dư; `makq` lạ → 404; SV (không có `dethi.view`) → 403 cả `exportPdf` lẫn `exportExcel` |
+| Đọc file SV | `POST /user/addExcel` | đọc được **file mẫu** `public/filemau/danhsachsv_mau.xlsx` (mọi dòng có `mssv`/`email`, `nhomquyen=2`); file tự dựng: **bỏ qua dòng thiếu MSSV và email sai định dạng**, ghép `họ đệm + tên` thành `fullname` |
+| Lỗi đọc file | `POST /user/addExcel` | thiếu file → "Chưa chọn file"; đuôi `.xls` → hướng dẫn lưu thành `.xlsx`; file rác → `status:error` (**không 500**); chưa đăng nhập → 401 |
+| Ghi vào nhóm | `POST /user/addFileExcelGroup` | tạo tài khoản (mật khẩu **băm bcrypt**, `manhomquyen=2`), `chitietnhom` `hienthi=1`, **`siso` = số thành viên**, tài khoản mới đăng nhập được; chạy lại → "đã có trong nhóm", **không nhân bản**; email trùng → bắt **P2002**, không tạo bản ghi mồ côi; `listuser` hỏng/rỗng → lỗi có kiểm soát |
+
+**An toàn dữ liệu:** các ca XUẤT chỉ đọc; các ca NHẬP ghi vào một **nhóm học phần tạm**
+do test tạo (`[E2E-XL] …`) chứ không đụng nhóm mẫu — `afterAll` xoá nhóm tạm
+(`chitietnhom` cascade) rồi xoá các tài khoản có tiền tố `E2EXL…`.
+
+Kết quả: `npx jest --config ./test/jest-e2e.json` → **86/86 pass** (6 bộ);
+`pnpm run build` sạch; CSDL sau khi chạy y nguyên (13 người dùng / 3 nhóm với
+`siso` 6-7-5 đúng số thành viên / 18 `chitietnhom`), không sót bản ghi `E2E*`.
+
 ## Việc kế tiếp (gợi ý)
 
 **Cả 7 phase đã XONG.** Việc còn lại là kiểm chứng & nợ lẻ:
@@ -455,8 +522,10 @@ sau khi chạy trở về y như trước (3 đề / 4 kết quả / 0 `cham_tul
    ~~Kiểm `user/addExcel` + `user/addFileExcelGroup`~~ — **XONG 2026-08-08**.
 2. ~~Mở rộng e2e sang luồng nghiệp vụ~~ — **XONG 2026-08-08**
    (`test/exam-flow.e2e-spec.ts`); ~~đề **tự động**, **chấm tự luận**, luồng
-   `/client/*`~~ — **XONG 2026-08-10** (`test/exam-auto-essay.e2e-spec.ts`).
-   Có thể mở rộng tiếp: thông báo (`/teacher_announcement/*`), thống kê
-   (`/statistic/*`), nhập/xuất Excel (hiện mới kiểm bằng script tay).
+   `/client/*`~~ — **XONG 2026-08-10** (`test/exam-auto-essay.e2e-spec.ts`);
+   ~~thông báo (`/teacher_announcement/*`) + thống kê (`/statistic/*`)~~ —
+   **XONG 2026-08-11** (`test/announcement-statistic.e2e-spec.ts`);
+   ~~nhập/xuất Excel + in PDF~~ — **XONG 2026-08-11** (`test/excel-pdf.e2e-spec.ts`).
+   → Toàn bộ nghiệp vụ đã có e2e (**86 ca / 6 bộ**).
 3. Còn nợ lẻ: `view_subject.php` (SV xem môn — Phase 2), `getExamineeByGroup`
    (chưa có nơi gọi), hỗ trợ đọc `.xls` cũ khi nhập SV (nếu người dùng cần).
