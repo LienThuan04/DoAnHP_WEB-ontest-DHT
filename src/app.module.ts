@@ -20,6 +20,7 @@ import { AccountModule } from '@/account/account.module';
 import { UsersModule } from '@/users/users.module';
 import { AcademicYearsModule } from '@/academic-years/academic-years.module';
 import { SubjectsModule } from '@/subjects/subjects.module';
+import { ViewSubjectModule } from '@/view-subject/view-subject.module';
 import { QuestionsModule } from '@/questions/questions.module';
 import { ExamsModule } from '@/exams/exams.module';
 import { ClassModulesModule } from '@/class-modules/class-modules.module';
@@ -47,7 +48,7 @@ import { StorageModule } from '@/storage/storage.module';
     ExamAuthModule, PagesModule, RolesModule, AccountModule, UsersModule,
     AcademicYearsModule, SubjectsModule, QuestionsModule, ExamsModule,
     ClassModulesModule, AssignmentsModule, ClientModule, AnnouncementsModule,
-    StatisticModule,
+    StatisticModule, ViewSubjectModule,
   ],
   controllers: [AppController],
   providers: [
