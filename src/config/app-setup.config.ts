@@ -34,6 +34,12 @@ export const setupAppConfig: (app: INestApplication) => { globalPrefix: string; 
           'subject/getAllChapter', 'subject/addChapter',
           'subject/updateChapter', 'subject/chapterDelete',
           'subject/getSubjectAssignment',
+          // Môn học của tôi (view_subject.php) — trang SSR + AJAX ở path gốc.
+          'view_subject', 'view_subject/getTotalPages',
+          'view_subject/pagination', 'view_subject/getNamHoc',
+          'view_subject/getHocKy', 'view_subject/getAllChapter',
+          'view_subject/addChapter', 'view_subject/updateChapter',
+          'view_subject/chapterDelete',
           // Ngân hàng câu hỏi (question.php) — trang SSR + AJAX ở path gốc.
           'question', 'question/getTotalPages', 'question/pagination',
           'question/getQuestionBySubject', 'question/getTotalPageQuestionBySubject',
