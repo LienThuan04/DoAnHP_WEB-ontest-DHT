@@ -1,6 +1,6 @@
 # 03 — Tiến độ (LIVING DOC — cập nhật mỗi phiên)
 
-> Cập nhật gần nhất: **2026-08-08**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
+> Cập nhật gần nhất: **2026-08-13**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
 > nhớ sửa file này (đánh dấu đã làm gì, còn gì) để phiên/agent sau không mất mạch.
 
 ## Bảng phase
@@ -9,7 +9,7 @@
 |-------|----------|-----------|
 | Hạ tầng | Gỡ demo, dời JwtStrategy → `exam-auth`, guards/interceptors tái dùng | ✅ XONG |
 | 1 | Auth/RBAC: `exam-auth`, `pages` (landing/dashboard), `account` | ✅ XONG |
-| 2 | `roles` (NhomQuyen), `users` (NguoiDung), `academic-years` (NamHoc+HocKy), `subjects` (MonHoc+Chuong) | ✅ XONG (trừ `view_subject` — hoãn, phụ thuộc phancong/nhom) |
+| 2 | `roles` (NhomQuyen), `users` (NguoiDung), `academic-years` (NamHoc+HocKy), `subjects` (MonHoc+Chuong), `view-subject` (môn được phân công) | ✅ XONG (`view_subject` trả nợ 2026-08-13) |
 | 3 | `questions`: ngân hàng câu hỏi mcq/essay/reading + đáp án + đoạn văn + ảnh + import Word (mammoth) + trang SSR/listing | ✅ XONG (Excel hoãn — nút gốc `disabled`) |
 | 4 | `exams`: đề thi & làm bài & chấm (LỚN NHẤT) | ✅ XONG (export PDF/Excel đã làm ở Phase 7) |
 | 5 | Nhóm/lớp & phân công (model `Nhom`/`ChiTietNhom`/`PhanCong` ĐÃ có) | ✅ XONG (`/module`, `/assignment`, `/client`) |
@@ -514,6 +514,49 @@ Kết quả: `npx jest --config ./test/jest-e2e.json` → **86/86 pass** (6 bộ
 `pnpm run build` sạch; CSDL sau khi chạy y nguyên (13 người dùng / 3 nhóm với
 `siso` 6-7-5 đúng số thành viên / 18 `chitietnhom`), không sót bản ghi `E2E*`.
 
+## ✅ Trả nợ Phase 2 — "Môn học của tôi" (`view_subject`) — XONG (2026-08-13)
+
+Module **MỚI** `src/view-subject/` (path `/view_subject`) thay `view_subject.php` +
+`XemMonHocModel.php`. Trang cho **giảng viên** xem các môn được **phân công** cho
+chính mình (bảng `phancong`), lọc theo năm học/học kỳ + tìm kiếm, kèm quản lý
+**chương** của môn đó.
+
+| Route | Nội dung |
+|-------|----------|
+| `GET /view_subject` | Trang SSR (`views/pages/view_subject.ejs`), quyền `xem_monhoc.view` |
+| `POST /view_subject/{pagination,getTotalPages}` | Phân trang `pagination.js` (controller=`view_subject`, model=`XemMonHocModel`), quyền `hocphan.view` |
+| `POST /view_subject/{getNamHoc,getHocKy}` | Dropdown lọc năm học / học kỳ có phân công, trả `{success,data}` |
+| `POST /view_subject/{getAllChapter,addChapter,updateChapter,chapterDelete}` | Quản lý chương — **dùng lại `SubjectsService`** (cùng bảng `chuong`), gate `chuong.*` |
+
+**KHÁC PHP (có chủ ý):**
+1. **Tìm kiếm hoạt động được:** nút kính lúp của `view_subject.js` đặt từ khoá vào
+   `filter.input`, nhưng `getQuery` gốc chỉ đọc `$input` cấp trên → bản PHP bấm nút
+   **không có tác dụng**. Service đọc cả `args.input`/`args.content`/`filter.input`.
+2. `ORDER BY` dùng `pc.mamonhoc` thay `mh.mamonhoc`: Postgres bắt cột trong `ORDER BY`
+   phải nằm trong select list của `SELECT DISTINCT` (MySQL dễ dãi hơn). Hai cột bằng
+   nhau theo điều kiện JOIN nên thứ tự không đổi.
+3. Bỏ nút **"Thêm môn học"** ở view gốc — nó mở `#modal-add-subject` vốn KHÔNG tồn tại
+   trong trang và `view_subject.js` cũng không xử lý (nút chết). Thêm/sửa môn nằm ở
+   `/subject` của Admin.
+4. Quản lý chương gate theo `chuong.*` (PHP chỉ `checkAuthentication`). **KHÔNG** gate
+   bằng `monhoc` như module `subjects` vì nhóm quyền **Giáo Viên (1) không có quyền
+   `monhoc`** — chỉ Admin (3) mới có → sẽ 403 oan.
+5. `userId` lấy từ **JWT**, không tin `args.id` phía client.
+6. Không port `getQuery`/`getDetail`/`search`/`getSubjectAssignment` của controller PHP:
+   `view_subject.js` không gọi, và `/subject/*` đã có tương đương.
+
+Navbar: mục `/subject` đổi nhãn thành **"Tạo môn học"** (như bản PHP) và thêm mục
+**"Môn học của tôi"** → `/view_subject`.
+
+**e2e MỚI** `test/view-subject.e2e-spec.ts` (14 ca): trang SSR đủ hook; dropdown
+năm/kỳ (DISTINCT + học kỳ đúng năm); phân trang chỉ trả môn của chính GV và **đối
+chiếu số dòng tính lại độc lập bằng Prisma**; cắt trang đúng; lọc năm+kỳ; tìm kiếm cả
+2 nhánh + không phân biệt hoa thường; phân công **xoá mềm không hiện** (test tự tạo
+dòng `trangthai=0` rồi xoá); chương thêm→đổi tên→xoá mềm (dọn **xoá cứng** ở
+`afterAll` để CSDL về nguyên trạng); SV → 403 (trang HTML + AJAX JSON), chưa đăng
+nhập → 401. Tổng e2e **100/100 pass** (7 bộ), `pnpm run build` sạch, CSDL sau khi
+chạy y nguyên (14 chương / 9 phân công / 13 người dùng, không dòng `trangthai=0` sót).
+
 ## Việc kế tiếp (gợi ý)
 
 **Cả 7 phase đã XONG.** Việc còn lại là kiểm chứng & nợ lẻ:
@@ -526,6 +569,8 @@ Kết quả: `npx jest --config ./test/jest-e2e.json` → **86/86 pass** (6 bộ
    ~~thông báo (`/teacher_announcement/*`) + thống kê (`/statistic/*`)~~ —
    **XONG 2026-08-11** (`test/announcement-statistic.e2e-spec.ts`);
    ~~nhập/xuất Excel + in PDF~~ — **XONG 2026-08-11** (`test/excel-pdf.e2e-spec.ts`).
-   → Toàn bộ nghiệp vụ đã có e2e (**86 ca / 6 bộ**).
-3. Còn nợ lẻ: `view_subject.php` (SV xem môn — Phase 2), `getExamineeByGroup`
-   (chưa có nơi gọi), hỗ trợ đọc `.xls` cũ khi nhập SV (nếu người dùng cần).
+   → Toàn bộ nghiệp vụ đã có e2e (**100 ca / 7 bộ**).
+3. ~~`view_subject.php`~~ — **XONG 2026-08-13** (module `src/view-subject/`, kèm e2e).
+   Còn nợ lẻ: `getExamineeByGroup` (PHP có action + model nhưng **không JS nào gọi**
+   → chỉ port khi có nơi dùng), hỗ trợ đọc `.xls` cũ khi nhập SV (exceljs không đọc
+   được BIFF; cần thư viện khác như `xlsx` — chỉ làm nếu người dùng cần).
