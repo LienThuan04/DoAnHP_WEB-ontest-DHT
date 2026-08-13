@@ -135,8 +135,21 @@ và **nhập SV từ .xlsx** (`user/addExcel` + `user/addFileExcelGroup`). File 
 Các ca nhập SV ghi vào một **nhóm học phần tạm** do test tạo rồi xoá, không đụng nhóm mẫu.
 Tổng e2e **86/86 pass** (6 bộ) → toàn bộ nghiệp vụ đã có e2e. Chi tiết: `docs/03`.
 
-→ Việc kế tiếp gợi ý: nợ lẻ `view_subject.php` (SV xem môn — Phase 2),
-`getExamineeByGroup` (chưa có nơi gọi), hỗ trợ đọc `.xls` cũ khi nhập SV.
+**Trả nợ Phase 2 XONG (2026-08-13):** "Môn học của tôi" — module MỚI
+`src/view-subject/` (path `/view_subject`) thay `view_subject.php` +
+`XemMonHocModel.php`: GV xem môn được **phân công** cho mình (lọc năm học/học kỳ +
+tìm kiếm) và quản lý **chương** của môn đó (dùng lại `SubjectsService`). 9 route
+(`GET /view_subject`; `POST pagination|getTotalPages|getNamHoc|getHocKy|getAllChapter|
+addChapter|updateChapter|chapterDelete`) + view `views/pages/view_subject.ejs` + JS
+`public/js/pages/view_subject.js`; navbar đổi `/subject` thành "Tạo môn học" và thêm
+"Môn học của tôi". KHÁC PHP: nút tìm kiếm nay hoạt động (đọc thêm `filter.input`);
+`ORDER BY pc.mamonhoc` (Postgres đòi cột ORDER BY nằm trong select list của SELECT
+DISTINCT); bỏ nút "Thêm môn học" chết; chương gate `chuong.*` (KHÔNG dùng `monhoc` vì
+nhóm quyền Giáo Viên không có quyền đó). e2e MỚI `test/view-subject.e2e-spec.ts`
+(14 ca) → tổng **100/100 pass** (7 bộ), CSDL y nguyên. Chi tiết: `docs/03`.
+
+→ Việc kế tiếp gợi ý: nợ lẻ `getExamineeByGroup` (PHP có action nhưng không JS nào
+gọi), hỗ trợ đọc `.xls` cũ khi nhập SV.
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
