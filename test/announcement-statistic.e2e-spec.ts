@@ -56,7 +56,6 @@ describe('Thông báo + Thống kê (e2e)', () => {
   let matb = 0;
 
   const skip = (why: string) => {
-    // eslint-disable-next-line no-console
     console.warn(`Bỏ qua e2e thông báo/thống kê: ${why}`);
   };
 
@@ -141,7 +140,9 @@ describe('Thông báo + Thống kê (e2e)', () => {
       });
     }
     if (!withMembers.length) {
-      return skip('CSDL chưa có nhóm học phần của GV kèm thành viên (chạy seed-demo)');
+      return skip(
+        'CSDL chưa có nhóm học phần của GV kèm thành viên (chạy seed-demo)',
+      );
     }
 
     // Đề của GV đã có bài làm — cần cho thống kê chi tiết.
@@ -263,12 +264,16 @@ describe('Thông báo + Thống kê (e2e)', () => {
     expect(id).toBeGreaterThan(0);
     // KHÁC PHP (dựa FK): service tự lọc nhóm có thật trước khi ghi.
     expect(await prisma.chiTietThongBao.count({ where: { matb: id } })).toBe(0);
-    expect(await prisma.trangThaiThongBao.count({ where: { matb: id } })).toBe(0);
+    expect(await prisma.trangThaiThongBao.count({ where: { matb: id } })).toBe(
+      0,
+    );
   });
 
   it('POST getDetail trả nội dung + danh sách mã nhóm đang nhận', async () => {
     if (!matb || !fixture || !gvCookie) return;
-    const res = await post('/teacher_announcement/getDetail', gvCookie, { matb });
+    const res = await post('/teacher_announcement/getDetail', gvCookie, {
+      matb,
+    });
 
     expect(res.body.matb).toBe(matb);
     expect(res.body.noidung).toContain(marker);
@@ -282,11 +287,9 @@ describe('Thông báo + Thống kê (e2e)', () => {
 
   it('phân trang (model=AnnouncementModel) có thông báo vừa gửi, KHÔNG có thông báo tự sinh', async () => {
     if (!matb || !fixture || !gvCookie) return;
-    const pages = await post(
-      '/teacher_announcement/getTotalPages',
-      gvCookie,
-      { args: paginationArgs() },
-    );
+    const pages = await post('/teacher_announcement/getTotalPages', gvCookie, {
+      args: paginationArgs(),
+    });
     expect(pages.body.totalPages).toBeGreaterThan(0);
 
     const list = await post('/teacher_announcement/pagination', gvCookie, {
@@ -311,8 +314,7 @@ describe('Thông báo + Thống kê (e2e)', () => {
       post('/teacher_announcement/pagination', gvCookie!, {
         args: paginationArgs(extra),
       });
-    const has = (body: { matb: number }[]) =>
-      body.some((r) => r.matb === matb);
+    const has = (body: { matb: number }[]) => body.some((r) => r.matb === matb);
 
     expect(has((await call({ input: marker })).body)).toBe(true);
     expect(
@@ -331,7 +333,8 @@ describe('Thông báo + Thống kê (e2e)', () => {
     ).toBe(true);
     expect(
       has(
-        (await call({ filter: { namhoc: fixture.namhoc, hocky: 999999 } })).body,
+        (await call({ filter: { namhoc: fixture.namhoc, hocky: 999999 } }))
+          .body,
       ),
     ).toBe(false);
     expect(
@@ -346,7 +349,11 @@ describe('Thông báo + Thống kê (e2e)', () => {
 
   it('POST getListAnnounce gộp tên nhóm thành mảng (giữ quirk tenhocky = mã học kỳ)', async () => {
     if (!matb || !fixture || !gvCookie) return;
-    const res = await post('/teacher_announcement/getListAnnounce', gvCookie, {});
+    const res = await post(
+      '/teacher_announcement/getListAnnounce',
+      gvCookie,
+      {},
+    );
 
     const row = res.body.find((r: { matb: number }) => r.matb === matb);
     expect(row).toBeDefined();
@@ -377,7 +384,11 @@ describe('Thông báo + Thống kê (e2e)', () => {
   it('SV thấy thông báo ở chuông; markAsRead xoá số chưa xem (khôi phục sau đó)', async () => {
     if (!matb || !fixture || !svCookie) return;
 
-    const noti = await post('/teacher_announcement/getNotifications', svCookie, {});
+    const noti = await post(
+      '/teacher_announcement/getNotifications',
+      svCookie,
+      {},
+    );
     expect(
       (noti.body as { noidung: string }[]).some((r) =>
         r.noidung?.includes(marker),
@@ -827,7 +838,8 @@ describe('Thông báo + Thống kê (e2e)', () => {
     let chua_nop_bai = 0;
     for (const r of kq) {
       for (const c of cap) {
-        if (c.made !== r.made || !laThanhVien(r.manguoidung, c.manhom)) continue;
+        if (c.made !== r.made || !laThanhVien(r.manguoidung, c.manhom))
+          continue;
         if (r.diemthi === null) chua_nop_bai++;
         else {
           da_nop_bai++;
