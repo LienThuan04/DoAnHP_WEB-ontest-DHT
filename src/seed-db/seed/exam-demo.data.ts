@@ -178,7 +178,11 @@ export const demoMonHoc: IDemoMonHoc[] = [
     sotinchi: 3,
     sotietlythuyet: 45,
     sotietthuchanh: 0,
-    chuong: ['Mô hình OSI và TCP/IP', 'Tầng mạng và địa chỉ IP', 'Tầng giao vận'],
+    chuong: [
+      'Mô hình OSI và TCP/IP',
+      'Tầng mạng và địa chỉ IP',
+      'Tầng giao vận',
+    ],
   },
   {
     mamonhoc: 'CTDL01',
@@ -195,15 +199,60 @@ export const demoMonHoc: IDemoMonHoc[] = [
  * JOIN `phancong` theo người đăng nhập) → admin được phân công cả 4 môn để test nhanh.
  */
 export const demoPhanCong: IDemoPhanCong[] = [
-  { manguoidung: 'gv001', mamonhoc: 'LTW001', tennamhoc: '2025-2026', sohocky: 1 },
-  { manguoidung: 'gv001', mamonhoc: 'CSDL01', tennamhoc: '2025-2026', sohocky: 1 },
-  { manguoidung: 'gv001', mamonhoc: 'LTW001', tennamhoc: '2024-2025', sohocky: 2 },
-  { manguoidung: 'gv002', mamonhoc: 'MMT001', tennamhoc: '2025-2026', sohocky: 1 },
-  { manguoidung: 'gv002', mamonhoc: 'CTDL01', tennamhoc: '2025-2026', sohocky: 1 },
-  { manguoidung: 'admin', mamonhoc: 'LTW001', tennamhoc: '2025-2026', sohocky: 1 },
-  { manguoidung: 'admin', mamonhoc: 'CSDL01', tennamhoc: '2025-2026', sohocky: 1 },
-  { manguoidung: 'admin', mamonhoc: 'MMT001', tennamhoc: '2025-2026', sohocky: 1 },
-  { manguoidung: 'admin', mamonhoc: 'CTDL01', tennamhoc: '2025-2026', sohocky: 1 },
+  {
+    manguoidung: 'gv001',
+    mamonhoc: 'LTW001',
+    tennamhoc: '2025-2026',
+    sohocky: 1,
+  },
+  {
+    manguoidung: 'gv001',
+    mamonhoc: 'CSDL01',
+    tennamhoc: '2025-2026',
+    sohocky: 1,
+  },
+  {
+    manguoidung: 'gv001',
+    mamonhoc: 'LTW001',
+    tennamhoc: '2024-2025',
+    sohocky: 2,
+  },
+  {
+    manguoidung: 'gv002',
+    mamonhoc: 'MMT001',
+    tennamhoc: '2025-2026',
+    sohocky: 1,
+  },
+  {
+    manguoidung: 'gv002',
+    mamonhoc: 'CTDL01',
+    tennamhoc: '2025-2026',
+    sohocky: 1,
+  },
+  {
+    manguoidung: 'admin',
+    mamonhoc: 'LTW001',
+    tennamhoc: '2025-2026',
+    sohocky: 1,
+  },
+  {
+    manguoidung: 'admin',
+    mamonhoc: 'CSDL01',
+    tennamhoc: '2025-2026',
+    sohocky: 1,
+  },
+  {
+    manguoidung: 'admin',
+    mamonhoc: 'MMT001',
+    tennamhoc: '2025-2026',
+    sohocky: 1,
+  },
+  {
+    manguoidung: 'admin',
+    mamonhoc: 'CTDL01',
+    tennamhoc: '2025-2026',
+    sohocky: 1,
+  },
 ];
 
 export const demoNhom: IDemoNhom[] = [
@@ -252,7 +301,7 @@ const abcd = (
 ): IDemoDapAn[] =>
   [a, b, c, d].map((noidungtl, i) => ({
     noidungtl,
-    ladapan: (i === dung ? 1 : 0) as 0 | 1,
+    ladapan: i === dung ? 1 : 0,
   }));
 
 export const demoCauHoi: IDemoCauHoi[] = [
@@ -291,7 +340,13 @@ export const demoCauHoi: IDemoCauHoi[] = [
     dokho: 1,
     nguoitao: 'gv001',
     noidung: 'Thẻ nào dùng để chèn hình ảnh vào trang web?',
-    dapan: abcd('&lt;image&gt;', '&lt;picture&gt;', '&lt;img&gt;', '&lt;figure&gt;', 2),
+    dapan: abcd(
+      '&lt;image&gt;',
+      '&lt;picture&gt;',
+      '&lt;img&gt;',
+      '&lt;figure&gt;',
+      2,
+    ),
   },
   {
     key: 'ltw-mcq-04',
@@ -310,7 +365,8 @@ export const demoCauHoi: IDemoCauHoi[] = [
     loai: 'mcq',
     dokho: 2,
     nguoitao: 'gv001',
-    noidung: 'Bộ chọn (selector) nào trong CSS chọn phần tử theo thuộc tính id?',
+    noidung:
+      'Bộ chọn (selector) nào trong CSS chọn phần tử theo thuộc tính id?',
     dapan: abcd('.ten', '#ten', '*ten', 'ten', 1),
   },
   {
@@ -322,7 +378,13 @@ export const demoCauHoi: IDemoCauHoi[] = [
     nguoitao: 'gv001',
     noidung:
       'Trong Flexbox, thuộc tính nào canh các phần tử con theo trục chính (main axis)?',
-    dapan: abcd('align-items', 'justify-content', 'align-content', 'flex-wrap', 1),
+    dapan: abcd(
+      'align-items',
+      'justify-content',
+      'align-content',
+      'flex-wrap',
+      1,
+    ),
   },
   {
     key: 'ltw-mcq-07',
@@ -331,7 +393,8 @@ export const demoCauHoi: IDemoCauHoi[] = [
     loai: 'mcq',
     dokho: 3,
     nguoitao: 'gv001',
-    noidung: 'Thuộc tính z-index chỉ có tác dụng khi phần tử có position là gì?',
+    noidung:
+      'Thuộc tính z-index chỉ có tác dụng khi phần tử có position là gì?',
     dapan: abcd(
       'static',
       'relative, absolute, fixed hoặc sticky',
@@ -347,7 +410,8 @@ export const demoCauHoi: IDemoCauHoi[] = [
     loai: 'mcq',
     dokho: 1,
     nguoitao: 'gv001',
-    noidung: 'Từ khoá nào khai báo biến có phạm vi khối (block scope) trong JavaScript?',
+    noidung:
+      'Từ khoá nào khai báo biến có phạm vi khối (block scope) trong JavaScript?',
     dapan: abcd('var', 'let', 'function', 'global', 1),
   },
   {
@@ -425,7 +489,8 @@ export const demoCauHoi: IDemoCauHoi[] = [
     loai: 'mcq',
     dokho: 1,
     nguoitao: 'gv001',
-    noidung: 'Khoá chính (primary key) của một quan hệ có tính chất nào sau đây?',
+    noidung:
+      'Khoá chính (primary key) của một quan hệ có tính chất nào sau đây?',
     dapan: abcd(
       'Có thể nhận giá trị NULL',
       'Xác định duy nhất mỗi bộ và không NULL',
@@ -467,7 +532,8 @@ export const demoCauHoi: IDemoCauHoi[] = [
     loai: 'mcq',
     dokho: 2,
     nguoitao: 'gv001',
-    noidung: 'Mệnh đề nào dùng để lọc dữ liệu SAU khi đã gom nhóm bằng GROUP BY?',
+    noidung:
+      'Mệnh đề nào dùng để lọc dữ liệu SAU khi đã gom nhóm bằng GROUP BY?',
     dapan: abcd('WHERE', 'HAVING', 'FILTER', 'ORDER BY', 1),
   },
   {
@@ -637,7 +703,8 @@ export const demoCauHoi: IDemoCauHoi[] = [
     loai: 'mcq',
     dokho: 2,
     nguoitao: 'gv002',
-    noidung: 'Duyệt cây nhị phân tìm kiếm theo thứ tự giữa (in-order) cho kết quả nào?',
+    noidung:
+      'Duyệt cây nhị phân tìm kiếm theo thứ tự giữa (in-order) cho kết quả nào?',
     dapan: abcd(
       'Dãy khoá tăng dần',
       'Dãy khoá giảm dần',
@@ -831,7 +898,11 @@ export const demoDeThi: IDemoDeThi[] = [
     diem_tuluan: 2,
     diem_dochieu: 0,
     nhom: ['LTW-N01'],
-    chuong: ['Tổng quan Web và HTML', 'CSS và giao diện', 'Lập trình phía máy chủ'],
+    chuong: [
+      'Tổng quan Web và HTML',
+      'CSS và giao diện',
+      'Lập trình phía máy chủ',
+    ],
     cauhoi: [
       'ltw-mcq-01',
       'ltw-mcq-02',
