@@ -107,7 +107,9 @@ export class QuestionsService {
 
     // Nội dung đoạn văn + số câu con cho các dòng reading.
     const madvs = [
-      ...new Set(rows.filter((r) => r.loai === 'reading' && r.madv).map((r) => r.madv!)),
+      ...new Set(
+        rows.filter((r) => r.loai === 'reading' && r.madv).map((r) => r.madv!),
+      ),
     ];
     const doanVanMap = new Map<number, string>();
     const subCountMap = new Map<number, number>();
@@ -130,13 +132,13 @@ export class QuestionsService {
       macauhoi: r.macauhoi,
       noidung:
         r.loai === 'reading' && r.madv
-          ? doanVanMap.get(r.madv) ?? r.noidung
+          ? (doanVanMap.get(r.madv) ?? r.noidung)
           : r.noidung,
       dokho: r.dokho,
       machuong: r.machuong,
       loai: r.loai,
       tenmonhoc,
-      num_subquestions: r.madv ? subCountMap.get(r.madv) ?? 0 : 0,
+      num_subquestions: r.madv ? (subCountMap.get(r.madv) ?? 0) : 0,
     }));
   }
 
@@ -176,9 +178,13 @@ export class QuestionsService {
   private buildListConditions(filter: Record<string, unknown>): Prisma.Sql {
     const conds: Prisma.Sql[] = [];
     if (this.isActiveFilter(filter.mamonhoc))
-      conds.push(Prisma.sql`AND combined.mamonhoc = ${String(filter.mamonhoc)}`);
+      conds.push(
+        Prisma.sql`AND combined.mamonhoc = ${String(filter.mamonhoc)}`,
+      );
     if (this.isActiveFilter(filter.machuong))
-      conds.push(Prisma.sql`AND combined.machuong = ${Number(filter.machuong)}`);
+      conds.push(
+        Prisma.sql`AND combined.machuong = ${Number(filter.machuong)}`,
+      );
     if (this.isActiveFilter(filter.dokho))
       conds.push(Prisma.sql`AND combined.dokho = ${Number(filter.dokho)}`);
     if (this.isActiveFilter(filter.loai))
@@ -219,7 +225,10 @@ export class QuestionsService {
   }
 
   /** POST /question/pagination — 1 trang danh sách câu hỏi (pagination.js). */
-  listQuestions(userId: string, args: IPaginationArgs): Promise<IQuestionListRow[]> {
+  listQuestions(
+    userId: string,
+    args: IPaginationArgs,
+  ): Promise<IQuestionListRow[]> {
     const limit = Number(args.limit) || PAGE_SIZE;
     const page = Math.max(Number(args.page) || 1, 1);
     const offset = (page - 1) * limit;
@@ -295,9 +304,7 @@ export class QuestionsService {
   }
 
   /** POST /question/getAnswerById — đáp án (mcq/essay) hoặc câu con + đáp án (reading). */
-  async getAnswerById(
-    id: number,
-  ): Promise<IAnswerRow[] | IReadingAnswerRow[]> {
+  async getAnswerById(id: number): Promise<IAnswerRow[] | IReadingAnswerRow[]> {
     const q = await this.prisma.cauHoi.findUnique({
       where: { macauhoi: id },
       select: { macauhoi: true, loai: true, madv: true },
@@ -392,7 +399,7 @@ export class QuestionsService {
   /** htmlspecialchars(ENT_QUOTES) + bỏ ký tự zero-width — thay encodeHTML(). */
   private encodeHTML(str: string | null | undefined): string {
     return (str ?? '')
-      .replace(/[​‌‍]/g, '')
+      .replace(/[\u200B-\u200D]/g, '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -436,10 +443,7 @@ export class QuestionsService {
    * file mới — đúng ở các ca phổ biến (thêm = chỉ file; sửa = giữ URL cũ, đổi ảnh
    * = xoá URL cũ + gửi file mới). Sync (không upload) vì đã upload trước.
    */
-  private pickImageUrl(
-    queue: string[],
-    item: IIncomingOption,
-  ): string | null {
+  private pickImageUrl(queue: string[], item: IIncomingOption): string | null {
     if (this.truthy(item.delete_image)) return null;
     const kept = typeof item.image === 'string' ? item.image.trim() : '';
     if (kept && kept !== 'null') return kept;
@@ -637,7 +641,10 @@ export class QuestionsService {
       if (loai === 'reading') {
         const noidungDV = this.encodeHTML((input.doanvan_noidung ?? '').trim());
         if (noidungDV === '') {
-          return { status: 'error', message: 'Vui lòng nhập nội dung đoạn văn' };
+          return {
+            status: 'error',
+            message: 'Vui lòng nhập nội dung đoạn văn',
+          };
         }
         if (answers.length === 0) {
           return { status: 'error', message: 'Phải có ít nhất 1 câu hỏi con' };
@@ -666,7 +673,9 @@ export class QuestionsService {
             select: { macauhoi: true },
           });
           for (const sub of oldSubs) {
-            await tx.cauTraLoi.deleteMany({ where: { macauhoi: sub.macauhoi } });
+            await tx.cauTraLoi.deleteMany({
+              where: { macauhoi: sub.macauhoi },
+            });
             await tx.cauHoi.update({
               where: { macauhoi: sub.macauhoi },
               data: { trangthai: 0 },
@@ -836,7 +845,8 @@ export class QuestionsService {
       } else if (item.type === 'essay') {
         if (item.question == null) item.question = '';
         // PHP gán option=[]/answer=null cho tự luận (JS không dùng) — bổ sung để khớp.
-        (item as IParsedEssay & { option: unknown[]; answer: null }).option = [];
+        (item as IParsedEssay & { option: unknown[]; answer: null }).option =
+          [];
         (item as IParsedEssay & { option: unknown[]; answer: null }).answer =
           null;
       }
