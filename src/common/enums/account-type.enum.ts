@@ -1,4 +1,4 @@
 export enum AccountType {
-    LOCAL = 'local',
-    GOOGLE = 'google',
+  LOCAL = 'local',
+  GOOGLE = 'google',
 }
