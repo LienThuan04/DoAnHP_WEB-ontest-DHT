@@ -1,4 +1,4 @@
-import { NestFactory, HttpAdapterHost } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
@@ -30,7 +30,7 @@ async function bootstrap() {
 
   // setup the versioning and global prefix for all routes
   const { globalPrefix, version } = setupAppConfig(app);
- // Custom Validation Pipe with error formatting and automatic transformation
+  // Custom Validation Pipe with error formatting and automatic transformation
   validationConfig(app);
 
   // Add cookie-parser middleware to handle cookies in requests and responses, which is essential for managing refresh tokens stored in cookies.
@@ -52,7 +52,9 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') ?? 3000;
 
   await app.listen(port);
-  logger.log(`Application is running on: http://${host}:${port}/${globalPrefix}/v${version}`);
+  logger.log(
+    `Application is running on: http://${host}:${port}/${globalPrefix}/v${version}`,
+  );
   logger.log(`Swagger is running on: http://${host}:${port}/swagger`);
   logger.warn(`Server is running, page Home is url: http://${host}:${port}/`);
 }
