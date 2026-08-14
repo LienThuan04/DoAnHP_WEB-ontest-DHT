@@ -203,11 +203,10 @@ $(document).ready(function () {
                 <li>
                 <a class="d-flex text-dark py-2" href="javascript:void(0)">
                     <div class="flex-shrink-0 mx-3">
-                        <img class="img-avatar img-avatar48" src="./public/media/avatars/${
-                          announce.avatar == null
-                            ? "avatar2.jpg"
-                            : announce.avatar
-                        }" alt="">
+                        <img class="img-avatar img-avatar48" src="${avatarUrl(
+                          announce.avatar,
+                          "avatar2.jpg"
+                        )}" alt="">
                     </div>
                     <div class="flex-grow-1 fs-sm pe-2">
                         <div class="fw-semibold">${announce.noidung}</div>
@@ -274,11 +273,10 @@ $(document).ready(function () {
         html += `<li>
                     <div class="d-flex py-2 align-items-center">
                         <div class="flex-shrink-0 mx-3 overlay-container">
-                            <img class="img-avatar img-avatar48" src="./public/media/avatars/${
-                              friend.avatar == null
-                                ? "avatar2.jpg"
-                                : friend.avatar
-                            }" alt="">
+                            <img class="img-avatar img-avatar48" src="${avatarUrl(
+                              friend.avatar,
+                              "avatar2.jpg"
+                            )}" alt="">
                         </div>
                         <div class="fw-semibold">${friend.hoten}</div>
                     </div>
