@@ -32,4 +32,18 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  {
+    // e2e: supertest khai báo `Response.body` là `any` (JSON server trả về không
+    // có kiểu tĩnh) nên mọi `expect(res.body.x)` đều dính họ rule `no-unsafe-*`.
+    // Ép kiểu từng chỗ chỉ tạo tiếng ồn mà không tăng an toàn cho code chạy thật
+    // → tắt nhóm rule này RIÊNG cho thư mục test. Code trong `src/` vẫn bật đủ.
+    files: ['test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
 );
