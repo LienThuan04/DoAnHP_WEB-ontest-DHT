@@ -40,7 +40,6 @@ describe('Luồng nghiệp vụ: tạo đề → làm bài → chấm (e2e)', ()
   let makq = 0;
 
   const skip = (why: string) => {
-    // eslint-disable-next-line no-console
     console.warn(`Bỏ qua e2e luồng nghiệp vụ: ${why}`);
   };
 
@@ -88,7 +87,8 @@ describe('Luồng nghiệp vụ: tạo đề → làm bài → chấm (e2e)', ()
       };
       break;
     }
-    if (!fixture) return skip('CSDL chưa có nhóm + câu hỏi mẫu (chạy seed-demo)');
+    if (!fixture)
+      return skip('CSDL chưa có nhóm + câu hỏi mẫu (chạy seed-demo)');
 
     svCookie = await login(app, fixture.sv);
     if (!svCookie) skip(`không đăng nhập được bằng SV mẫu ${fixture.sv}`);
@@ -259,9 +259,9 @@ describe('Luồng nghiệp vụ: tạo đề → làm bài → chấm (e2e)', ()
       .send({ made });
 
     expect(res.body).toHaveLength(3);
-    expect(res.body.map((q: { macauhoi: number }) => q.macauhoi).sort()).toEqual(
-      chosen.map((c) => c.macauhoi).sort(),
-    );
+    expect(
+      res.body.map((q: { macauhoi: number }) => q.macauhoi).sort(),
+    ).toEqual(chosen.map((c) => c.macauhoi).sort());
   });
 
   // ── SV: vào thi & nộp bài ──────────────────────────────────────────────────
