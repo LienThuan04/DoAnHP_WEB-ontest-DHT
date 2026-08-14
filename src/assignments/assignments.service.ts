@@ -248,9 +248,7 @@ export class AssignmentsService {
   }
 
   /** POST /assignment/pagination (nhánh mặc định) — 1 trang phân công (mảng). */
-  listAssignments(
-    args: IAssignmentPaginationArgs,
-  ): Promise<IAssignmentRow[]> {
+  listAssignments(args: IAssignmentPaginationArgs): Promise<IAssignmentRow[]> {
     const limit = Number(args.limit) || 10;
     const page = Number(args.page) || 1;
     const offset = (page - 1) * limit;
