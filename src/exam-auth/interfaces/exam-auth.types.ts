@@ -10,6 +10,23 @@ export interface IExamJwtPayload {
   roleName: string; // nhomquyen.tennhomquyen
 }
 
+/**
+ * Payload vé khôi phục mật khẩu — thay `$_SESSION['checkMail']` của PHP.
+ * Ký bằng JWT, gửi kèm cookie httpOnly ngắn hạn (10 phút).
+ * `verified` chỉ bật SAU khi nhập đúng OTP → bước đổi mật khẩu bắt buộc có cờ này.
+ */
+export interface IRecoveryTicket {
+  email: string;
+  purpose: 'recover';
+  verified: boolean;
+}
+
+/** Shape {status,message} mà signup/recover JS đọc. */
+export interface IAuthActionResult {
+  status: 'success' | 'error';
+  message: string;
+}
+
 export interface IExamLoginResult {
   accessToken: string;
   user: {
