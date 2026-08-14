@@ -1,4 +1,11 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { AppException } from '@/common/exceptions/app.exception';
@@ -18,7 +25,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal Server Error';
     let code = 'INTERNAL_SERVER_ERROR';
-    let details: any;
+    let details: unknown;
 
     /**
      * 1. Custom App Exception
@@ -28,28 +35,27 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = exception.message;
       code = exception.code;
       details = exception.details;
-    }
-
-    /**
-     * 2. NestJS Default Exception
-     */
-    else if (exception instanceof HttpException) {
+    } else if (exception instanceof HttpException) {
+      /**
+       * 2. NestJS Default Exception
+       */
       statusCode = exception.getStatus();
 
       const exceptionResponse = exception.getResponse();
 
-      if (
-        typeof exceptionResponse === 'object' &&
-        exceptionResponse !== null
-      ) {
-        const res = exceptionResponse as any;
+      if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        // Shape do ValidationPipe/Nest trả về: { message: string | string[], errors?: [] }
+        const res = exceptionResponse as {
+          message?: string | string[];
+          errors?: unknown;
+        };
 
         message = Array.isArray(res.message)
           ? res.message.join(', ')
           : res.message || message;
 
         // Preserve validation errors detail from ValidationPipe
-        if (res.errors && Array.isArray(res.errors)) {
+        if (Array.isArray(res.errors)) {
           details = res.errors;
         }
       } else {
@@ -57,12 +63,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
 
       code = 'HTTP_EXCEPTION';
-    }
-
-    /**
-     * 3. Unknown Error
-     */
-    else if (exception instanceof Error) {
+    } else if (exception instanceof Error) {
+      /**
+       * 3. Unknown Error
+       */
       message = exception.message;
     }
 
@@ -107,7 +111,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       code,
       timestamp: new Date().toISOString(),
       path: request.url,
-      ...(details && { details }),
+      ...(details ? { details } : {}),
     });
   }
 
@@ -125,7 +129,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const accept = request.headers.accept ?? '';
     if (!accept.includes('text/html')) return false;
 
-    const globalPrefix = this.configService.get<string>('GLOBAL_PREFIX') || 'api';
+    const globalPrefix =
+      this.configService.get<string>('GLOBAL_PREFIX') || 'api';
     const path = (request.path || request.url || '').split('?')[0];
     if (path === `/${globalPrefix}` || path.startsWith(`/${globalPrefix}/`)) {
       return false;
@@ -141,7 +146,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
   private renderErrorPage(
     request: Request,
     response: Response,
-    statusCode: number,
+    statusCode: HttpStatus,
     message: string,
   ): void {
     if (statusCode === HttpStatus.UNAUTHORIZED) {
