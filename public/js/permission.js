@@ -89,9 +89,9 @@ $(document).ready(function () {
                 <li>
                     <a class="d-flex text-dark py-2" href="javascript:void(0)">
                         <div class="flex-shrink-0 mx-3">
-                            <img class="img-avatar img-avatar48" src="/public/media/avatars/${
+                            <img class="img-avatar img-avatar48" src="${avatarUrl(
                               notification.avatar
-                            }" alt="">
+                            )}" alt="">
                         </div>
                         <div class="flex-grow-1 fs-sm pe-2">
                            <div class="truncate truncate--3">
