@@ -35,7 +35,7 @@
     <div class="flex-grow-1 text-center">
       <a class="text-decoration-none" style="color: #191970; font-size: 18px; font-weight: bold;">
         <i class="fa fa-graduation-cap fa-sm me-1"></i>
-        DHT Ontest - Website tạo và quản lý bài thi cá nhân hóa
+        LianHarman - Website tạo và quản lý bài thi cá nhân hóa
       </a>
     </div>
     <!-- END Left Section -->
@@ -81,14 +81,16 @@
         <div class="dropdown-menu dropdown-menu-end p-0" aria-labelledby="page-header-user-dropdown">
           <div class="bg-body-light rounded-top fw-semibold text-center p-3 border-bottom">
             <span class="avatar-Account">
-              <img class="img-avatar img-avatar48 img-avatar-thumb" src="/public/media/avatars/<%= (typeof user !== 'undefined' && user.avatar) ? user.avatar : 'avatar2.jpg' %>" alt="" />
+              <%# Cột `avatar` có thể là TÊN FILE cũ hoặc URL Supabase (xem public/js/avatar-url.js) %>
+              <% var headerAvatar = (typeof user !== 'undefined' && user.avatar) ? String(user.avatar) : 'avatar2.jpg'; %>
+              <img class="img-avatar img-avatar48 img-avatar-thumb" src="<%= /^https?:\/\//i.test(headerAvatar) ? headerAvatar : '/public/media/avatars/' + headerAvatar %>" alt="" />
             </span>
             <div class="pt-2 load-nameAccount">
               <a class="fw-semibold"><%= typeof user !== 'undefined' ? user.hoten : '' %></a>
             </div>
           </div>
           <div class="p-2">
-            <a class="dropdown-item" href="#">
+            <a class="dropdown-item" href="/account">
               <i class="si si-settings me-2 fa-fw icon-dropdown-item"></i> Tài khoản
             </a>
             <!-- Logout: stateless JWT nên chỉ cần POST xoá cookie (xem ExamAuthController.logout) -->
