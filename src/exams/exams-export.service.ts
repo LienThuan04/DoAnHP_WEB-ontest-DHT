@@ -248,7 +248,8 @@ export class ExamsExportService {
           line.getCell(9).value = 'Chưa làm';
           line.getCell(10).value = 'Chưa làm';
         } else {
-          line.getCell(3).value = Math.round((diemTN + diemTL + diemDH) * 100) / 100;
+          line.getCell(3).value =
+            Math.round((diemTN + diemTL + diemDH) * 100) / 100;
           line.getCell(4).value = diemTN > 0 ? diemTN : 0;
           line.getCell(5).value = diemTL > 0 ? diemTL : 0;
           line.getCell(6).value = diemDH > 0 ? diemDH : 0;
@@ -356,7 +357,8 @@ export class ExamsExportService {
       line.getCell(2).alignment = { wrapText: true };
       tests.forEach((t, i) => {
         const diem = markMap.get(`${sv.id}|${t.made}`);
-        line.getCell(3 + i).value = diem === null || diem === undefined ? '' : diem;
+        line.getCell(3 + i).value =
+          diem === null || diem === undefined ? '' : diem;
       });
       centerCells(sheet, rowNum, 3, colCount);
       rowNum++;
