@@ -1,9 +1,11 @@
 import request from 'supertest';
 import ExcelJS from 'exceljs';
+import * as XLSX from 'xlsx';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { PrismaService } from '@/prisma/prisma.service';
+import { cellText } from '@/common/utils/excel.util';
 import { createTestApp, login } from './setup-app';
 
 /**
@@ -50,7 +52,6 @@ describe('Xuất Excel / in PDF / nhập SV từ .xlsx (e2e)', () => {
   let tempNhom = 0;
 
   const skip = (why: string) => {
-    // eslint-disable-next-line no-console
     console.warn(`Bỏ qua e2e Excel/PDF: ${why}`);
   };
 
@@ -72,7 +73,8 @@ describe('Xuất Excel / in PDF / nhập SV từ .xlsx (e2e)', () => {
 
   const text = (sheet: ExcelJS.Worksheet, row: number, col: number) => {
     const v = sheet.getRow(row).getCell(col).value;
-    return v === null || v === undefined ? '' : String(v);
+    // Ô kiểu object (rich text/công thức/ngày) → dùng chính helper của app.
+    return typeof v === 'object' && v !== null ? cellText(v) : String(v ?? '');
   };
 
   /**
@@ -99,12 +101,37 @@ describe('Xuất Excel / in PDF / nhập SV từ .xlsx (e2e)', () => {
     return Buffer.from(await wb.xlsx.writeBuffer());
   }
 
+  /**
+   * Cùng bố cục nhưng ghi ra **định dạng `.xls` cũ (BIFF)** — exceljs không ghi
+   * được nên dùng SheetJS, đúng thứ mà server phải đọc được ở nhánh `.xls`.
+   */
+  function buildStudentXls(
+    rows: { mssv: string; hoDem: string; ten: string; email: string }[],
+  ): Buffer {
+    const aoa: unknown[][] = [
+      ['DANH SÁCH SINH VIÊN'],
+      ['', 'MSSV', 'Họ đệm', 'Tên', '', '', '', 'Email'],
+      ...rows.map((r) => ['', r.mssv, r.hoDem, r.ten, '', '', '', r.email]),
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'DSSV');
+    return XLSX.write(wb, { type: 'buffer', bookType: 'xls' }) as Buffer;
+  }
+
   /** 3 SV hợp lệ dùng cho luồng nhập nhóm. */
   const svMoi = [0, 1, 2].map((i) => ({
     mssv: `${PREFIX}${i}`,
     hoDem: 'Nguyễn Văn',
     ten: `Test${i}`,
     email: `${PREFIX.toLowerCase()}${i}@e2e.local`,
+  }));
+
+  /** 2 SV riêng cho luồng nhập từ file `.xls` (vẫn cùng tiền tố để dọn dẹp). */
+  const svXls = [0, 1].map((i) => ({
+    mssv: `${PREFIX}X${i}`,
+    hoDem: 'Lê Thị',
+    ten: `Biff${i}`,
+    email: `${PREFIX.toLowerCase()}x${i}@e2e.local`,
   }));
 
   beforeAll(async () => {
@@ -267,9 +294,7 @@ describe('Xuất Excel / in PDF / nhập SV từ .xlsx (e2e)', () => {
       if (daThi.has(id)) {
         const row = kq.find((k) => k.manguoidung === id)!;
         const tong =
-          Math.round(
-            ((row.diemthi ?? 0) + (row.diem_tuluan ?? 0)) * 100,
-          ) / 100;
+          Math.round(((row.diemthi ?? 0) + (row.diem_tuluan ?? 0)) * 100) / 100;
         // ĐIỂM TỔNG = trắc nghiệm + tự luận + đọc hiểu (đọc hiểu đã nằm trong diemthi).
         expect(Number(text(sheet, r, 3))).toBeCloseTo(tong, 2);
         expect(text(sheet, r, 7)).not.toBe(''); // có thời gian vào thi
@@ -447,7 +472,12 @@ describe('Xuất Excel / in PDF / nhập SV từ .xlsx (e2e)', () => {
     const buf = await buildStudentXlsx([
       ...svMoi,
       { mssv: '', hoDem: 'Thiếu', ten: 'MSSV', email: 'x@e2e.local' },
-      { mssv: `${PREFIX}9`, hoDem: 'Sai', ten: 'Email', email: 'khong-phai-email' },
+      {
+        mssv: `${PREFIX}9`,
+        hoDem: 'Sai',
+        ten: 'Email',
+        email: 'khong-phai-email',
+      },
     ]);
 
     const res = await request(server)
@@ -465,7 +495,38 @@ describe('Xuất Excel / in PDF / nhập SV từ .xlsx (e2e)', () => {
     expect(res.body.data[0].fullname).toBe(`${svMoi[0].hoDem} ${svMoi[0].ten}`);
   });
 
-  it('addExcel: thiếu file / đuôi .xls / file hỏng → lỗi có kiểm soát (không 500)', async () => {
+  it('addExcel đọc được file .xls CŨ (BIFF) y hệt file .xlsx', async () => {
+    if (!gvCookie) return;
+    const rows = [
+      ...svXls,
+      { mssv: '', hoDem: 'Thiếu', ten: 'MSSV', email: 'x@e2e.local' },
+      { mssv: `${PREFIX}X9`, hoDem: 'Sai', ten: 'Email', email: 'sai-email' },
+    ];
+
+    const xls = await request(server)
+      .post('/user/addExcel')
+      .set('Cookie', gvCookie)
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .attach('fileToUpload', buildStudentXls(rows), 'dssv.xls');
+    expect(xls.body.status).toBe('success');
+    expect(xls.body.data).toHaveLength(svXls.length);
+    expect(xls.body.data[0]).toMatchObject({
+      mssv: svXls[0].mssv,
+      fullname: `${svXls[0].hoDem} ${svXls[0].ten}`,
+      email: svXls[0].email,
+      nhomquyen: 2,
+    });
+
+    // Cùng dữ liệu, ghi ra .xlsx → 2 nhánh đọc phải cho kết quả GIỐNG HỆT.
+    const xlsx = await request(server)
+      .post('/user/addExcel')
+      .set('Cookie', gvCookie)
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .attach('fileToUpload', await buildStudentXlsx(rows), 'dssv.xlsx');
+    expect(xlsx.body.data).toEqual(xls.body.data);
+  });
+
+  it('addExcel: thiếu file / đuôi lạ / file hỏng → lỗi có kiểm soát (không 500)', async () => {
     if (!gvCookie) return;
     const thieu = await request(server)
       .post('/user/addExcel')
@@ -475,14 +536,13 @@ describe('Xuất Excel / in PDF / nhập SV từ .xlsx (e2e)', () => {
     expect(thieu.body.message).toMatch(/Chưa chọn file/);
 
     const buf = await buildStudentXlsx(svMoi);
-    const xls = await request(server)
+    const csv = await request(server)
       .post('/user/addExcel')
       .set('Cookie', gvCookie)
       .set('X-Requested-With', 'XMLHttpRequest')
-      .attach('fileToUpload', buf, 'dssv.xls');
-    expect(xls.body.status).toBe('error');
-    // exceljs KHÔNG đọc được .xls (BIFF) → hướng dẫn lưu lại thành .xlsx.
-    expect(xls.body.message).toMatch(/\.xlsx/);
+      .attach('fileToUpload', buf, 'dssv.csv');
+    expect(csv.body.status).toBe('error');
+    expect(csv.body.message).toMatch(/\.xlsx, \.xls/);
 
     const hong = await request(server)
       .post('/user/addExcel')
@@ -491,6 +551,15 @@ describe('Xuất Excel / in PDF / nhập SV từ .xlsx (e2e)', () => {
       .attach('fileToUpload', Buffer.from('day khong phai excel'), 'hong.xlsx');
     expect(hong.status).toBe(201);
     expect(hong.body.status).toBe('error');
+
+    // File rác mang đuôi .xls cũng phải rơi vào nhánh lỗi có kiểm soát.
+    const hongXls = await request(server)
+      .post('/user/addExcel')
+      .set('Cookie', gvCookie)
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .attach('fileToUpload', Buffer.from('day khong phai excel'), 'hong.xls');
+    expect(hongXls.status).toBe(201);
+    expect(hongXls.body.status).toBe('error');
   });
 
   it('addExcel yêu cầu đăng nhập (401)', async () => {
@@ -530,7 +599,7 @@ describe('Xuất Excel / in PDF / nhập SV từ .xlsx (e2e)', () => {
     expect(users).toHaveLength(svMoi.length);
     expect(users[0].manhomquyen).toBe(2);
     expect(users[0].matkhau).not.toBe('123456'); // đã băm bcrypt
-    expect(users[0].matkhau.startsWith('$2')).toBe(true);
+    expect(users[0].matkhau?.startsWith('$2')).toBe(true);
 
     const members = await prisma.chiTietNhom.findMany({
       where: { manhom: tempNhom },
@@ -628,4 +697,35 @@ describe('Xuất Excel / in PDF / nhập SV từ .xlsx (e2e)', () => {
       await prisma.chiTietNhom.count({ where: { manhom: tempNhom } }),
     ).toBe(svMoi.length);
   });
+
+  // Luồng đầy đủ khởi đầu từ file .xls cũ — để cuối cùng vì có thêm thành viên
+  // vào nhóm tạm (các ca trên đối chiếu sỉ số theo `svMoi`).
+  it('nhập SV vào nhóm từ file .xls: addExcel → addFileExcelGroup', async () => {
+    if (!tempNhom || !gvCookie) return;
+
+    const parsed = await request(server)
+      .post('/user/addExcel')
+      .set('Cookie', gvCookie)
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .attach('fileToUpload', buildStudentXls(svXls), 'dssv.xls');
+    expect(parsed.body.status).toBe('success');
+
+    const res = await post('/user/addFileExcelGroup', gvCookie, {
+      listuser: JSON.stringify(parsed.body.data),
+      password: '123456',
+      group: tempNhom,
+    });
+    expect(res.body.status).toBe('success');
+    expect(res.body.message).toContain(`Đã thêm ${svXls.length} sinh viên`);
+
+    const users = await prisma.nguoiDung.findMany({
+      where: { id: { startsWith: `${PREFIX}X` } },
+      orderBy: { id: 'asc' },
+    });
+    expect(users.map((u) => u.id)).toEqual(svXls.map((s) => s.mssv));
+    expect(users[0].hoten).toBe(`${svXls[0].hoDem} ${svXls[0].ten}`);
+
+    const nhom = await prisma.nhom.findUnique({ where: { manhom: tempNhom } });
+    expect(nhom!.siso).toBe(svMoi.length + svXls.length);
+  }, 60_000);
 });
