@@ -140,11 +140,10 @@
                       </div>
                       <div class="mb-4">
                         <label class="form-label" for="js-ckeditor">Nội dung</label>
-                        <!-- KHÁC PHP: chỉ nhận .xlsx (exceljs không đọc định dạng .xls cũ). -->
-                        <input class="form-control" type="file" id="file-cau-hoi" accept=".xlsx" required>
+                        <input class="form-control" type="file" id="file-cau-hoi" accept=".xlsx,.xls" required>
                       </div>
                       <div class="mb-4">
-                        <em>Vui lòng soạn người dùng theo đúng định dạng (dữ liệu từ dòng 3; cột B = MSSV, C = họ đệm, D = tên, H = email). Chỉ hỗ trợ <strong>.xlsx</strong> — file .xls hãy mở rồi "Lưu thành" .xlsx. <a href="/public/filemau/danhsachsv_mau.xlsx">Tải về file mẫu</a></em>
+                        <em>Vui lòng soạn người dùng theo đúng định dạng (dữ liệu từ dòng 3; cột B = MSSV, C = họ đệm, D = tên, H = email). Hỗ trợ <strong>.xlsx</strong> và <strong>.xls</strong>. <a href="/public/filemau/danhsachsv_mau.xlsx">Tải về file mẫu</a></em>
                       </div>
                       <div class="mb-4 d-flex justify-content-between">
                         <button type="submit" class="btn btn-hero btn-primary" id="nhap-file"><i class="fa fa-cloud-arrow-up"></i> Thêm vào hệ thống</button>
