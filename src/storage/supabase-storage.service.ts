@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
 /**
@@ -15,7 +15,9 @@ import { randomUUID } from 'crypto';
 @Injectable()
 export class SupabaseStorageService {
   private readonly logger = new Logger(SupabaseStorageService.name);
-  private readonly client: SupabaseClient;
+  // Lấy đúng kiểu client mà `createClient` trả về (generic mặc định của
+  // `SupabaseClient` khai báo trần không khớp 1-1 nên gán bị báo unsafe).
+  private readonly client: ReturnType<typeof createClient>;
   private readonly bucket: string;
 
   constructor(private readonly config: ConfigService) {
