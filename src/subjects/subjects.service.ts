@@ -40,7 +40,9 @@ export class SubjectsService {
   /** POST /subject/getTotalPages — tổng số trang theo từ khoá. */
   async getTotalPages(args: IPaginationArgs): Promise<{ totalPages: number }> {
     const limit = Number(args.limit) || 10;
-    const total = await this.prisma.monHoc.count({ where: this.buildWhere(args) });
+    const total = await this.prisma.monHoc.count({
+      where: this.buildWhere(args),
+    });
     return { totalPages: Math.ceil(total / limit) || 0 };
   }
 
