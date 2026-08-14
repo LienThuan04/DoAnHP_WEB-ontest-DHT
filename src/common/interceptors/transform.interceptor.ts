@@ -1,4 +1,10 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  HttpStatus,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -17,11 +23,11 @@ export interface IApiResponse<T> {
   path?: string;
 }
 
-
-
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<T, IApiResponse<T>> {
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  IApiResponse<T>
+> {
   constructor(private readonly reflector: Reflector) {}
 
   intercept(
@@ -33,10 +39,10 @@ export class TransformInterceptor<T>
     // Route SSR: có @Render() hoặc đánh dấu @SkipTransform() → trả nguyên vẹn,
     // không bọc JSON (nếu bọc sẽ phá HTML / model truyền cho view).
     const isRender = !!this.reflector.get(RENDER_METADATA, handler);
-    const isSkipped = this.reflector.getAllAndOverride<boolean>(SKIP_TRANSFORM_KEY, [
-      handler,
-      context.getClass(),
-    ]);
+    const isSkipped = this.reflector.getAllAndOverride<boolean>(
+      SKIP_TRANSFORM_KEY,
+      [handler, context.getClass()],
+    );
     if (isRender || isSkipped) {
       return next.handle() as Observable<IApiResponse<T>>;
     }
@@ -44,22 +50,28 @@ export class TransformInterceptor<T>
     const request = context.switchToHttp().getRequest<Request>();
 
     return next.handle().pipe(
-      map((data) => {
+      map((data: unknown): IApiResponse<T> => {
         // nếu response đã chuẩn rồi thì giữ nguyên
-        if (data && typeof data === 'object' && 'statusCode' in data && 'message' in data) {
+        if (
+          data &&
+          typeof data === 'object' &&
+          'statusCode' in data &&
+          'message' in data
+        ) {
+          const std = data as IApiResponse<T>;
           return {
-            ...data,
-            code: data.code || 'SUCCESS',
+            ...std,
+            code: std.code || 'SUCCESS',
             timestamp: new Date().toISOString(),
             path: request.url,
           };
-        } 
+        }
 
         return {
           statusCode: HttpStatus.OK,
           message: 'Request successful',
           code: 'SUCCESS',
-          data,
+          data: data as T,
           timestamp: new Date().toISOString(),
           path: request.url,
         };
