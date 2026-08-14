@@ -65,7 +65,6 @@ describe('Đề tự động + chấm tự luận + trang sinh viên (e2e)', () 
   } = { mcq: [], reading: [], essay: [] };
 
   const skip = (why: string) => {
-    // eslint-disable-next-line no-console
     console.warn(`Bỏ qua e2e đề tự động: ${why}`);
   };
 
@@ -239,10 +238,10 @@ describe('Đề tự động + chấm tự luận + trang sinh viên (e2e)', () 
     for (const r of rows) {
       expect(LEVEL_KEY[r.dokho]).toBe(
         r.loai === 'mcq'
-          ? fixture!.mcqLevel
+          ? fixture.mcqLevel
           : r.loai === 'essay'
-            ? fixture!.essayLevel
-            : fixture!.readingLevel,
+            ? fixture.essayLevel
+            : fixture.readingLevel,
       );
       expect(r.thutu).toBeGreaterThan(0); // reorderQuestions đã đánh số
     }
@@ -268,8 +267,8 @@ describe('Đề tự động + chấm tự luận + trang sinh viên (e2e)', () 
     const keyOf = (macauhoi: number) =>
       options.find((o) => o.macauhoi === macauhoi && o.ladapan === 1)!.macautl;
     const wrongOf = (macauhoi: number) =>
-      options.find((o) => o.macauhoi === macauhoi && o.ladapan !== 1)?.macautl ??
-      null;
+      options.find((o) => o.macauhoi === macauhoi && o.ladapan !== 1)
+        ?.macautl ?? null;
 
     sinh = {
       mcq: rows
@@ -335,9 +334,7 @@ describe('Đề tự động + chấm tự luận + trang sinh viên (e2e)', () 
     makq = kq!.makq;
 
     const ct = await prisma.chiTietKetQua.count({ where: { makq } });
-    expect(ct).toBe(
-      sinh.mcq.length + sinh.reading.length + sinh.essay.length,
-    );
+    expect(ct).toBe(sinh.mcq.length + sinh.reading.length + sinh.essay.length);
   });
 
   it('SV lấy đề: câu tự luận KHÔNG có lựa chọn, câu đọc hiểu kèm đoạn văn', async () => {
@@ -433,9 +430,7 @@ describe('Đề tự động + chấm tự luận + trang sinh viên (e2e)', () 
 
     const all = await call({ made });
     expect(all.body.success).toBe(true);
-    const row = all.body.data.find(
-      (r: { makq: number }) => r.makq === makq,
-    );
+    const row = all.body.data.find((r: { makq: number }) => r.makq === makq);
     expect(row).toBeDefined();
     expect(row.manguoidung).toBe(fixture!.sv);
     expect(row.trangthai_cham).toBe('Chưa chấm');
@@ -446,9 +441,9 @@ describe('Đề tự động + chấm tự luận + trang sinh viên (e2e)', () 
       ungraded.body.data.some((r: { makq: number }) => r.makq === makq),
     ).toBe(true);
     const graded = await call({ made, status: 'graded' });
-    expect(graded.body.data.some((r: { makq: number }) => r.makq === makq)).toBe(
-      false,
-    );
+    expect(
+      graded.body.data.some((r: { makq: number }) => r.makq === makq),
+    ).toBe(false);
 
     // Tìm theo mã sinh viên.
     const found = await call({ made, q: fixture!.sv });
@@ -551,9 +546,9 @@ describe('Đề tự động + chấm tự luận + trang sinh viên (e2e)', () 
       .set('X-Requested-With', 'XMLHttpRequest')
       .type('form')
       .send({ made, status: 'graded' });
-    expect(
-      list.body.data.some((r: { makq: number }) => r.makq === makq),
-    ).toBe(true);
+    expect(list.body.data.some((r: { makq: number }) => r.makq === makq)).toBe(
+      true,
+    );
   });
 
   it('SV xem lại bài: thấy nội dung tự luận + điểm GV đã chấm', async () => {
