@@ -1,6 +1,6 @@
 # 03 — Tiến độ (LIVING DOC — cập nhật mỗi phiên)
 
-> Cập nhật gần nhất: **2026-08-13**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
+> Cập nhật gần nhất: **2026-08-14**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
 > nhớ sửa file này (đánh dấu đã làm gì, còn gì) để phiên/agent sau không mất mạch.
 
 ## Bảng phase
@@ -180,9 +180,9 @@ prefix: `test/getMarkOfAllTest`, `user/addExcel`, `user/addFileExcelGroup`.
 - **`getTenLopDisplay`** tra theo `manhom` (`WHERE manhom IN (...)`). PHP tra
   `tennhom IN (...)` trong khi `ds` mà `test_detail.js` gửi lên là mảng **mã nhóm**
   → luôn không khớp, tiêu đề luôn rơi về "Tất cả các lớp".
-- **Chỉ đọc `.xlsx`** khi nhập SV — exceljs không đọc định dạng `.xls` cũ (BIFF).
-  Báo lỗi rõ ràng thay vì đọc ra dữ liệu rác. `class_detail.ejs` đã đổi
-  `accept=".xlsx"` + file mẫu mới **`public/filemau/danhsachsv_mau.xlsx`** (sinh bằng
+- **Nhập SV đọc `.xlsx` + `.xls`** — exceljs chỉ đọc OOXML nên `.xls` cũ (BIFF) đi qua
+  SheetJS (bổ sung 2026-08-14; trước đó chỉ nhận `.xlsx`).
+  `class_detail.ejs` dùng `accept=".xlsx,.xls"` + file mẫu **`public/filemau/danhsachsv_mau.xlsx`** (sinh bằng
   exceljs, đúng bố cục: dữ liệu từ **dòng 3**, cột **B**=MSSV, **C**=họ đệm,
   **D**=tên, **H**=email — y như PHP đọc `j=1,2,3,7` 0-based).
 - **`addFileGroup`**: băm mật khẩu **1 lần cho cả lô** + cập nhật sỉ số **1 lần ở cuối**
@@ -356,7 +356,7 @@ khôi phục về 6. **17/17 ca ĐÚNG:**
 | --- | --- |
 | `addExcel` với **file mẫu chính thức** `public/filemau/danhsachsv_mau.xlsx` | 3 dòng, đúng MSSV/họ tên ghép từ cột C+D/email |
 | `addExcel` thiếu file | `{status:'error', message:'Chưa chọn file để tải lên'}` |
-| `addExcel` đuôi `.xls` | báo lỗi gợi ý "Lưu thành .xlsx" (không đọc ra dữ liệu rác) |
+| `addExcel` đuôi `.xls` | (lúc đó) báo lỗi gợi ý "Lưu thành .xlsx" — **từ 2026-08-14 đọc được `.xls`**, ca này đổi thành đuôi `.csv` |
 | `addExcel` file 5 dòng (1 thiếu MSSV, 1 email sai) | trả đúng **3** dòng hợp lệ, `nhomquyen=2`, `trangthai=1` |
 | `addFileExcelGroup` lần 1 | `success` — tạo 3 tài khoản (mật khẩu đã băm bcrypt) + 3 `chitietnhom` (`hienthi=1`); `siso` 6 → 9 = số thành viên thực tế |
 | `addFileExcelGroup` lần 2 (cùng danh sách) | `success` + "Sinh viên đã có trong nhóm: …", KHÔNG nhân bản bản ghi |
@@ -557,6 +557,178 @@ dòng `trangthai=0` rồi xoá); chương thêm→đổi tên→xoá mềm (dọ
 nhập → 401. Tổng e2e **100/100 pass** (7 bộ), `pnpm run build` sạch, CSDL sau khi
 chạy y nguyên (14 chương / 9 phân công / 13 người dùng, không dòng `trangthai=0` sót).
 
+## ✅ Rà soát toàn bộ so với bản PHP → bù 4 mảng còn thiếu (2026-08-13)
+
+Đối chiếu 3 danh sách: **action PHP** (18 controller) ↔ **route NestJS** ↔ **URL mà
+JS gốc thực sự gọi**. Kết quả: 4 mảng thiếu thật, đã làm hết.
+
+| # | Thiếu | Đã bù |
+|---|-------|-------|
+| 1 | `POST /test/getTestGroup` — `class_detail.js` gọi nhưng route chưa có → tab "Đề kiểm tra" ở offcanvas nhóm học phần luôn trống | `ExamsService.getTestGroup` (thay `DeThiModel::getListTestGroup`), thời gian định dạng sẵn `H:i d/m/Y` y PHP; gate `dethi.view` |
+| 2 | `POST /user/addFileExcel` — nhập **người dùng** hàng loạt ở trang Người dùng (khác `addFileExcelGroup` = nhập SV vào nhóm); `user.js` còn stub "đang phát triển" | `UsersService.addUsersFromFile` + route gate `nguoidung.create` + nối dây `user.js` (đọc `{status,data}` của `addExcel`), `accept=".xlsx"` |
+| 3 | Trang cá nhân `/account` (`account.php` + `account_setting.php`) — chỉ mới có `getRole`; menu "Tài khoản" ở header trỏ `href="#"` | `GET /account` + `POST /account/{changePassword,changeProfile,uploadFile}`, view `account_setting.ejs`, JS `account_setting.js`, header trỏ `/account` |
+| 4 | Đăng ký + quên mật khẩu (OTP email) — 4 trang + 6 route; link "Tạo tài khoản"/"Quên mật khẩu?" ở `signin.ejs` trỏ `href="#"` | `GET /auth/{signup,recover,otp,changepass}` + `POST /auth/{addUser,sendOptAuth,resendOtpAuth,checkOpt,changePassword}`, 4 view + `recover.js` + partial `auth-scripts.ejs` |
+
+**KHÁC PHP (có chủ ý, phần lớn là vá lỗi/lỗ hổng của bản gốc):**
+1. **Đăng ký KHÔNG dùng lại `/user/add`.** `signup.php` gốc submit sang route quản
+   trị `user/add` — route đó nhận `role` từ client nên **ai cũng tự tạo được tài
+   khoản Admin**. Nay có route riêng `/auth/addUser`, ép `manhomquyen = 2`.
+   (`Auth::addUser` gốc thì đọc `$_POST['id']/hoten` trong khi `signup.js` gửi
+   `fullname` → luồng đó không bao giờ chạy được.)
+2. **Đổi mật khẩu quên phải qua OTP.** PHP chỉ cần có `$_SESSION['checkMail']` nên
+   gọi `sendOptAuth` rồi `changePassword` là đổi được mật khẩu người khác **không
+   cần mã**. Nay trạng thái 3 bước nằm trong **JWT 10 phút ở cookie httpOnly**
+   (`recover_ticket`) và bước cuối đòi vé đã `verified` (chỉ bật sau khi nhập đúng OTP).
+3. **Sửa lỗi thật:** `Auth::changePassword` gọi `NguoiDungModel::changePassword($email,…)`
+   nhưng model lại `WHERE id = ?` → 0 dòng đổi, luôn báo "Đổi mật khẩu thất bại".
+   Bản NestJS cập nhật đúng theo email + xoá OTP đã dùng.
+4. **Giới tính ở trang đăng ký:** `signup.php` để `0 = Nam` trong khi toàn hệ thống
+   (`user.js`, `account_setting`) hiểu `1 = Nam` → tài khoản tự đăng ký hiện sai
+   giới tính. Nay theo quy ước chung.
+5. **Ảnh đại diện** khi đó còn ghi ra `public/media/avatars/` (cột `avatar` lưu TÊN
+   FILE) — **đã chuyển sang Supabase Storage 2026-08-14**, xem mục "Trả nốt 2 nợ lẻ".
+   Chỉ nhận `.jpg/.jpeg/.png`; tên file KHÔNG lấy theo tên người dùng gửi lên (tránh
+   `../`).
+6. OTP sinh bằng `crypto.randomInt` (thay `rand()`), gửi qua `EmailService`
+   (nodemailer + template EJS) có sẵn của dự án.
+7. `account_setting.js`/`recover.js` tự đăng ký validator `emailWithDot` (bản gốc
+   dùng rule này nhưng chỉ định nghĩa trong `user.js` → 2 trang kia ném lỗi);
+   `recover.js` bỏ `JSON.parse` thừa và URL hardcode `/Quanlythitracnghiem/...`.
+
+**BỔ SUNG `POST /test/getExamineeByGroup`** (2026-08-13): bài làm của 1 đề lọc theo
+1 nhóm học phần, kèm `email/hoten/avatar` — thay `KetQuaModel::getExamineeByGroup`.
+PHP có action + model nhưng **không JS nào gọi**; port cho đủ bề mặt API. Giữ nguyên
+truy vấn gốc: chỉ SV **đã có bản ghi `ketqua`** (chưa thi thì không xuất hiện) và
+KHÔNG lọc `chitietnhom.hienthi`. Gate `dethi.view`, body `{made, manhom}` (dùng lại
+`StaticticalDto`).
+
+**KHÔNG port (chết sẵn trong PHP, đã kiểm 0 nơi gọi):** `setting.php`,
+`user_online.php`, `auth/{getUser,checkEmail}`, `account/{checkAllow,check}`,
+`assignment/{getAssignment,deleteAll,getAssignmentByUser}`,
+`test/{getDethi,tookTheExam,check,getGroupsTakeTests}`,
+`user/getData`, `namhoc/getQuery`, `question/addExcel` (nút gốc `disabled`).
+
+**e2e MỚI** `test/auth-account.e2e-spec.ts` (14 ca) phủ cả 4 mảng + `getExamineeByGroup`
+(đối chiếu độc lập bằng Prisma: đúng số SV vừa có `ketqua` vừa thuộc nhóm, có kèm
+email/hoten/avatar; nhóm không khớp → rỗng; SV → 403): đề của nhóm
+(định dạng giờ + thứ tự + nhóm rỗng + SV 403); nhập user Excel (tạo tài khoản băm
+bcrypt, chạy lại báo "đã có", danh sách hỏng, SV 403); đăng ký (ép nhóm quyền 2,
+trùng mã/email, lệch mật khẩu, mật khẩu ngắn → 400); khôi phục mật khẩu (chặn mọi
+lối tắt khi chưa có vé/chưa xác minh, OTP sai/đúng, đổi xong mật khẩu cũ hết hiệu
+lực + OTP bị xoá); trang cá nhân (render, đổi mật khẩu, đổi hồ sơ + email trùng,
+upload ảnh .png/.txt/không file). **`EmailService.sendRegisterOtp` bị mock** nên
+không gửi mail thật; OTP đọc từ cột `nguoidung.otp`.
+Tổng e2e **114/114 pass** (8 bộ), build sạch, CSDL sau khi chạy y nguyên
+(13 người dùng, 0 bản ghi `E2E*`, 0 OTP treo, thư mục avatar sạch).
+
+## ✅ Đổi thương hiệu "DHT OnTest" → "LianHarman" (2026-08-13)
+
+Toàn bộ chỗ **người dùng nhìn thấy** đã đổi (13 file): `views/partials/{navbar,header,
+footer,head}.ejs` (logo sidebar, thanh tiêu đề, footer bản quyền, `<title>` + meta
+description/author), `views/pages/{landing,dashboard,export_pdf}.ejs` (kể cả dòng
+`© … All rights reserved` ở landing và tiêu đề phiếu in PDF), 5 trang `views/pages/auth/*`
+và `src/pages/pages.controller.ts` (Title trang chủ).
+
+- Logo **2 tông màu** giữ nguyên bố cục, chỉ tách chữ khác: `DHT` + `OnTest` →
+  **`Lian` + `Harman`** (signup: `<h1>Lian<span>Harman</span></h1>`; otp/changepass:
+  span nền đen `Lian` + span xanh `Harman`; recover: `text-dark` `Lian` + `text-primary`
+  `Harman`).
+- **Email** (OTP đăng ký/khôi phục) lấy tên từ biến môi trường `APP_NAME` — vốn đã là
+  `LianHarman` nên tiêu đề + footer "© … All rights reserved" trong mail đã đúng, không
+  cần sửa template.
+- **KHÔNG đụng tới:** chuỗi `DHT_OneTest` trong **comment** (đó là đường dẫn thư mục mã
+  nguồn PHP gốc, cần giữ để tra cứu khi port tiếp), và ràng buộc email đăng ký
+  `@dht.edu.vn` ở `views/pages/auth/signup.ejs` (là **quy tắc nghiệp vụ** — chỉ nhận
+  email trường — không phải thương hiệu; muốn đổi domain thì sửa `emailPattern` ở đó).
+- Kiểm chứng: render thật 7 trang (`/`, `/auth/{signin,signup,recover}`, `/dashboard`,
+  `/test`, `/account`) → **0 lần** xuất hiện "DHT OnTest/OnTest DHT", brand mới hiện
+  đúng chỗ. e2e vẫn **114/114 pass**.
+
+## ✅ Trả nốt 2 nợ lẻ: đọc `.xls` cũ + avatar lên Supabase (2026-08-14)
+
+### A. Nhập SV/người dùng đọc được cả `.xls` (BIFF) lẫn `.xlsx`
+
+- Gói mới **`xlsx` (SheetJS) 0.20.3**, cài từ **CDN chính chủ**
+  (`pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`) — KHÔNG dùng gói
+  `xlsx` trên npm registry (kẹt ở 0.18.5, còn lỗ hổng đã vá ở bản sau). Vì thế
+  `package.json` ghi dependency dạng URL tarball; máy mới cài cần vào được CDN đó.
+- `src/common/utils/excel.util.ts` thêm 2 hàm trả về **cùng một ma trận chuỗi**
+  (`rows[i][j]`, đã đệm tối thiểu 8 cột):
+  `readXlsxSheetRows` (exceljs) và `readXlsSheetRows` (SheetJS, `raw:false` để MSSV
+  dài không ra dạng số mũ, `defval:''`+`blankrows:true` để không lệch dòng/cột).
+- `UsersService.parseStudentExcel` chỉ còn **rẽ nhánh theo đuôi file** rồi lọc dữ liệu
+  dùng chung: dữ liệu từ **dòng 3**, cột **B/C/D/H** (index 1/2/3/7). Đuôi khác
+  `.xlsx`/`.xls` → `Chỉ hỗ trợ file Excel (.xlsx, .xls)`. File rác (cả 2 đuôi) vẫn rơi
+  vào nhánh lỗi có kiểm soát, KHÔNG 500.
+- `views/pages/user.ejs` + `views/pages/class_detail.ejs` mở lại `accept=".xlsx,.xls"`
+  (bỏ dòng hướng dẫn "hãy lưu thành .xlsx"). File mẫu vẫn là `.xlsx`.
+- e2e: `excel-pdf` +2 ca (đọc `.xls` cho kết quả **giống hệt** `.xlsx`; nhập trọn luồng
+  `addExcel` → `addFileExcelGroup` từ `.xls`), `auth-account` +1 ca (nhập **người dùng**
+  từ `.xls`). Ca cũ "đuôi `.xls` → lỗi" đổi thành **đuôi `.csv` → lỗi**.
+
+### B. Ảnh đại diện lưu trên Supabase Storage
+
+- `AccountService.uploadAvatar` nay `SupabaseStorageService.uploadImage(buffer,'avatars')`
+  → cột `avatar` lưu **URL đầy đủ**; ảnh cũ của chính user đó được `storage.remove()`
+  dọn kèm (tên file cũ không phải URL bucket thì hàm bỏ qua). Vẫn chỉ nhận
+  `.jpg/.jpeg/.png`. Hết ghi ra đĩa → chạy được trên hạ tầng **ephemeral**.
+- **Tương thích ngược** là bắt buộc vì seed/dữ liệu PHP cũ lưu TÊN FILE
+  (`ANHSV.png`, `avatar2.jpg`) trong `public/media/avatars/`. Hai helper cùng quy tắc
+  `http(s)://… → dùng nguyên, còn lại → ghép '/public/media/avatars/'`:
+  - server: `src/common/utils/avatar.util.ts` (`avatarSrc`, `DEFAULT_AVATAR`) —
+    `AccountService.getProfile` trả thêm trường **`avatarUrl`** cho view;
+  - client: **`public/js/avatar-url.js`** (`window.avatarUrl(avatar, fallback)`), nạp ở
+    `views/partials/head.ejs` ngay sau jQuery nên MỌI trang SSR đều có.
+- 12 chỗ render đã sửa: `header.ejs` (1, inline vì `user` lấy từ JWT),
+  `account_setting.ejs` (2 → dùng `profile.avatarUrl`), `class_detail.js` (3),
+  `client_group.js` (2), `test_detail.js` (2), `user.js` (1), `permission.js` (1).
+  ⚠️ Thêm chỗ render avatar mới thì PHẢI đi qua helper, không ghép tay đường dẫn.
+- e2e `auth-account`: ca upload nay đối chiếu `avatar` khớp URL bucket + trang
+  `/account` in đúng `src` đó, thêm ca "avatar dạng tên file cũ vẫn ra
+  `/public/media/avatars/ANHSV.png`"; `afterAll` **xoá ảnh test khỏi bucket**.
+- Ảnh cũ trong `public/media/avatars/` GIỮ NGUYÊN (seed vẫn trỏ tới), không cần
+  migrate; chỉ ảnh tải lên từ nay mới nằm trên Supabase.
+
+Kiểm chứng: `pnpm run build` sạch, **e2e 118/118 pass (8 bộ)**, CSDL y nguyên
+(13 người dùng / 3 nhóm / 18 `chitietnhom`, không còn bản ghi `E2E*`, không còn
+`avatar` dạng URL sau khi test dọn).
+
+## ✅ Dọn sạch lint toàn dự án (2026-08-14)
+
+Trước phiên này `pnpm run lint` báo **1152 vấn đề** (nợ cũ tích từ đầu dự án). Nay
+**`npx eslint "{src,apps,libs,test}/**/*.ts"` → 0 lỗi, 0 cảnh báo**, `npx tsc --noEmit`
+và `pnpm run build` cũng sạch.
+
+- **763 lỗi `prettier/prettier`** đã tự sửa bằng `pnpm run lint` (script có sẵn `--fix`)
+  — thuần định dạng, ~58 file `src/`.
+- **Sửa tay phần còn lại trong `src/` (60 lỗi)**, đáng chú ý:
+  - `@types/bcrypt` **CHƯA được cài** → cả `src/lib/bcrypt/bcrypt.ts` là "error typed
+    value" (TS không biết kiểu `bcrypt`). Đã `pnpm add -D @types/bcrypt`.
+  - `EmailService.transporter` khai báo `nodemailer.Transporter` (generic mặc định
+    `any`) → đổi sang `ReturnType<typeof nodemailer.createTransport>` để `info.messageId`
+    có kiểu. Tương tự `SupabaseStorageService.client` → `ReturnType<typeof createClient>`.
+  - `AllExceptionsFilter`: bỏ `as any` cho `exception.getResponse()` (đặt kiểu
+    `{message?: string|string[]; errors?: unknown}`), `details: any` → `unknown`,
+    `renderErrorPage(statusCode: HttpStatus)` để hết `no-unsafe-enum-comparison`.
+  - `TransformInterceptor`: `map((data: unknown): IApiResponse<T> => ...)`.
+  - `JwtAuthGuard.handleRequest` khai báo generic `<TUser = IExamJwtPayload>` đúng
+    hợp đồng `IAuthGuard` (trước trả `any`).
+  - File MỚI **`src/common/utils/text.util.ts`**: `plainText(unknown)` (object →
+    chuỗi rỗng thay vì `'[object Object]'`) + `errorMessage(unknown)` cho `catch`.
+    Dùng lại ở `excel.util`, `exams.service` (4 chỗ `String(...)`), `seed-db.service`
+    (bỏ `catch (error: any)`).
+  - Regex xoá ký tự zero-width viết bằng **escape** `/[\u200B-\u200D]/g` (trước là ký
+    tự thật trong mã nguồn → `no-irregular-whitespace`).
+  - Gỡ import chết: `HttpAdapterHost` (main), `PrismaPg` (prisma.service — code dùng
+    `accelerateUrl`, adapter chỉ còn trong comment), `ApiProperty`, `ISoCauLevels`.
+- **`eslint.config.mjs` thêm 1 override cho `test/**/*.ts`**: tắt nhóm
+  `@typescript-eslint/no-unsafe-*`. Lý do: supertest khai báo `Response.body` là `any`
+  nên mọi `expect(res.body.x)` đều dính rule (301 lỗi) — ép kiểu từng chỗ chỉ tạo tiếng
+  ồn chứ không làm code chạy thật an toàn hơn. **`src/` vẫn bật đủ rule.**
+
+⚠️ Sau đợt này e2e vẫn **118/118 pass**, CSDL y nguyên. Khi thêm code mới nhớ chạy
+`pnpm run lint` (có `--fix`) trước khi commit để không tích nợ lại.
+
 ## Việc kế tiếp (gợi ý)
 
 **Cả 7 phase đã XONG.** Việc còn lại là kiểm chứng & nợ lẻ:
@@ -569,8 +741,18 @@ chạy y nguyên (14 chương / 9 phân công / 13 người dùng, không dòng 
    ~~thông báo (`/teacher_announcement/*`) + thống kê (`/statistic/*`)~~ —
    **XONG 2026-08-11** (`test/announcement-statistic.e2e-spec.ts`);
    ~~nhập/xuất Excel + in PDF~~ — **XONG 2026-08-11** (`test/excel-pdf.e2e-spec.ts`).
-   → Toàn bộ nghiệp vụ đã có e2e (**100 ca / 7 bộ**).
+   → Toàn bộ nghiệp vụ đã có e2e (**118 ca / 8 bộ** sau 2026-08-14).
 3. ~~`view_subject.php`~~ — **XONG 2026-08-13** (module `src/view-subject/`, kèm e2e).
-   Còn nợ lẻ: `getExamineeByGroup` (PHP có action + model nhưng **không JS nào gọi**
-   → chỉ port khi có nơi dùng), hỗ trợ đọc `.xls` cũ khi nhập SV (exceljs không đọc
-   được BIFF; cần thư viện khác như `xlsx` — chỉ làm nếu người dùng cần).
+   ~~4 mảng thiếu phát hiện khi rà soát toàn bộ (đề của nhóm, nhập user Excel, trang
+   cá nhân, đăng ký + quên mật khẩu)~~ — **XONG 2026-08-13** (xem mục rà soát ở trên).
+4. ~~`getExamineeByGroup`~~ — **XONG 2026-08-13** (`POST /test/getExamineeByGroup`).
+
+### Nợ lẻ — ĐÃ TRẢ HẾT (2026-08-14)
+
+~~A. Đọc file `.xls` cũ (BIFF) khi nhập SV/người dùng~~ và
+~~B. Chuyển ảnh đại diện sang Supabase Storage~~ — **XONG 2026-08-14**, chi tiết ở mục
+"Trả nốt 2 nợ lẻ" phía trên.
+
+**Không còn hạng mục port nào đang treo.** Ý tưởng mở rộng (KHÔNG bắt buộc, chỉ làm khi
+có yêu cầu): nhập câu hỏi từ Excel ở trang Câu hỏi (nút gốc vẫn `disabled`), và migrate
+các ảnh đại diện cũ trong `public/media/avatars/` lên bucket nếu muốn bỏ hẳn thư mục đó.
