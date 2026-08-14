@@ -1,5 +1,5 @@
 export enum CookieSameSite {
-    LAX = 'lax',
-    STRICT = 'strict',
-    NONE = 'none',
+  LAX = 'lax',
+  STRICT = 'strict',
+  NONE = 'none',
 }
