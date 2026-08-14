@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { SupabaseStorageService } from '@/storage/supabase-storage.service';
+import { plainText } from '@/common/utils/text.util';
 import type {
   IAddDetailResult,
   ICreatedTestRow,
@@ -22,7 +23,6 @@ import type {
   IQuestionForTestFilter,
   IQuestionForTestRow,
   IResultDetailRow,
-  ISoCauLevels,
   ISoCauMap,
   IStartPageData,
   IStudentAnswerOption,
@@ -367,12 +367,7 @@ export class ExamsService {
     if (f.loai) conds.push(Prisma.sql`AND cauhoi.loai = ${String(f.loai)}`);
     // KHÁC PHP: PHP đọc $input (args.input/content) nên ô tìm kiếm (gửi
     // filter.keyword) vô tác dụng — ở đây ưu tiên filter.keyword để search hoạt động.
-    const keyword = (
-      f.keyword ??
-      args.input ??
-      args.content ??
-      ''
-    ).trim();
+    const keyword = (f.keyword ?? args.input ?? args.content ?? '').trim();
     if (keyword)
       conds.push(Prisma.sql`AND cauhoi.noidung ILIKE ${`%${keyword}%`}`);
     return conds.length ? Prisma.join(conds, ' ') : Prisma.empty;
@@ -507,7 +502,7 @@ export class ExamsService {
 
   /** Ép về số nguyên (mô phỏng (int) của PHP). */
   private toInt(v: unknown, def = 0): number {
-    const n = parseInt(String(v ?? ''), 10);
+    const n = parseInt(plainText(v), 10);
     return isNaN(n) ? def : n;
   }
 
@@ -623,12 +618,25 @@ export class ExamsService {
     const added: number[] = [];
     for (const [type, levels] of Object.entries(socau)) {
       for (const lvl of ['de', 'tb', 'kho'] as const) {
-        const qty = this.toInt((levels as ISoCauLevels)[lvl]);
+        const qty = this.toInt(levels[lvl]);
         if (qty <= 0) continue;
         const ids =
           type === 'reading'
-            ? await this.getReadingQuestions(tx, chuong, monhoc, levelMap[lvl], qty)
-            : await this.getQuestions(tx, chuong, monhoc, levelMap[lvl], [type], qty);
+            ? await this.getReadingQuestions(
+                tx,
+                chuong,
+                monhoc,
+                levelMap[lvl],
+                qty,
+              )
+            : await this.getQuestions(
+                tx,
+                chuong,
+                monhoc,
+                levelMap[lvl],
+                [type],
+                qty,
+              );
         added.push(...ids);
       }
     }
@@ -734,7 +742,10 @@ export class ExamsService {
    * Gói toàn bộ (đề + chương + nhóm + câu tự động + thông báo) trong 1
    * $transaction (chặt hơn PHP, vốn không bọc transaction).
    */
-  async createTest(userId: string, dto: CreateTestDto): Promise<ICreateTestResult> {
+  async createTest(
+    userId: string,
+    dto: CreateTestDto,
+  ): Promise<ICreateTestResult> {
     try {
       const mamonhoc = (dto.mamonhoc ?? '').trim();
       const tende = (dto.tende ?? '').trim();
@@ -761,7 +772,8 @@ export class ExamsService {
       const diem_tuluan = Number(dto.diem_tuluan) || 0;
       const diem_dochieu = Number(dto.diem_dochieu) || 0;
 
-      const g = (t: string, l: 'de' | 'tb' | 'kho') => this.toInt(socau[t]?.[l]);
+      const g = (t: string, l: 'de' | 'tb' | 'kho') =>
+        this.toInt(socau[t]?.[l]);
 
       return await this.prisma.$transaction(async (tx) => {
         // Đủ câu theo loại & mức độ (chỉ đề tự động).
@@ -772,7 +784,7 @@ export class ExamsService {
               ['tb', 2],
               ['kho', 3],
             ] as const) {
-              const qty = this.toInt((levels as ISoCauLevels)[key]);
+              const qty = this.toInt(levels[key]);
               if (qty <= 0) continue;
               const available = await this.countAvailable(
                 tx,
@@ -856,7 +868,10 @@ export class ExamsService {
    * DeThiModel::update. Nếu đã có thí sinh làm → chặn đổi số câu/điểm. Đề tự động
    * chưa ai làm → random lại danh sách câu. Luôn cập nhật lại thutu theo cờ đảo.
    */
-  async updateTest(userId: string, dto: UpdateTestDto): Promise<ICreateTestResult> {
+  async updateTest(
+    userId: string,
+    dto: UpdateTestDto,
+  ): Promise<ICreateTestResult> {
     try {
       const made = this.toInt(dto.made);
       if (made <= 0) throw new Error('Mã đề không hợp lệ.');
@@ -883,7 +898,8 @@ export class ExamsService {
       const diem_tracnghiem = Number(dto.diem_tracnghiem) || 0;
       const diem_tuluan = Number(dto.diem_tuluan) || 0;
       const diem_dochieu = Number(dto.diem_dochieu) || 0;
-      const g = (t: string, l: 'de' | 'tb' | 'kho') => this.toInt(socau[t]?.[l]);
+      const g = (t: string, l: 'de' | 'tb' | 'kho') =>
+        this.toInt(socau[t]?.[l]);
 
       return await this.prisma.$transaction(async (tx) => {
         const hasResult = (await tx.ketQua.count({ where: { made } })) > 0;
@@ -920,7 +936,8 @@ export class ExamsService {
           if (!sameCounts) {
             return {
               success: false,
-              error: 'Đề đã có thí sinh làm, không được thay đổi số lượng câu hỏi!',
+              error:
+                'Đề đã có thí sinh làm, không được thay đổi số lượng câu hỏi!',
             };
           }
           const sameScore =
@@ -1297,10 +1314,13 @@ export class ExamsService {
 
       // Thời gian kết thúc: ưu tiên client gửi nếu lệch <= 120s, ngược lại = now.
       let end = new Date();
-      const rawTime = String(body.thoigian ?? '');
+      const rawTime = plainText(body.thoigian);
       if (rawTime) {
         const t = new Date(rawTime);
-        if (!isNaN(t.getTime()) && Math.abs(t.getTime() - Date.now()) <= 120000) {
+        if (
+          !isNaN(t.getTime()) &&
+          Math.abs(t.getTime() - Date.now()) <= 120000
+        ) {
           end = t;
         }
       }
@@ -1310,13 +1330,17 @@ export class ExamsService {
       );
 
       // listCauTraLoi (JSON) → [{macauhoi, cautraloi, thutu}].
-      let listCauTraLoi: { macauhoi?: number; cautraloi?: number; thutu?: number }[] =
-        [];
+      type ILuaChon = {
+        macauhoi?: number;
+        cautraloi?: number;
+        thutu?: number;
+      };
+      let listCauTraLoi: ILuaChon[] = [];
       const rawList = body.listCauTraLoi;
       if (typeof rawList === 'string') {
         try {
           const parsed = JSON.parse(rawList) as unknown;
-          if (Array.isArray(parsed)) listCauTraLoi = parsed;
+          if (Array.isArray(parsed)) listCauTraLoi = parsed as ILuaChon[];
         } catch {
           listCauTraLoi = [];
         }
@@ -1325,9 +1349,7 @@ export class ExamsService {
       // Loại của từng câu (mcq/essay/reading).
       const macList = [
         ...new Set(
-          listCauTraLoi
-            .map((a) => this.toInt(a.macauhoi))
-            .filter((n) => n > 0),
+          listCauTraLoi.map((a) => this.toInt(a.macauhoi)).filter((n) => n > 0),
         ),
       ];
       const typeMap = new Map<number, string>();
@@ -1395,8 +1417,9 @@ export class ExamsService {
             : 0;
         const diemDoChieu =
           tongReading > 0
-            ? Math.round((readingTotal / tongReading) * socaudungReading * 100) /
-              100
+            ? Math.round(
+                (readingTotal / tongReading) * socaudungReading * 100,
+              ) / 100
             : 0;
         const diem = diemTracNghiem + diemDoChieu;
 
@@ -1450,13 +1473,15 @@ export class ExamsService {
       { macauhoi: number; noidung: string; thutu: number; images: string[] }
     >();
     for (const [key, value] of Object.entries(body)) {
-      const m = key.match(/^essay_(\d+)_(exists|macauhoi|noidung|thutu|image_\d+)$/);
+      const m = key.match(
+        /^essay_(\d+)_(exists|macauhoi|noidung|thutu|image_\d+)$/,
+      );
       if (!m) continue;
       const idx = m[1];
       if (!essays.has(idx))
         essays.set(idx, { macauhoi: 0, noidung: '', thutu: 0, images: [] });
       const e = essays.get(idx)!;
-      const v = String(value ?? '');
+      const v = plainText(value);
       if (key.endsWith('_macauhoi')) e.macauhoi = this.toInt(v);
       else if (key.endsWith('_noidung')) e.noidung = v.trim();
       else if (key.endsWith('_thutu')) e.thutu = this.toInt(v);
@@ -1630,7 +1655,9 @@ export class ExamsService {
   /** Điều kiện lọc nhóm cho bảng điểm (manhom là số hoặc mảng số). */
   private examResultManhom(manhom: IExamPaginationArgs['manhom']): Prisma.Sql {
     if (Array.isArray(manhom)) {
-      const list = manhom.map((m) => Number(m)).filter((n) => Number.isFinite(n));
+      const list = manhom
+        .map((m) => Number(m))
+        .filter((n) => Number.isFinite(n));
       if (list.length === 0) return Prisma.sql`AND FALSE`;
       return Prisma.sql`AND CTN.manhom IN (${Prisma.join(list)})`;
     }
@@ -1718,7 +1745,7 @@ export class ExamsService {
     countOnly: boolean,
   ): Prisma.Sql {
     const made = Number(args.made);
-    const filter = String(args.filter ?? 'present');
+    const filter = plainText(args.filter) || 'present';
     const manhom = this.examResultManhom(args.manhom);
     const input = (args.input ?? args.content ?? '').trim();
     const like = `%${input}%`;
@@ -1822,7 +1849,8 @@ export class ExamsService {
       }
     }
     return {
-      diem_trung_binh: soluong !== 0 ? Math.round((tongdiem / soluong) * 100) / 100 : 0,
+      diem_trung_binh:
+        soluong !== 0 ? Math.round((tongdiem / soluong) * 100) / 100 : 0,
       da_nop_bai: soluong,
       chua_nop_bai: chuanop,
       khong_thi: khongthi,
@@ -1944,7 +1972,8 @@ export class ExamsService {
     let daCham = 0;
     for (const row of rows) {
       if (!byCau.has(row.macauhoi)) {
-        const diemCham = row.diem_da_cham != null ? Number(row.diem_da_cham) : null;
+        const diemCham =
+          row.diem_da_cham != null ? Number(row.diem_da_cham) : null;
         byCau.set(row.macauhoi, {
           macauhoi: row.macauhoi,
           noidung_cauhoi: row.noidung_cauhoi ?? '(Câu hỏi đã bị xóa)',
@@ -2034,7 +2063,11 @@ export class ExamsService {
             where: { makq, macauhoi: { in: rows.map((r) => r.macauhoi) } },
           });
           await tx.chamTuLuan.createMany({
-            data: rows.map((r) => ({ makq, macauhoi: r.macauhoi, diem: r.diem })),
+            data: rows.map((r) => ({
+              makq,
+              macauhoi: r.macauhoi,
+              diem: r.diem,
+            })),
           });
         }
         await tx.ketQua.update({
@@ -2083,4 +2116,69 @@ export class ExamsService {
       ORDER BY T1.made DESC
     `);
   }
+
+  /**
+   * POST /test/getExamineeByGroup — bài làm của 1 đề, lọc theo 1 nhóm học phần
+   * (kèm email/họ tên/ảnh của thí sinh). Thay
+   * `KetQuaModel::getExamineeByGroup`.
+   *
+   * PHP có sẵn action + model này nhưng KHÔNG file JS nào gọi — port lại cho đủ
+   * bề mặt API; dùng được cho màn "danh sách thí sinh theo nhóm" của 1 đề.
+   * Giữ nguyên truy vấn gốc: chỉ lấy SV **đã có bản ghi `ketqua`** (SV chưa thi
+   * không xuất hiện) và KHÔNG lọc `chitietnhom.hienthi`.
+   */
+  getExamineeByGroup(
+    made: number,
+    manhom: number,
+  ): Promise<Record<string, unknown>[]> {
+    return this.prisma.$queryRaw<Record<string, unknown>[]>(Prisma.sql`
+      SELECT KQ.*, ND.email, ND.hoten, ND.avatar
+      FROM ketqua KQ, nguoidung ND, chitietnhom CTN
+      WHERE KQ.manguoidung = ND.id
+        AND CTN.manguoidung = ND.id
+        AND KQ.made = ${made}
+        AND CTN.manhom = ${manhom}
+      ORDER BY KQ.makq ASC
+    `);
+  }
+
+  /**
+   * POST /test/getTestGroup — đề đã giao cho 1 nhóm (tab "Đề kiểm tra" ở
+   * offcanvas trang chi tiết nhóm học phần của GV). Thay
+   * DeThiModel::getListTestGroup.
+   *
+   * KHÁC PHP: SQL gốc không lọc `dethi.trangthai` — giữ nguyên để đề tạm ẩn vẫn
+   * hiện với GV. Mốc thời gian trả về đã định dạng sẵn `H:i d/m/Y` y PHP
+   * (`date_format`) vì class_detail.js in thẳng chuỗi ra màn hình.
+   */
+  async getTestGroup(manhom: number): Promise<Record<string, unknown>[]> {
+    const rows = await this.prisma.$queryRaw<
+      {
+        made: number;
+        tende: string;
+        thoigianbatdau: Date | null;
+        thoigianketthuc: Date | null;
+      }[]
+    >(Prisma.sql`
+      SELECT DT.made, DT.tende, DT.thoigianbatdau, DT.thoigianketthuc
+      FROM dethi DT, giaodethi GDT
+      WHERE DT.made = GDT.made AND GDT.manhom = ${manhom}
+      ORDER BY DT.made DESC
+    `);
+
+    return rows.map((r) => ({
+      ...r,
+      thoigianbatdau: formatTestTime(r.thoigianbatdau),
+      thoigianketthuc: formatTestTime(r.thoigianketthuc),
+    }));
+  }
+}
+
+/** `H:i d/m/Y` — y `date_format(..., "H:i d/m/Y")` của DeThiModel PHP. */
+function formatTestTime(value: Date | string | null): string {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())} ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
