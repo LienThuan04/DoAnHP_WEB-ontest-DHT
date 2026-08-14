@@ -33,15 +33,12 @@ function htmlEntityDecode(str: string): string {
     .replace(/&#x([0-9a-f]+);/gi, (_, h: string) =>
       String.fromCodePoint(parseInt(h, 16)),
     )
-    .replace(
-      /&(amp|lt|gt|quot|apos|nbsp|#0?39);/g,
-      (m) => named[m] ?? m,
-    );
+    .replace(/&(amp|lt|gt|quot|apos|nbsp|#0?39);/g, (m) => named[m] ?? m);
 }
 
 /** Bỏ ký tự zero-width Word hay chèn (giống preg_replace \x{200B}-\x{200D}). */
 function stripZeroWidth(str: string): string {
-  return str.replace(/[​‌‍]/g, '');
+  return str.replace(/[\u200B-\u200D]/g, '');
 }
 
 /** Đọc .docx → mảng dòng đã trim, bỏ dòng trống (thay bước split của PHP). */
@@ -62,7 +59,10 @@ function orderOptions(
   const keys = Object.keys(opts).sort(
     (a, b) => a.charCodeAt(0) - b.charCodeAt(0),
   );
-  return { options: keys.map((k) => opts[k]), answer: keys.indexOf(correct) + 1 };
+  return {
+    options: keys.map((k) => opts[k]),
+    answer: keys.indexOf(correct) + 1,
+  };
 }
 
 /**
