@@ -78,7 +78,6 @@ describe('Trang lỗi 404/403/500 (e2e)', () => {
       // gv001 = giảng viên (nhóm quyền 1) trong `seed/exam-sample.ts`.
       cookie = await login(app, 'gv001');
       if (!cookie) {
-        // eslint-disable-next-line no-console
         console.warn(
           'Bỏ qua nhóm test cần đăng nhập: CSDL chưa có tài khoản mẫu gv001 (chạy seed trước).',
         );
