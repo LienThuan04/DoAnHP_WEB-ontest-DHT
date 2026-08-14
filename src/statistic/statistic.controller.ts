@@ -112,7 +112,10 @@ export class StatisticController {
   /** POST /statistic/getAggregatedStatistical — thống kê tổng hợp. */
   @SkipTransform()
   @Post('getAggregatedStatistical')
-  getAggregatedStatistical(@Req() req: Request, @Body() dto: StatAggregatedDto) {
+  getAggregatedStatistical(
+    @Req() req: Request,
+    @Body() dto: StatAggregatedDto,
+  ) {
     const user = req.user as IExamJwtPayload;
     return this.statistic.getAggregatedStatisticalData(
       user.id,
