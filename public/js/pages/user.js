@@ -1,5 +1,5 @@
 // Port từ DHT_OneTest/public/js/pages/user.js — đổi URL './' → '/' cho route NestJS.
-// Nhập từ file Excel (addExcel/addFileExcel) để Phase 3; nút import hiện báo "đang phát triển".
+// Nhập từ file Excel (addExcel → addFileExcel) đã nối dây; đọc .xlsx (exceljs) + .xls (SheetJS).
 Dashmix.helpersOnLoad(["js-flatpickr", "jq-datepicker"]);
 
 // Custom validate: email phải có dấu chấm ở phần domain.
@@ -65,9 +65,10 @@ const showData = function (users) {
       <tr>
         <td class="text-center"><strong>${user.id}</strong></td>
         <td class="fs-sm d-flex align-items-center">
-          <img class="img-avatar img-avatar48 me-3" src="/public/media/avatars/${
-            user.avatar == null ? `avatar2.jpg` : user.avatar
-          }" alt="">
+          <img class="img-avatar img-avatar48 me-3" src="${avatarUrl(
+            user.avatar,
+            "avatar2.jpg"
+          )}" alt="">
           <div class="d-flex flex-column">
             <strong class="text-primary">${user.hoten}</strong>
             <span class="fw-normal fs-sm text-muted">${user.email}</span>
@@ -342,15 +343,106 @@ $(document).ready(function () {
     });
   });
 
-  // Nhập từ file Excel — sẽ port ở Phase 3 (cần exceljs + multer).
+  // Nhập người dùng từ file Excel: đọc file (/user/addExcel) rồi ghi danh sách
+  // (/user/addFileExcel). Bê từ user.js gốc, đổi sang path tuyệt đối và đọc
+  // {status,data,message} — addExcel bản NestJS trả bọc thay vì mảng trần.
   $("#nhap-file").click(function (e) {
     e.preventDefault();
-    Dashmix.helpers("jq-notify", {
-      type: "info",
-      icon: "fa fa-info-circle me-1",
-      message: "Nhập từ file Excel đang được phát triển (Phase 3).",
+    let password = $("#ps_user_group").val();
+    let file_cauhoi = $("#file-cau-hoi").val();
+    if (password == "" || file_cauhoi == "") {
+      Dashmix.helpers("jq-notify", {
+        type: "danger",
+        icon: "fa fa-times me-1",
+        message: `Vui lòng điền đầy đủ thông tin!`,
+      });
+      return;
+    }
+
+    var file = $("#file-cau-hoi")[0].files[0];
+    var formData = new FormData();
+    formData.append("fileToUpload", file);
+    $.ajax({
+      type: "post",
+      url: "/user/addExcel",
+      data: formData,
+      contentType: false,
+      processData: false,
+      dataType: "json",
+      beforeSend: function () {
+        Dashmix.layout("header_loader_on");
+      },
+      success: function (response) {
+        if (response.status === "error") {
+          Dashmix.helpers("jq-notify", {
+            type: "danger",
+            icon: "fa fa-times me-1",
+            message: response.message,
+          });
+          return;
+        }
+        addExcel(response.data, password);
+      },
+      error: function (xhr) {
+        console.error("Lỗi AJAX:", xhr.responseText);
+        Dashmix.helpers("jq-notify", {
+          type: "danger",
+          icon: "fa fa-times me-1",
+          message: `Lỗi khi xử lý file Excel: ${xhr.responseText}`,
+        });
+      },
+      complete: function () {
+        Dashmix.layout("header_loader_off");
+      },
     });
   });
+
+  function addExcel(data, password) {
+    $.ajax({
+      type: "post",
+      url: "/user/addFileExcel",
+      data: {
+        listuser: JSON.stringify(data),
+        password: password,
+      },
+      dataType: "json",
+      beforeSend: function () {
+        Dashmix.layout("header_loader_on");
+      },
+      success: function (response) {
+        Dashmix.helpers("jq-notify", {
+          type: response.status === "success" ? "success" : "danger",
+          icon:
+            response.status === "success"
+              ? "fa fa-check me-1"
+              : "fa fa-times me-1",
+          message:
+            response.message ||
+            (response.status === "success"
+              ? "Thêm người dùng thành công!"
+              : "Thêm người dùng thất bại!"),
+        });
+        if (response.status === "success") {
+          mainPagePagination.valuePage.curPage = 1;
+          mainPagePagination.getPagination(mainPagePagination.option, 1);
+          $("#ps_user_group").val("");
+          $("#file-cau-hoi").val("");
+          $("#modal-add-user").modal("hide");
+        }
+      },
+      error: function (xhr) {
+        console.error("Lỗi AJAX:", xhr.responseText);
+        Dashmix.helpers("jq-notify", {
+          type: "danger",
+          icon: "fa fa-times me-1",
+          message: `Lỗi khi thêm người dùng: ${xhr.responseText}`,
+        });
+      },
+      complete: function () {
+        Dashmix.layout("header_loader_off");
+      },
+    });
+  }
 
   function clearInputFields() {
     $("#masinhvien").val("");
