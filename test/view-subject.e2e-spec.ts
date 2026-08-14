@@ -42,7 +42,6 @@ describe('Môn học của tôi — view_subject (e2e)', () => {
     null;
 
   const skip = (why: string) => {
-    // eslint-disable-next-line no-console
     console.warn(`Bỏ qua e2e view_subject: ${why}`);
   };
 
@@ -83,7 +82,8 @@ describe('Môn học của tôi — view_subject (e2e)', () => {
       ORDER BY pc.namhoc DESC, pc.hocky DESC, pc.mamonhoc ASC
       LIMIT 1
     `;
-    if (!rows.length) return skip('CSDL chưa có phân công mẫu (chạy seed-demo)');
+    if (!rows.length)
+      return skip('CSDL chưa có phân công mẫu (chạy seed-demo)');
 
     const [count] = await prisma.$queryRaw<{ total: number }[]>`
       SELECT COUNT(*)::int AS total FROM (
@@ -300,7 +300,9 @@ describe('Môn học của tôi — view_subject (e2e)', () => {
 
     const res = await paginate(gvCookie, { limit: 50, page: 1 }).expect(201);
     expect(
-      res.body.some((r: { mamonhoc: string }) => r.mamonhoc === free[0].mamonhoc),
+      res.body.some(
+        (r: { mamonhoc: string }) => r.mamonhoc === free[0].mamonhoc,
+      ),
     ).toBe(false);
     expect(res.body.length).toBe(fixture.total);
   });
