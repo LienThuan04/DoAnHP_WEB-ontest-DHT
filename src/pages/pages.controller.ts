@@ -35,7 +35,7 @@ export class PagesController {
     // (Đăng nhập <-> Dashboard) — kiểm sự hiện diện cookie, không cần verify.
     const cookieName = process.env.ACCESS_TOKEN_COOKIE || 'access_token';
     const isLoggedIn = !!req.cookies?.[cookieName];
-    return { Title: 'DHT ONTEST', isLoggedIn };
+    return { Title: 'LianHarman', isLoggedIn };
   }
 
   @Get('dashboard')
