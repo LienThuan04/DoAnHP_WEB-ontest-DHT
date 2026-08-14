@@ -40,6 +40,11 @@ Giữ **nguyên nghiệp vụ + giao diện** của hệ thi cũ; chỉ đổi c
 ## Kiểm chứng khi làm xong (môi trường có thể KHÔNG có DB local)
 
 - `pnpm run build` phải sạch.
+- **`pnpm run lint` phải sạch** (script có sẵn `--fix`). Từ 2026-08-14 toàn dự án
+  **0 lỗi/0 cảnh báo** — đừng để tích nợ lại. `eslint.config.mjs` có override tắt
+  nhóm `no-unsafe-*` **chỉ cho `test/**`** (supertest khai `res.body: any`);
+  trong `src/` rule vẫn bật đủ nên tránh `any`, dùng
+  `plainText()`/`errorMessage()` ở `src/common/utils/text.util.ts`.
 - Boot `node dist/src/main.js` → xem log `RouterExplorer` "Mapped ... route".
   DB có thể là remote (Prisma Postgres/Supabase) — nếu kết nối được thì seed chạy.
 
@@ -65,7 +70,8 @@ trong `dashboard.ejs` + `public/js/pages/dashboard.js`.
 helper `src/common/utils/excel.util.ts`, service mới `src/exams/exams-export.service.ts`.
 6 route: `module/exportExcelStudentS`, `test/exportExcel`, `test/getMarkOfAllTest`
 (MỚI — PHP thiếu action), `test/exportPdf/:makq` (trang HTML tự `window.print()` thay
-dompdf), `user/addExcel` + `user/addFileExcelGroup` (chỉ đọc `.xlsx`; file mẫu
+dompdf), `user/addExcel` + `user/addFileExcelGroup` (đọc `.xlsx`, thêm `.xls` từ
+2026-08-14; file mẫu
 `public/filemau/danhsachsv_mau.xlsx`). Chi tiết + danh sách "KHÁC PHP": `docs/03`.
 
 **Phase 7 slice 2 XONG (2026-08-04):** seed dữ liệu mẫu nghiệp vụ —
@@ -148,8 +154,46 @@ DISTINCT); bỏ nút "Thêm môn học" chết; chương gate `chuong.*` (KHÔNG
 nhóm quyền Giáo Viên không có quyền đó). e2e MỚI `test/view-subject.e2e-spec.ts`
 (14 ca) → tổng **100/100 pass** (7 bộ), CSDL y nguyên. Chi tiết: `docs/03`.
 
-→ Việc kế tiếp gợi ý: nợ lẻ `getExamineeByGroup` (PHP có action nhưng không JS nào
-gọi), hỗ trợ đọc `.xls` cũ khi nhập SV.
+**Rà soát toàn bộ + bù 4 mảng thiếu (2026-08-13):** đối chiếu action PHP ↔ route
+NestJS ↔ URL mà JS gốc gọi → phát hiện & làm nốt: (1) `POST /test/getTestGroup`
+(tab "Đề kiểm tra" ở offcanvas nhóm học phần, `class_detail.js` gọi mà chưa có
+route); (2) `POST /user/addFileExcel` + nối dây `user.js` (nhập **người dùng** hàng
+loạt ở trang Người dùng — trước còn stub); (3) **trang cá nhân `/account`**
+(`account_setting.ejs` + đổi mật khẩu/hồ sơ/ảnh đại diện, header hết `href="#"`);
+(4) **đăng ký + quên mật khẩu bằng OTP** (`/auth/{signup,recover,otp,changepass}` +
+`addUser/sendOptAuth/resendOtpAuth/checkOpt/changePassword`, 4 view + `recover.js`).
+⚠️ 3 điểm KHÁC PHP quan trọng: đăng ký KHÔNG dùng lại `/user/add` (route đó nhận
+`role` → ai cũng tự tạo được Admin), luồng quên mật khẩu bắt buộc qua OTP (vé JWT
+10 phút trong cookie `recover_ticket`, cờ `verified`; PHP chỉ cần session email),
+và sửa lỗi `changePassword` của PHP (update theo `id` trong khi truyền email).
+Ảnh đại diện lúc đó còn ghi ra `public/media/avatars/` (**đã chuyển sang Supabase
+2026-08-14** — xem mục dưới). Bổ sung nốt **`POST /test/getExamineeByGroup`**
+(bài làm của 1 đề lọc theo nhóm, kèm email/hoten/avatar — PHP có action nhưng không
+JS nào gọi). e2e MỚI `test/auth-account.e2e-spec.ts` (14 ca, **mock `EmailService`**
+nên không gửi mail thật) → tổng **114/114 pass** (8 bộ).
+Chi tiết + danh sách action PHP cố ý KHÔNG port: `docs/03`.
+
+**Thương hiệu (2026-08-13):** mọi chỗ người dùng nhìn thấy đã đổi **"DHT OnTest" →
+"LianHarman"** (13 file: navbar/header/footer/head, landing, dashboard, export_pdf,
+5 trang auth, `pages.controller.ts`). Logo 2 tông màu tách thành `Lian` + `Harman`.
+Email dùng `APP_NAME` (đã là LianHarman). **Giữ nguyên** chuỗi `DHT_OneTest` trong
+comment (đường dẫn mã nguồn PHP gốc) và ràng buộc email đăng ký `@dht.edu.vn`
+(quy tắc nghiệp vụ, không phải thương hiệu).
+
+**Trả nốt 2 nợ lẻ (2026-08-14):** (A) **nhập SV/người dùng đọc được cả `.xls` cũ
+(BIFF)** — gói `xlsx` (SheetJS, cài từ CDN chính chủ), 2 hàm đọc chung ở
+`src/common/utils/excel.util.ts` (`readXlsxSheetRows`/`readXlsSheetRows`),
+`UsersService.parseStudentExcel` chỉ rẽ nhánh theo đuôi, 2 view mở lại
+`accept=".xlsx,.xls"`. (B) **ảnh đại diện lên Supabase Storage** (thư mục `avatars/`,
+cột `avatar` lưu URL, dọn ảnh cũ) — cột này nay có **2 dạng giá trị** (URL mới / TÊN
+FILE cũ) nên mọi chỗ render phải dùng helper `avatarSrc()` (server,
+`src/common/utils/avatar.util.ts`) hoặc `window.avatarUrl()` (client,
+`public/js/avatar-url.js`, nạp ở `partials/head.ejs`) — 12 chỗ đã sửa. e2e
+**118/118 pass** (8 bộ). Chi tiết: `docs/03` + `docs/06`.
+
+→ **Việc kế tiếp:** KHÔNG còn hạng mục port nào treo. Ý tưởng tuỳ chọn: nhập câu hỏi
+từ Excel ở trang Câu hỏi (nút gốc vẫn `disabled`), migrate ảnh đại diện cũ trong
+`public/media/avatars/` lên bucket nếu muốn bỏ hẳn thư mục đó.
 
 ✅ **Lỗi DB ETIMEDOUT đã fix** (commit `32e94f23`): `src/prisma/prisma.service.ts`
 dùng `datasourceUrl` cho URL Accelerate `prisma+postgres://`, chỉ dùng adapter `pg`
