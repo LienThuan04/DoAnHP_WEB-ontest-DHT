@@ -21,7 +21,11 @@ export class ValidationException extends AppException {
 // Error when a requested resource is not found
 export class NotFoundException extends AppException {
   constructor(resource: string, id?: string) {
-    super( 404, id ? `${resource} with ID ${id} not found` : `${resource} not found`,   'NOT_FOUND' );
+    super(
+      404,
+      id ? `${resource} with ID ${id} not found` : `${resource} not found`,
+      'NOT_FOUND',
+    );
   }
 }
 
