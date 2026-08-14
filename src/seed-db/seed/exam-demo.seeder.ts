@@ -173,7 +173,9 @@ export async function seedExamDemo(
   const machuongOf = (mamonhoc: string, tenchuong: string): number => {
     const id = chuongIds.get(`${mamonhoc}#${tenchuong}`);
     if (id == null) {
-      throw new Error(`Không tìm thấy chương "${tenchuong}" của môn ${mamonhoc}.`);
+      throw new Error(
+        `Không tìm thấy chương "${tenchuong}" của môn ${mamonhoc}.`,
+      );
     }
     return id;
   };
@@ -183,7 +185,9 @@ export async function seedExamDemo(
   const mahockyOf = (tennamhoc: string, sohocky: number): number => {
     const id = hockyIds.get(`${tennamhoc}#${sohocky}`);
     if (id == null) {
-      throw new Error(`Không tìm thấy học kỳ ${sohocky} của năm học ${tennamhoc}.`);
+      throw new Error(
+        `Không tìm thấy học kỳ ${sohocky} của năm học ${tennamhoc}.`,
+      );
     }
     return id;
   };
@@ -282,7 +286,8 @@ export async function seedExamDemo(
       const created = await prisma.cauHoi.create({
         data: {
           noidung: q.noidung,
-          dapan_dung: CHU_CAI[q.dapan.findIndex((a) => a.ladapan === 1)] ?? null,
+          dapan_dung:
+            CHU_CAI[q.dapan.findIndex((a) => a.ladapan === 1)] ?? null,
           dokho: dv.dokho,
           mamonhoc: dv.mamonhoc,
           machuong,
@@ -302,7 +307,9 @@ export async function seedExamDemo(
       });
     }
   }
-  log(`Câu hỏi: ${cauhoiIds.size} (gồm ${demoDoanVan.length} đoạn văn đọc hiểu).`);
+  log(
+    `Câu hỏi: ${cauhoiIds.size} (gồm ${demoDoanVan.length} đoạn văn đọc hiểu).`,
+  );
 
   // ── 6. Đề thi (+ giao nhóm, thông báo, bài làm mẫu) ────────────────────────
   let soKetQua = 0;
@@ -393,7 +400,8 @@ async function taoDeThi(
 
   const manhom = t.nhom.map((key) => {
     const id = ctx.nhomIds.get(key);
-    if (id == null) throw new Error(`Không tìm thấy nhóm "${key}" khi giao đề.`);
+    if (id == null)
+      throw new Error(`Không tìm thấy nhóm "${key}" khi giao đề.`);
     return id;
   });
   if (manhom.length) {
@@ -404,13 +412,15 @@ async function taoDeThi(
   }
 
   // Danh sách câu của đề: thủ công lấy theo `key`, tự động random như addQuestionsToAutoTest.
-  const macauhoi = t.loaide === 0
-    ? (t.cauhoi ?? []).map((key) => {
-        const id = ctx.cauhoiIds.get(key);
-        if (id == null) throw new Error(`Không tìm thấy câu hỏi "${key}" của đề ${t.key}.`);
-        return id;
-      })
-    : await chonCauTuDong(prisma, t, machuong);
+  const macauhoi =
+    t.loaide === 0
+      ? (t.cauhoi ?? []).map((key) => {
+          const id = ctx.cauhoiIds.get(key);
+          if (id == null)
+            throw new Error(`Không tìm thấy câu hỏi "${key}" của đề ${t.key}.`);
+          return id;
+        })
+      : await chonCauTuDong(prisma, t, machuong);
 
   if (macauhoi.length) {
     await prisma.chiTietDeThi.createMany({
@@ -485,7 +495,12 @@ async function taoThongBaoDeThi(
     `onclick="window.open('${link}', '_blank')">${t.tende} – Môn ${mon?.tenmonhoc ?? 'Không rõ'}</span>`;
 
   const tb = await prisma.thongBao.create({
-    data: { noidung, thoigiantao: new Date(), nguoitao: t.nguoitao, is_auto: 1 },
+    data: {
+      noidung,
+      thoigiantao: new Date(),
+      nguoitao: t.nguoitao,
+      is_auto: 1,
+    },
   });
   if (!manhom.length) return;
 
@@ -551,10 +566,12 @@ async function taoKetQuaMau(
     const dungDocHieu = cauDocHieu.filter((id) => dungIds.has(id)).length;
 
     const diemTracNghiem = cauTracNghiem.length
-      ? Math.round((t.diem_tracnghiem / cauTracNghiem.length) * dungMcq * 100) / 100
+      ? Math.round((t.diem_tracnghiem / cauTracNghiem.length) * dungMcq * 100) /
+        100
       : 0;
     const diemDocHieu = cauDocHieu.length
-      ? Math.round((t.diem_dochieu / cauDocHieu.length) * dungDocHieu * 100) / 100
+      ? Math.round((t.diem_dochieu / cauDocHieu.length) * dungDocHieu * 100) /
+        100
       : 0;
 
     const ketthuc = new Date(batdau.getTime() + kq.thoigianlambai * 60 * 1000);
