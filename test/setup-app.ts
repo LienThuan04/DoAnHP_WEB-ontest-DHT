@@ -60,5 +60,8 @@ export async function login(
 
   const setCookie = res.headers['set-cookie'];
   const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
-  return cookies.filter(Boolean).map((c: string) => c.split(';')[0]).join('; ');
+  return cookies
+    .filter(Boolean)
+    .map((c: string) => c.split(';')[0])
+    .join('; ');
 }
