@@ -165,10 +165,7 @@ export class StatisticService {
    * Thống kê điểm 1 đề (lọc theo nhóm; manhom=0 = tất cả).
    * Thay ThongKeModel::getStatisticalData.
    */
-  async getStatisticalData(
-    made: number,
-    manhom = 0,
-  ): Promise<IStatisticData> {
+  async getStatisticalData(made: number, manhom = 0): Promise<IStatisticData> {
     const data = this.emptyData();
     if (!made) return data;
 
@@ -204,7 +201,9 @@ export class StatisticService {
     if (dem > 0) data.diem_trung_binh = this.round1(tong / dem);
 
     // Số thí sinh không thi: thành viên nhóm được giao đề nhưng chưa có kết quả.
-    const khongThi = await this.prisma.$queryRaw<{ total: bigint }[]>(Prisma.sql`
+    const khongThi = await this.prisma.$queryRaw<
+      { total: bigint }[]
+    >(Prisma.sql`
       SELECT COUNT(*)::bigint AS total
       FROM chitietnhom cn
       JOIN giaodethi gd ON cn.manhom = gd.manhom
@@ -230,9 +229,13 @@ export class StatisticService {
     const data = this.emptyData();
     if (!nguoitao || !mahocky || !namhoc) return data;
 
-    const monCond = mamonhoc ? Prisma.sql`AND d.monthi = ${mamonhoc}` : Prisma.empty;
+    const monCond = mamonhoc
+      ? Prisma.sql`AND d.monthi = ${mamonhoc}`
+      : Prisma.empty;
     const nhomCond =
-      manhom && manhom !== 0 ? Prisma.sql`AND cn.manhom = ${manhom}` : Prisma.empty;
+      manhom && manhom !== 0
+        ? Prisma.sql`AND cn.manhom = ${manhom}`
+        : Prisma.empty;
 
     const rows = await this.prisma.$queryRaw<
       { diemthi: number | null; thoigianvaothi: Date | null }[]
@@ -258,7 +261,9 @@ export class StatisticService {
     }
 
     // Số thí sinh không thi (đếm DISTINCT người chưa có kết quả).
-    const khongThi = await this.prisma.$queryRaw<{ total: bigint }[]>(Prisma.sql`
+    const khongThi = await this.prisma.$queryRaw<
+      { total: bigint }[]
+    >(Prisma.sql`
       SELECT COUNT(DISTINCT cn.manguoidung)::bigint AS total
       FROM chitietnhom cn
       JOIN giaodethi gd ON cn.manhom = gd.manhom
