@@ -68,7 +68,10 @@ export class ViewSubjectController {
   @Permissions('hocphan', 'view')
   @SkipTransform()
   @Post('getTotalPages')
-  getTotalPages(@Req() req: Request, @Body() dto: ViewSubjectPaginationBodyDto) {
+  getTotalPages(
+    @Req() req: Request,
+    @Body() dto: ViewSubjectPaginationBodyDto,
+  ) {
     const user = req.user as IExamJwtPayload;
     return this.viewSubject.countAssignedSubjectPages(
       user.id,
