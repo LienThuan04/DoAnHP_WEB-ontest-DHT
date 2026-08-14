@@ -1,10 +1,9 @@
-import ExcelJS from 'exceljs';
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/prisma/prisma.service';
 import { generatePasswordHash } from '@/lib/bcrypt/bcrypt';
-import { cellText } from '@/common/utils/excel.util';
+import { readXlsSheetRows, readXlsxSheetRows } from '@/common/utils/excel.util';
 import { CreateUserDto } from '@/users/dto/create-user.dto';
 import { UpdateUserDto } from '@/users/dto/update-user.dto';
 import type {
@@ -78,8 +77,7 @@ export class UsersService {
       take: limit,
       include: { nhomQuyen: { select: { tennhomquyen: true } } },
     });
-    const fmt = (d: Date | null) =>
-      d ? d.toISOString().slice(0, 10) : '';
+    const fmt = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '');
     return rows.map((u) => ({
       id: u.id,
       email: u.email,
@@ -112,7 +110,9 @@ export class UsersService {
   }
 
   /** Tạo người dùng — thay create(). Như PHP: luôn nhóm 2, trạng thái 1. */
-  async create(dto: CreateUserDto): Promise<{ status: string; message: string }> {
+  async create(
+    dto: CreateUserDto,
+  ): Promise<{ status: string; message: string }> {
     const dupEmail = await this.prisma.nguoiDung.findUnique({
       where: { email: dto.email },
     });
@@ -120,7 +120,8 @@ export class UsersService {
     const dupId = await this.prisma.nguoiDung.findUnique({
       where: { id: dto.masinhvien },
     });
-    if (dupId) return { status: 'error', message: 'Mã sinh viên đã được sử dụng' };
+    if (dupId)
+      return { status: 'error', message: 'Mã sinh viên đã được sử dụng' };
 
     try {
       const salt = parseInt(
@@ -148,7 +149,9 @@ export class UsersService {
   }
 
   /** Cập nhật người dùng — thay update(). password trống = giữ nguyên. */
-  async update(dto: UpdateUserDto): Promise<{ status: string; message: string }> {
+  async update(
+    dto: UpdateUserDto,
+  ): Promise<{ status: string; message: string }> {
     const existing = await this.prisma.nguoiDung.findUnique({
       where: { email: dto.email },
     });
@@ -214,14 +217,16 @@ export class UsersService {
   /**
    * POST /user/addExcel — đọc file danh sách SV (.xls/.xlsx) và trả về JSON để
    * client xem trước rồi gửi sang addFileExcelGroup. Thay `User::addExcel`
-   * (PHPExcel) bằng exceljs.
+   * (PHPExcel) bằng exceljs (.xlsx) + SheetJS (.xls).
    *
    * Bố cục file giữ y bản PHP (mẫu danh sách lớp của trường): bỏ 2 dòng đầu,
    * dữ liệu từ **dòng 3**; cột **B** = MSSV, **C** = họ đệm, **D** = tên,
    * **H** = email. Dòng thiếu mssv/họ tên/email hoặc email sai định dạng bị BỎ QUA.
    *
-   * KHÁC PHP: exceljs KHÔNG đọc được định dạng .xls cũ (BIFF) → chỉ nhận .xlsx
-   * và báo lỗi rõ ràng thay vì đọc ra dữ liệu rác.
+   * Đọc được cả 2 định dạng: `.xlsx` (OOXML) qua exceljs và **`.xls` cũ (BIFF)**
+   * qua `xlsx`/SheetJS — exceljs không đọc được BIFF nên phải rẽ nhánh theo đuôi
+   * file. Sau khi đọc, cả 2 nhánh cho cùng ma trận chuỗi nên phần lọc dữ liệu
+   * bên dưới dùng chung.
    */
   async parseStudentExcel(
     file: Express.Multer.File | undefined,
@@ -230,19 +235,19 @@ export class UsersService {
       return { status: 'error', message: 'Chưa chọn file để tải lên' };
     }
     const ext = (file.originalname.split('.').pop() ?? '').toLowerCase();
-    if (ext !== 'xlsx') {
+    if (ext !== 'xlsx' && ext !== 'xls') {
       return {
         status: 'error',
-        message:
-          ext === 'xls'
-            ? 'Chỉ hỗ trợ file Excel .xlsx — hãy mở file .xls và "Lưu thành" .xlsx'
-            : 'Chỉ hỗ trợ file Excel (.xlsx)',
+        message: 'Chỉ hỗ trợ file Excel (.xlsx, .xls)',
       };
     }
 
-    const workbook = new ExcelJS.Workbook();
+    let rows: string[][] | null;
     try {
-      await workbook.xlsx.load(file.buffer as unknown as ArrayBuffer);
+      rows =
+        ext === 'xls'
+          ? readXlsSheetRows(file.buffer)
+          : await readXlsxSheetRows(file.buffer);
     } catch (err) {
       this.logger.error('Đọc file Excel thất bại', err as Error);
       return {
@@ -251,18 +256,18 @@ export class UsersService {
       };
     }
 
-    const sheet = workbook.worksheets[0];
-    if (!sheet) {
+    if (!rows) {
       return { status: 'error', message: 'File Excel không có sheet nào' };
     }
 
     const data: IImportUserRow[] = [];
-    for (let i = 3; i <= sheet.rowCount; i++) {
-      const row = sheet.getRow(i);
-      const mssv = cellText(row.getCell(2).value);
-      const hoDem = cellText(row.getCell(3).value);
-      const ten = cellText(row.getCell(4).value);
-      const email = cellText(row.getCell(8).value);
+    // Dữ liệu từ dòng 3 → chỉ số mảng 2; cột B/C/D/H → chỉ số 1/2/3/7.
+    for (let i = 2; i < rows.length; i++) {
+      const row = rows[i] ?? [];
+      const mssv = row[1] ?? '';
+      const hoDem = row[2] ?? '';
+      const ten = row[3] ?? '';
+      const email = row[7] ?? '';
       const fullname = `${hoDem} ${ten}`.trim();
 
       if (!mssv || !email || !fullname) continue;
@@ -377,6 +382,93 @@ export class UsersService {
     }
     if (exists.length > 0) {
       message += `Sinh viên đã có trong nhóm: ${exists.join(', ')}. `;
+    }
+    if (errors.length > 0) {
+      message += `Lỗi: ${errors.join(', ')}`;
+      return { status: 'error', message: message.trim() };
+    }
+    return {
+      status: 'success',
+      message: message.trim() || 'Thêm người dùng thành công!',
+    };
+  }
+
+  /**
+   * POST /user/addFileExcel — tạo tài khoản hàng loạt từ danh sách đã đọc ở
+   * `addExcel` (tab "Nhập từ file" của trang Người dùng). Thay
+   * `User::addFileExcel` + `NguoiDungModel::addFile`.
+   *
+   * KHÁC PHP: (1) băm mật khẩu **1 lần** cho cả lô thay vì mỗi vòng lặp;
+   * (2) MSSV đã có tài khoản → **bỏ qua** và báo lại (`exists`) thay vì để INSERT
+   * chết vì trùng khoá chính; (3) email trùng bắt bằng `P2002` nên không 500;
+   * (4) trả `{status,message}` liệt kê rõ đã thêm / đã tồn tại / lỗi, thay vì chỉ
+   * `true|false` như PHP (JS cũ chỉ báo "thành công" bất kể kết quả thật).
+   * Giữ nguyên: mặc định `trangthai`/`nhomquyen` lấy từ từng dòng của file.
+   */
+  async addUsersFromFile(
+    listUser: IImportUserRow[],
+    password: string,
+  ): Promise<IActionStatus> {
+    if (listUser.length === 0 || !password) {
+      return { status: 'error', message: 'Dữ liệu hoặc mật khẩu không hợp lệ' };
+    }
+
+    const salt = parseInt(
+      this.config.get<string>('BCRYPT_SALT_ROUNDS') || '10',
+      10,
+    );
+    const hashed = await generatePasswordHash(password, salt);
+
+    const success: string[] = [];
+    const exists: string[] = [];
+    const errors: string[] = [];
+
+    for (const user of listUser) {
+      const mssv = (user.mssv ?? '').trim();
+      const email = (user.email ?? '').trim();
+      const fullname = (user.fullname ?? '').trim();
+      if (!mssv || !email || !fullname) {
+        errors.push(`Dữ liệu không hợp lệ cho MSSV: ${mssv}`);
+        continue;
+      }
+
+      const account = await this.prisma.nguoiDung.findUnique({
+        where: { id: mssv },
+        select: { id: true },
+      });
+      if (account) {
+        exists.push(mssv);
+        continue;
+      }
+
+      try {
+        await this.prisma.nguoiDung.create({
+          data: {
+            id: mssv,
+            email,
+            hoten: fullname,
+            matkhau: hashed,
+            trangthai: Number(user.trangthai ?? 1),
+            manhomquyen: Number(user.nhomquyen ?? 2),
+          },
+        });
+        success.push(mssv);
+      } catch (err) {
+        const code = (err as Prisma.PrismaClientKnownRequestError).code;
+        errors.push(
+          code === 'P2002'
+            ? `Email ${email} đã tồn tại cho MSSV ${mssv}`
+            : `Lỗi thêm MSSV ${mssv}`,
+        );
+      }
+    }
+
+    let message = '';
+    if (success.length > 0) {
+      message += `Đã thêm ${success.length} người dùng thành công. `;
+    }
+    if (exists.length > 0) {
+      message += `Đã có tài khoản: ${exists.join(', ')}. `;
     }
     if (errors.length > 0) {
       message += `Lỗi: ${errors.join(', ')}`;
