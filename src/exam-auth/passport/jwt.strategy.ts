@@ -20,8 +20,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const accessCookieName =
       configService.get<string>('ACCESS_TOKEN_COOKIE') || 'access_token';
     const cookieExtractor = (req: Request): string | null => {
-      const cookies = (req as Request & { cookies?: Record<string, string> })
-        .cookies;
+      // `Request['cookies']` của @types/express là `any` → ép về map chuỗi
+      // để giá trị trả về có kiểu thật (cookie-parser luôn cho chuỗi).
+      const cookies = (req as { cookies?: Record<string, string> }).cookies;
       return cookies?.[accessCookieName] ?? null;
     };
     super({
