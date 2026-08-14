@@ -74,9 +74,7 @@ function showData(data) {
           <div class="d-flex align-items-center py-1">
             <img
               class="img-avatar img-avatar48 me-3 rounded-circle flex-shrink-0"
-              src="/public/media/avatars/${
-                item.avatar?.trim() || "admin1-689ab11d45eea.jpg"
-              }"
+              src="${avatarUrl(item.avatar, "admin1-689ab11d45eea.jpg")}"
               onerror="this.src='/public/media/avatars/admin1-689ab11d45eea.jpg'"
               alt=""
             >
@@ -1027,7 +1025,7 @@ function loadStudentsEssayToGrade(made, q, status) {
   <!-- Avatar -->
   <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3"
        style="width:48px; height:48px; font-size:20px; font-weight:bold;">
-    <img src="${item.avatar?.trim() || "/public/media/avatars/ANHSV.png"}"
+    <img src="${avatarUrl(item.avatar, "ANHSV.png")}"
          alt="${hoten}"
          class="rounded-circle"
          style="width:100%; height:100%; object-fit:cover;">
