@@ -18,6 +18,7 @@ import { UsersService } from '@/users/users.service';
 import { CreateUserDto } from '@/users/dto/create-user.dto';
 import { UpdateUserDto } from '@/users/dto/update-user.dto';
 import {
+  AddFileExcelDto,
   AddFileExcelGroupDto,
   CheckUserDto,
   PaginationBodyDto,
@@ -123,7 +124,7 @@ export class UsersController {
   }
 
   /**
-   * POST /user/addExcel — đọc file danh sách SV (.xlsx) và trả JSON xem trước.
+   * POST /user/addExcel — đọc file danh sách SV (.xlsx/.xls) và trả JSON xem trước.
    * Gọi từ tab "Nhập từ file" của trang chi tiết nhóm (class_detail.js).
    * Chỉ cần đăng nhập như user.php gốc (GV không có quyền `nguoidung` vẫn dùng
    * được nút này ở nhóm của mình); route KHÔNG ghi gì vào CSDL.
@@ -133,6 +134,28 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('fileToUpload', { limits: MULTER_LIMITS }))
   addExcel(@UploadedFile() file: Express.Multer.File) {
     return this.usersService.parseStudentExcel(file);
+  }
+
+  /**
+   * POST /user/addFileExcel — tạo tài khoản hàng loạt từ danh sách đã đọc
+   * (tab "Nhập từ file" của trang Người dùng, `user.js`). KHÁC `addFileExcelGroup`:
+   * chỉ tạo tài khoản, không gắn vào nhóm nào.
+   *
+   * Gate `nguoidung`/`create` (route này TẠO người dùng ở trang quản trị) — chặt
+   * hơn PHP vốn chỉ `checkAuthentication`.
+   */
+  @Permissions('nguoidung', 'create')
+  @SkipTransform()
+  @Post('addFileExcel')
+  addFileExcel(@Body() dto: AddFileExcelDto) {
+    let list: IImportUserRow[] = [];
+    try {
+      const parsed: unknown = JSON.parse(dto.listuser);
+      if (Array.isArray(parsed)) list = parsed as IImportUserRow[];
+    } catch {
+      return { status: 'error', message: 'Danh sách người dùng không hợp lệ' };
+    }
+    return this.usersService.addUsersFromFile(list, dto.password);
   }
 
   /**
