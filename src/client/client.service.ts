@@ -54,10 +54,7 @@ export class ClientService {
    * POST /client/loadDataGroups — nhóm SV đang tham gia theo trạng thái hiển thị.
    * Thay NhomModel::getAllGroup_User($user_id, $hienthi). Bỏ nhóm trangthai=0.
    */
-  getAllGroupUser(
-    userId: string,
-    hienthi: number,
-  ): Promise<IClientGroupRow[]> {
+  getAllGroupUser(userId: string, hienthi: number): Promise<IClientGroupRow[]> {
     return this.prisma.$queryRaw<IClientGroupRow[]>(Prisma.sql`
       SELECT MH.mamonhoc, MH.tenmonhoc,
              N.manhom, N.tennhom, N.namhoc, N.hocky,
@@ -94,11 +91,7 @@ export class ClientService {
    * Thay NhomModel::sv_hide. Trả true nếu cập nhật được (client_group.js chỉ
    * kiểm truthy). giatri phải là 0 hoặc 1.
    */
-  async svHide(
-    manhom: number,
-    masv: string,
-    giatri: number,
-  ): Promise<boolean> {
+  async svHide(manhom: number, masv: string, giatri: number): Promise<boolean> {
     if (giatri !== 0 && giatri !== 1) return false;
     const res = await this.prisma.chiTietNhom.updateMany({
       where: { manhom, manguoidung: masv },
@@ -206,9 +199,7 @@ export class ClientService {
   }
 
   /** POST /client/pagination — 1 trang lịch thi (mảng, ORDER BY made DESC). */
-  listUserTestSchedule(
-    args: IClientScheduleArgs,
-  ): Promise<ITestScheduleRow[]> {
+  listUserTestSchedule(args: IClientScheduleArgs): Promise<ITestScheduleRow[]> {
     const limit = Number(args.limit) || 10;
     const page = Number(args.page) || 1;
     const offset = (page - 1) * limit;
