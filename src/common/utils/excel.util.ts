@@ -1,4 +1,6 @@
 import ExcelJS from 'exceljs';
+import * as XLSX from 'xlsx';
+import { plainText } from '@/common/utils/text.util';
 
 /**
  * Tiện ích Excel dùng chung cho các route xuất/nhập file (thay PHPExcel của bản PHP).
@@ -131,6 +133,62 @@ export function applyThinBorders(
 }
 
 /**
+ * Số cột tối thiểu đọc ra cho mỗi dòng khi nhập file (bố cục danh sách lớp dùng
+ * tới cột **H** = index 7) — dòng thiếu ô cuối vẫn phải có đủ ô rỗng.
+ */
+const MIN_IMPORT_COLS = 8;
+
+/**
+ * Đọc sheet đầu tiên của file **`.xlsx`** (OOXML) về ma trận chuỗi
+ * (`rows[i][j]` = dòng i+1, cột j+1). `null` = file không có sheet nào.
+ */
+export async function readXlsxSheetRows(
+  buffer: Buffer,
+): Promise<string[][] | null> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
+  const sheet = workbook.worksheets[0];
+  if (!sheet) return null;
+
+  const rows: string[][] = [];
+  for (let i = 1; i <= sheet.rowCount; i++) {
+    const row = sheet.getRow(i);
+    const width = Math.max(row.cellCount, MIN_IMPORT_COLS);
+    const cells: string[] = [];
+    for (let c = 1; c <= width; c++) cells.push(cellText(row.getCell(c).value));
+    rows.push(cells);
+  }
+  return rows;
+}
+
+/**
+ * Đọc sheet đầu tiên của file **`.xls` cũ (BIFF)** về cùng ma trận chuỗi.
+ *
+ * exceljs KHÔNG đọc được BIFF nên nhánh này dùng `xlsx` (SheetJS) — bản cài từ
+ * CDN chính chủ (`https://cdn.sheetjs.com/...`), KHÔNG phải gói `xlsx` cũ trên
+ * npm (0.18.5, còn lỗ hổng đã vá ở các bản sau).
+ * `raw:false` để SheetJS trả **chuỗi đã định dạng** như ô hiển thị (MSSV dài
+ * không bị về dạng số mũ), `defval:''` để ô trống vẫn giữ đúng vị trí cột.
+ */
+export function readXlsSheetRows(buffer: Buffer): string[][] | null {
+  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  const name = workbook.SheetNames[0];
+  if (!name) return null;
+
+  const raw = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[name], {
+    header: 1,
+    raw: false,
+    defval: '',
+    blankrows: true,
+  });
+  return raw.map((row) => {
+    const cells = (row ?? []).map((cell) => plainText(cell));
+    while (cells.length < MIN_IMPORT_COLS) cells.push('');
+    return cells;
+  });
+}
+
+/**
  * Đọc giá trị ô về chuỗi. ExcelJS trả về nhiều kiểu (rich text, formula, date,
  * hyperlink) — gom hết về text thuần như `->getValue()` của PHPExcel.
  */
@@ -153,9 +211,10 @@ export function cellText(value: ExcelJS.CellValue): string {
         .join('')
         .trim();
     }
-    if (v.hyperlink && typeof v.hyperlink === 'string') {
-      return String(v.text ?? v.hyperlink).trim();
+    if (typeof v.hyperlink === 'string') {
+      // Nhánh này chỉ tới khi `v.text` KHÔNG phải chuỗi (đã trả ở trên).
+      return v.hyperlink.trim();
     }
   }
-  return String(value).trim();
+  return plainText(value);
 }
