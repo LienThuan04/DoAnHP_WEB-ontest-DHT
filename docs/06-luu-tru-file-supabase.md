@@ -44,6 +44,13 @@ trong lúc chờ mạng). Nên upload trước, lấy URL rồi mới ghi DB.
 - **`exams.service`** (nộp bài tự luận): `collectEssayAnswers(body)` parse
   `essay_{i}_image_{j}` (base64) + `uploadBase64` → URL[] TRƯỚC tx; `saveEssayAnswers`
   chỉ ghi URL. Thư mục bucket: `essays/`.
+- **`account.service`** (ảnh đại diện, từ 2026-08-14): `uploadAvatar` →
+  `uploadImage(file.buffer, 'avatars')`, cột `nguoidung.avatar` lưu URL, rồi
+  `remove(avatar cũ)`. Thư mục bucket: `avatars/`.
+  ⚠️ Cột `avatar` là chỗ DUY NHẤT còn **2 dạng giá trị**: URL bucket (ảnh mới) và TÊN
+  FILE trong `public/media/avatars/` (dữ liệu seed + bản PHP cũ). Mọi chỗ render phải
+  đi qua helper `avatarSrc()` (server, `src/common/utils/avatar.util.ts`) hoặc
+  `window.avatarUrl()` (client, `public/js/avatar-url.js` — nạp ở `partials/head.ejs`).
 
 ## Luồng ĐỌC (trả thẳng URL)
 
@@ -57,7 +64,8 @@ tiếp:
 
 ## TODO còn nợ
 
-- **Dọn file cũ trên bucket** khi đổi/xoá ảnh (hiện chỉ ghi URL mới, chưa gọi
-  `remove()` cho ảnh cũ) — làm nếu cần tiết kiệm dung lượng.
+- **Dọn file cũ trên bucket** khi đổi/xoá ảnh câu hỏi / ảnh bài tự luận (hiện chỉ ghi
+  URL mới, chưa gọi `remove()` cho ảnh cũ) — làm nếu cần tiết kiệm dung lượng.
+  Riêng **ảnh đại diện** đã dọn ảnh cũ khi upload ảnh mới.
 - Nếu bucket đổi sang **private**: phải dùng **signed URL** (DB lưu path, server ký
   URL khi trả) — hiện code giả định bucket **public** + `getPublicUrl`.
