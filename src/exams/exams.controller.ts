@@ -159,7 +159,9 @@ export class ExamsController {
     const test = await this.exams.getInfoTestBasic(made);
     if (!test) throw new NotFoundException('Đề thi không tồn tại');
     if (test.nguoitao !== user.id) {
-      throw new ForbiddenException('Bạn không có quyền xem chi tiết đề thi này');
+      throw new ForbiddenException(
+        'Bạn không có quyền xem chi tiết đề thi này',
+      );
     }
     return { Title: 'Danh sách đã thi', Page: 'test_detail', Test: test, user };
   }
@@ -403,12 +405,23 @@ export class ExamsController {
   @Permissions('tgthi', 'join')
   @SkipTransform()
   @Post('getTestsGroupWithUserResult')
-  getTestsGroupWithUserResult(
-    @Body() dto: GroupTestsDto,
-    @Req() req: Request,
-  ) {
+  getTestsGroupWithUserResult(@Body() dto: GroupTestsDto, @Req() req: Request) {
     const user = req.user as IExamJwtPayload;
     return this.exams.getTestsGroupWithUserResult(dto.manhom, user.id);
+  }
+
+  /**
+   * POST /test/getTestGroup — đề đã giao cho 1 nhóm (tab "Đề kiểm tra" ở
+   * offcanvas trang chi tiết nhóm học phần của GV, `class_detail.js`).
+   *
+   * PHP không gate quyền cho action này; ở đây gate `dethi`/`view` như các route
+   * đọc đề khác của module (GV và Admin đều có sẵn quyền này).
+   */
+  @Permissions('dethi', 'view')
+  @SkipTransform()
+  @Post('getTestGroup')
+  getTestGroup(@Body() dto: GroupTestsDto) {
+    return this.exams.getTestGroup(dto.manhom);
   }
 
   /** POST /test/getResultDetail — chi tiết bài làm để SV xem lại. */
@@ -434,13 +447,29 @@ export class ExamsController {
     return this.exams.getStatictical(dto.made, dto.manhom);
   }
 
+  /**
+   * POST /test/getExamineeByGroup — bài làm của 1 đề, lọc theo 1 nhóm học phần.
+   * PHP có action này nhưng không JS nào gọi; port cho đủ bề mặt API. Body giống
+   * hệt getStatictical ({made, manhom}) nên dùng lại `StaticticalDto`.
+   */
+  @Permissions('dethi', 'view')
+  @SkipTransform()
+  @Post('getExamineeByGroup')
+  getExamineeByGroup(@Body() dto: StaticticalDto) {
+    return this.exams.getExamineeByGroup(dto.made, dto.manhom);
+  }
+
   /** POST /test/getListEssaySubmissionsAction — SV có bài tự luận cần chấm. */
   @Permissions('dethi', 'view')
   @SkipTransform()
   @Post('getListEssaySubmissionsAction')
   getListEssaySubmissions(@Body() dto: ListEssaySubmissionsDto) {
     const search = dto.q ?? dto.search ?? null;
-    return this.exams.getEssaySubmissions(dto.made, search, dto.status ?? 'all');
+    return this.exams.getEssaySubmissions(
+      dto.made,
+      search,
+      dto.status ?? 'all',
+    );
   }
 
   /** POST /test/getEssayDetailAction — chi tiết bài tự luận 1 SV (form chấm). */
