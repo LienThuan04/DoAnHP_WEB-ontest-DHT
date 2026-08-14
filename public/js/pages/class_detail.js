@@ -70,9 +70,10 @@ const showData = function (
                 <tr>
                     <td class="text-center">${offset + index++}</td>
                     <td class="fs-sm d-flex align-items-center">
-                        <img class="img-avatar img-avatar48 me-3" src="/public/media/avatars/${
-                          student.avatar || "avatar2.jpg"
-                        }" alt="">
+                        <img class="img-avatar img-avatar48 me-3" src="${avatarUrl(
+                          student.avatar,
+                          "avatar2.jpg"
+                        )}" alt="">
                         <div class="d-flex flex-column">
                             <a class="fw-semibold" href="javascript:void(0)">${
                               student.hoten
@@ -321,9 +322,10 @@ $(document).ready(function () {
                 <tr>
                     <td class="text-center">${offset + index++}</td>
                     <td class="fs-sm d-flex align-items-center">
-                        <img class="img-avatar img-avatar48 me-3" src="/public/media/avatars/${
-                          student.avatar || "avatar2.jpg"
-                        }" alt="">
+                        <img class="img-avatar img-avatar48 me-3" src="${avatarUrl(
+                          student.avatar,
+                          "avatar2.jpg"
+                        )}" alt="">
                         <div class="d-flex flex-column">
                             <a class="fw-semibold" href="javascript:void(0)">${
                               student.hoten || "Không có tên"
@@ -378,11 +380,10 @@ $(document).ready(function () {
                       announce.matb
                     }">
                         <div class="flex-shrink-0 mx-3">
-                            <img class="img-avatar img-avatar48" src="/public/media/avatars/${
-                              announce.avatar == null
-                                ? "avatar2.jpg"
-                                : announce.avatar
-                            }" alt="">
+                            <img class="img-avatar img-avatar48" src="${avatarUrl(
+                              announce.avatar,
+                              "avatar2.jpg"
+                            )}" alt="">
                         </div>
                         <div class="flex-grow-1 fs-sm pe-2">
                             <div class="fw-semibold">${announce.noidung}</div>
