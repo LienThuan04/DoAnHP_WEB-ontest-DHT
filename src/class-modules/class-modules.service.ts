@@ -213,7 +213,14 @@ export class ClassModulesService {
     const giangvien = group?.giangvien ?? '';
 
     if (
-      await this.isDuplicate(tennhom, mamonhoc, namhoc, hocky, giangvien, manhom)
+      await this.isDuplicate(
+        tennhom,
+        mamonhoc,
+        namhoc,
+        hocky,
+        giangvien,
+        manhom,
+      )
     ) {
       return {
         success: false,
@@ -416,9 +423,7 @@ export class ClassModulesService {
   }
 
   /** POST /module/pagination (model=NhomModel) — 1 trang SV của nhóm (mảng). */
-  listGroupStudents(
-    args: IGroupPaginationArgs,
-  ): Promise<IGroupStudentRow[]> {
+  listGroupStudents(args: IGroupPaginationArgs): Promise<IGroupStudentRow[]> {
     const limit = Number(args.limit) || 10;
     const page = Number(args.page) || 1;
     const offset = (page - 1) * limit;
@@ -447,9 +452,7 @@ export class ClassModulesService {
     // Lặp tới khi mã mới không trùng nhóm nào (như PHP getIdFromInvitedCode).
     do {
       mamoi = this.genInviteCode();
-    } while (
-      (await this.prisma.nhom.count({ where: { mamoi } })) > 0
-    );
+    } while ((await this.prisma.nhom.count({ where: { mamoi } })) > 0);
     try {
       await this.prisma.nhom.update({ where: { manhom }, data: { mamoi } });
       return true;
