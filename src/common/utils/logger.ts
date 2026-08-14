@@ -7,8 +7,7 @@ interface LogMeta {
 @Injectable({ scope: Scope.TRANSIENT })
 export class LoggerService {
   private readonly logger: Logger;
-  private readonly isDevelopment =
-    process.env.NODE_ENV === 'development';
+  private readonly isDevelopment = process.env.NODE_ENV === 'development';
 
   constructor(private readonly context: string = 'App') {
     this.logger = new Logger(context);
@@ -41,10 +40,7 @@ export class LoggerService {
    * Error log
    */
   error(message: string, error?: Error, meta?: LogMeta): void {
-    this.logger.error(
-      this.formatMessage('ERROR', message, meta),
-      error?.stack,
-    );
+    this.logger.error(this.formatMessage('ERROR', message, meta), error?.stack);
   }
 
   /**
