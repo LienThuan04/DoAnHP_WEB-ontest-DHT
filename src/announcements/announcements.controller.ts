@@ -86,10 +86,7 @@ export class AnnouncementsController {
   @Permissions('thongbao', 'update')
   @Get('update/:matb')
   @Render('pages/add_announce')
-  async update(
-    @Param('matb', ParseIntPipe) matb: number,
-    @Req() req: Request,
-  ) {
+  async update(@Param('matb', ParseIntPipe) matb: number, @Req() req: Request) {
     const user = req.user as IExamJwtPayload;
     await this.assertOwner(matb, user.id);
     return {
@@ -120,7 +117,10 @@ export class AnnouncementsController {
   @Permissions('thongbao', 'update')
   @SkipTransform()
   @Post('updateAnnounce')
-  async updateAnnounce(@Req() req: Request, @Body() dto: UpdateAnnouncementDto) {
+  async updateAnnounce(
+    @Req() req: Request,
+    @Body() dto: UpdateAnnouncementDto,
+  ) {
     const user = req.user as IExamJwtPayload;
     await this.assertOwner(dto.matb, user.id);
     return this.announcements.updateAnnounce(dto.matb, dto.noidung, dto.manhom);
@@ -185,7 +185,10 @@ export class AnnouncementsController {
   /** POST /teacher_announcement/getTotalPages — tổng số trang danh sách. */
   @SkipTransform()
   @Post('getTotalPages')
-  getTotalPages(@Req() req: Request, @Body() dto: AnnouncementPaginationBodyDto) {
+  getTotalPages(
+    @Req() req: Request,
+    @Body() dto: AnnouncementPaginationBodyDto,
+  ) {
     const user = req.user as IExamJwtPayload;
     return this.announcements.countPages(this.parseArgs(dto.args), user.id);
   }
@@ -195,6 +198,9 @@ export class AnnouncementsController {
   @Post('pagination')
   pagination(@Req() req: Request, @Body() dto: AnnouncementPaginationBodyDto) {
     const user = req.user as IExamJwtPayload;
-    return this.announcements.listAnnouncements(this.parseArgs(dto.args), user.id);
+    return this.announcements.listAnnouncements(
+      this.parseArgs(dto.args),
+      user.id,
+    );
   }
 }
