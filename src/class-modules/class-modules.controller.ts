@@ -241,7 +241,12 @@ export class ClassModulesController {
   @SkipTransform()
   @Post('addSV')
   addSV(@Body() dto: AddSvDto) {
-    return this.classModules.addSV(dto.manhom, dto.mssv, dto.hoten, dto.password);
+    return this.classModules.addSV(
+      dto.manhom,
+      dto.mssv,
+      dto.hoten,
+      dto.password,
+    );
   }
 
   /** POST /module/addStudentsByClassCode — thêm hàng loạt SV theo tiền tố mã lớp. */
