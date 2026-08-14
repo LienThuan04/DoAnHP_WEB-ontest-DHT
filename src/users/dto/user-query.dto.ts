@@ -45,6 +45,21 @@ export class AddFileExcelGroupDto {
   password!: string;
 }
 
+/**
+ * Thay $_POST của User::addFileExcel() — tạo tài khoản hàng loạt (KHÔNG kèm
+ * nhóm). user.js gửi `listuser` = JSON.stringify(danh sách đọc từ addExcel) +
+ * `password` = mật khẩu mặc định.
+ */
+export class AddFileExcelDto {
+  @IsNotEmpty({ message: 'Thiếu danh sách người dùng' })
+  @IsString()
+  listuser!: string;
+
+  @IsNotEmpty({ message: 'Thiếu mật khẩu mặc định' })
+  @IsString()
+  password!: string;
+}
+
 /** Thay $_POST['id'] + $_POST['status'] của User::setStatus(). */
 export class SetStatusDto {
   @IsNotEmpty({ message: 'Thiếu mã người dùng' })
