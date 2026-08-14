@@ -1,5 +1,5 @@
-import { INestApplication } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 export const setupCors = (app: INestApplication) => {
   const configService: ConfigService = app.get(ConfigService);
