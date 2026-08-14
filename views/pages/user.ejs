@@ -173,8 +173,9 @@
                         <input type="password" class="form-control" name="user_password" id="ps_user_group" placeholder="Để trống nếu muốn hệ thống tự sinh">
                       </div>
                       <div class="col-12">
-                        <label class="form-label fw-semibold">File Excel (.xlsx, .xls, .csv)</label>
-                        <input type="file" class="form-control" id="file-cau-hoi" name="file" accept=".xlsx,.xls,.csv" required>
+                        <label class="form-label fw-semibold">File Excel (.xlsx, .xls)</label>
+                        <!-- KHÁC PHP: KHÔNG nhận .csv (bản PHP cũng không đọc được) -->
+                        <input type="file" class="form-control" id="file-cau-hoi" name="file" accept=".xlsx,.xls" required>
                       </div>
                       <div class="col-12">
                         <div class="alert alert-info"><i class="fa fa-info-circle"></i> Vui lòng sử dụng đúng định dạng.</div>
