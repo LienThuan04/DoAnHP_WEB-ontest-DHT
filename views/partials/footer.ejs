@@ -29,3 +29,12 @@
     document.querySelector('[data-year-copy]').textContent = new Date().getFullYear();
   });
 </script>
+
+<!--
+  RBAC phía client (ẩn/hiện theo `data-role`/`data-action`, lọc navbar) + chuông
+  thông báo. Nạp Ở ĐÂY thay vì từng trang — y như `main_layout.php` của PHP nạp
+  `permission.js` cho MỌI trang có navbar. Partial này được include đúng bởi 21
+  trang main-layout, nên đừng thêm thẻ script này vào trang lẻ nữa: `permission.js`
+  khai báo `let role` ở phạm vi toàn cục, nạp 2 lần là SyntaxError.
+-->
+<script src="/public/js/permission.js"></script>
