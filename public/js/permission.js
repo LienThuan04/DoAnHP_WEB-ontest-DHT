@@ -14,6 +14,13 @@ $(document).ajaxStop(function () {
       $(this).addClass("show");
     }
   });
+  // Gỡ tiêu đề nhóm ở navbar khi mọi mục dưới nó đã bị ẩn — thay chỗ PHP
+  // `build_navbar()` chỉ in heading nếu `count($nav['navbarItem']) > 0`.
+  $(".nav-main .nav-main-heading").each(function () {
+    if ($(this).nextUntil(".nav-main-heading", ".nav-main-item").length === 0) {
+      $(this).remove();
+    }
+  });
   $(".col-action").each(function () {
     if ($(this).children().length == 0) {
       $(this).remove();
