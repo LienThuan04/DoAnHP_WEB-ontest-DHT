@@ -1,6 +1,6 @@
 # 03 — Tiến độ (LIVING DOC — cập nhật mỗi phiên)
 
-> Cập nhật gần nhất: **2026-08-14**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
+> Cập nhật gần nhất: **2026-08-16**. Đây là "sổ tay tiến độ" — mỗi phiên làm xong
 > nhớ sửa file này (đánh dấu đã làm gì, còn gì) để phiên/agent sau không mất mạch.
 
 ## Bảng phase
@@ -728,6 +728,77 @@ và `pnpm run build` cũng sạch.
 
 ⚠️ Sau đợt này e2e vẫn **118/118 pass**, CSDL y nguyên. Khi thêm code mới nhớ chạy
 `pnpm run lint` (có `--fix`) trước khi commit để không tích nợ lại.
+
+## ✅ Navbar lọc theo quyền + `permission.js` nạp cho MỌI trang (2026-08-16)
+
+Rà soát lại toàn bộ dự án lần nữa (18 controller PHP ↔ route NestJS ↔ URL mà JS gốc
+gọi ↔ 24 view) → **chỉ còn đúng 1 mảng thiếu thật: navbar không lọc theo quyền.**
+
+**Bản PHP:** menu dựng động bằng `build_navbar()` (`mvc/views/inc/config.php`) —
+mảng `$GLOBALS['navbar']` khai `role` cho từng mục, lọc theo `$_SESSION['user_role']`
+(+ `is_admin` cho nhóm mục admin), và **chỉ in `nav-main-heading` khi nhóm còn ≥1 mục**.
+
+**Bản NestJS trước đây:** `views/partials/navbar.ejs` hard-code 13 mục cho mọi người
+→ SV thấy "Người dùng"/"Nhóm quyền"/"Năm học"…, bấm vào ra trang 403.
+(Backend vẫn an toàn — `PermissionsGuard` chặn đúng; đây là lỗi giao diện.)
+
+**Đã sửa (cách nhẹ nhất, không thêm code server):**
+
+1. `views/partials/navbar.ejs` — mỗi `<li class="nav-main-item">` nay mang
+   `data-role`/`data-action` **đúng bằng `@Permissions(...)` gác route GET của trang
+   đó**, nên menu hiện ⟺ người dùng thật sự vào được:
+
+   | Mục | data-role | data-action |
+   |-----|-----------|-------------|
+   | Người dùng | `nguoidung` | `view` |
+   | Nhóm quyền | `nhomquyen` | `view` |
+   | Năm học | `namhoc` | `view` |
+   | Tạo môn học | `monhoc` | `view` |
+   | Môn học của tôi | `xem_monhoc` | `view` |
+   | Câu hỏi | `cauhoi` | `view` |
+   | Phân công | `phancong` | `view` |
+   | Nhóm học phần (GV) | `hocphan` | `view` |
+   | Đề thi | `dethi` | `view` |
+   | Nhóm học phần (SV) | `tghocphan` | **`join`** |
+   | Lịch kiểm tra | `tgthi` | **`join`** |
+   | Thông báo | `thongbao` | `view` |
+   | Thống kê | `thongke` | `view` |
+
+   "Tổng quan" KHÔNG gắn `data-role` (mọi người đều vào được, y PHP).
+
+2. `public/js/permission.js` — thêm bước gỡ `nav-main-heading` khi mọi mục dưới nó đã
+   bị xoá (`nextUntil('.nav-main-heading', '.nav-main-item').length === 0`), thay chỗ
+   PHP kiểm `count($nav['navbarItem']) > 0`.
+
+3. ⚠️ **`permission.js` chuyển vào `views/partials/footer.ejs`** — trước đó chỉ 15/21
+   trang tự nạp nó, 6 trang (`dashboard`, `client_group`, `test_schedule`,
+   `test_detail`, `select_question`, `vao_thi`) thì KHÔNG. Vì `custom.css` có
+   `[data-role] { opacity: 0 }` (chỉ `.show` do permission.js gắn mới hiện), navbar ở
+   6 trang đó sẽ **trắng vĩnh viễn** nếu không sửa. `partials/footer.ejs` được include
+   đúng bởi 21 trang main-layout (landing/export_pdf/auth/trang lỗi không có) nên là
+   chỗ tương đương `main_layout.php` của PHP. **Đã gỡ 15 thẻ `<script>` lẻ** — nạp 2
+   lần là `SyntaxError: Identifier 'role' has already been declared`, chết cả hai.
+   Tiện thể **chuông thông báo SV cũng hết hỏng** ở dashboard/lịch kiểm tra/nhóm học
+   phần (trước đó 3 trang này không nạp permission.js nên chuông không chạy).
+
+**KHÁC PHP (có chủ ý):** PHP còn chặn thêm bằng `is_admin` (`manhomquyen == 3`) cho
+`nguoidung`/`phancong`/`nhomquyen`, nhưng chính `user.php` gốc lại gác bằng
+`checkPermission("nguoidung","view")` — tức GV (nhóm 1, seed CÓ quyền `nguoidung`)
+vẫn vào `/user` được, chỉ là navbar giấu link. Bản NestJS bỏ tầng `is_admin` để menu
+khớp đúng cái `PermissionsGuard` cho phép. Muốn giấu lại thì bỏ quyền `nguoidung` của
+nhóm 1 trong `/roles` (chuẩn hơn là hard-code theo nhóm).
+
+**Kiểm chứng (server thật, `node dist/src/main.js`, dữ liệu seed):** đăng nhập
+`admin`/`gv001`/`sv001` → đọc `/account/getRole` + HTML `/dashboard`, chạy lại đúng
+logic permission.js:
+
+| | admin | gv001 | sv001 |
+|---|---|---|---|
+| Số mục còn lại | 10 | 5 | 3 |
+| Heading bị gỡ | Sinh viên | Sinh viên, Khác | Quản lý, Khác |
+
+20 lượt tải trang (10 admin + 6 GV + 4 SV) đều **HTTP 200 và nạp `permission.js` đúng
+1 lần**. `pnpm run build` + `pnpm run lint` sạch.
 
 ## Việc kế tiếp (gợi ý)
 
