@@ -41,47 +41,52 @@
           </a>
         </li>
 
-        <!-- Menu nghiệp vụ (Phase sau sẽ render động theo quyền — xem docs/06) -->
+        <!--
+          Menu nghiệp vụ — thay `build_navbar()` của PHP (mvc/views/inc/config.php).
+          Mỗi mục mang `data-role`/`data-action` ĐÚNG BẰNG `@Permissions(...)` gác
+          route GET của trang đó, nên permission.js chỉ giữ lại mục mà người dùng
+          thật sự vào được (`nav-main-heading` rỗng cũng bị gỡ theo).
+        -->
         <li class="nav-main-heading">Quản lý</li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="nguoidung" data-action="view">
           <a class="nav-main-link <%= page === 'user' ? 'active' : '' %>" href="/user"><i class="nav-main-link-icon fa fa-users"></i><span class="nav-main-link-name">Người dùng</span></a>
         </li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="nhomquyen" data-action="view">
           <a class="nav-main-link <%= page === 'roles' ? 'active' : '' %>" href="/roles"><i class="nav-main-link-icon fa fa-user-shield"></i><span class="nav-main-link-name">Nhóm quyền</span></a>
         </li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="namhoc" data-action="view">
           <a class="nav-main-link <%= page === 'namhoc' ? 'active' : '' %>" href="/namhoc"><i class="nav-main-link-icon fa fa-calendar-alt"></i><span class="nav-main-link-name">Năm học</span></a>
         </li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="monhoc" data-action="view">
           <a class="nav-main-link <%= page === 'subject' ? 'active' : '' %>" href="/subject"><i class="nav-main-link-icon fa fa-book"></i><span class="nav-main-link-name">Tạo môn học</span></a>
         </li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="xem_monhoc" data-action="view">
           <a class="nav-main-link <%= page === 'view_subject' ? 'active' : '' %>" href="/view_subject"><i class="nav-main-link-icon fa fa-book-open"></i><span class="nav-main-link-name">Môn học của tôi</span></a>
         </li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="cauhoi" data-action="view">
           <a class="nav-main-link <%= page === 'question' ? 'active' : '' %>" href="/question"><i class="nav-main-link-icon fa fa-question-circle"></i><span class="nav-main-link-name">Câu hỏi</span></a>
         </li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="phancong" data-action="view">
           <a class="nav-main-link <%= page === 'assignment' ? 'active' : '' %>" href="/assignment"><i class="nav-main-link-icon fa fa-tasks"></i><span class="nav-main-link-name">Phân công</span></a>
         </li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="hocphan" data-action="view">
           <a class="nav-main-link <%= page === 'module' ? 'active' : '' %>" href="/module"><i class="nav-main-link-icon fa fa-users-cog"></i><span class="nav-main-link-name">Nhóm học phần</span></a>
         </li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="dethi" data-action="view">
           <a class="nav-main-link <%= page === 'test' ? 'active' : '' %>" href="/test"><i class="nav-main-link-icon fa fa-file-alt"></i><span class="nav-main-link-name">Đề thi</span></a>
         </li>
         <li class="nav-main-heading">Sinh viên</li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="tghocphan" data-action="join">
           <a class="nav-main-link <%= page === 'client_group' ? 'active' : '' %>" href="/client/group"><i class="nav-main-link-icon fa fa-user-graduate"></i><span class="nav-main-link-name">Nhóm học phần</span></a>
         </li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="tgthi" data-action="join">
           <a class="nav-main-link <%= page === 'test_schedule' ? 'active' : '' %>" href="/client/test"><i class="nav-main-link-icon fa fa-calendar-check"></i><span class="nav-main-link-name">Lịch kiểm tra</span></a>
         </li>
         <li class="nav-main-heading">Khác</li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="thongbao" data-action="view">
           <a class="nav-main-link <%= page === 'teacher_announcement' ? 'active' : '' %>" href="/teacher_announcement"><i class="nav-main-link-icon fa fa-bell"></i><span class="nav-main-link-name">Thông báo</span></a>
         </li>
-        <li class="nav-main-item">
+        <li class="nav-main-item" data-role="thongke" data-action="view">
           <a class="nav-main-link <%= page === 'statistic' ? 'active' : '' %>" href="/statistic"><i class="nav-main-link-icon fa fa-chart-bar"></i><span class="nav-main-link-name">Thống kê</span></a>
         </li>
       </ul>
